@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-Master | Plataforma Analítica de Calidad</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-body: #f1f5f9; --bg-sidebar: #0f172a; --primary: #3b82f6; --primary-hover: #2563eb;
+            --surface: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0;
+            --success-bg: #d1fae5; --success-txt: #065f46; --success-border: #a7f3d0;
+            --warning-bg: #fef3c7; --warning-txt: #92400e; --warning-border: #fde68a;
+            --danger-bg: #fee2e2;  --danger-txt: #b91c1c;  --danger-border: #fecaca;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); display: flex; height: 100vh; overflow: hidden; color: var(--text-main); }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; z-index: 20; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .logo-container { padding: 30px 25px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; }
+        .logo-icon { background: var(--primary); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4); }
+        .logo-text { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        .logo-sub { display: block; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        .upload-area { padding: 30px 25px; }
+        .btn-upload { background: var(--primary); color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; }
+        .btn-upload:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        
+        #uploadStatus { text-align: center; margin-top: 15px; font-size: 13px; color: #34d399; font-weight: 600; display: none; padding: 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); }
+
+        .kpi-side { margin-top: auto; padding: 25px; background: rgba(0,0,0,0.2); }
+        .kpi-item { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .kpi-label { font-size: 12px; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+        .kpi-val { font-size: 20px; font-weight: 800; color: white; }
+        .kpi-val.highlight { color: #34d399; }
+
+        /* --- MAIN TOPBAR --- */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { background: var(--surface); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .topbar h1 { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        .topbar p { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        
+        .filters { display: flex; gap: 12px; }
+        .search-box { position: relative; width: 280px; }
+        .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search-box input { width: 100%; padding: 12px 15px 12px 42px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 13px; font-weight: 500; background: var(--bg-body); transition: 0.2s; }
+        .search-box input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        select.filter-select { padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--bg-body); color: var(--text-main); min-width: 160px; }
+        select.filter-select:focus { border-color: var(--primary); }
+
+        /* --- TABLE AREA --- */
+        .content { flex: 1; padding: 30px 40px; overflow-y: auto; }
+        .table-card { background: var(--surface); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #f8fafc; padding: 16px 20px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+        td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 500; vertical-align: middle; }
+        tbody tr:hover { background-color: #f1f5f9; }
+        
+        .col-area { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .col-feedback { font-size: 13px; color: var(--text-muted); min-width: 250px; line-height: 1.6; }
+        .feedback-item { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+        .feedback-item i { color: var(--primary); margin-top: 3px; font-size: 10px; }
+        
+        /* Badges */
+        .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 32px; border-radius: 6px; font-weight: 700; font-size: 14px; }
+        .bg-green { background: var(--success-bg); color: var(--success-txt); border: 1px solid var(--success-border); }
+        .bg-yellow { background: var(--warning-bg); color: var(--warning-txt); border: 1px solid var(--warning-border); }
+        .bg-red { background: var(--danger-bg); color: var(--danger-txt); border: 1px solid var(--danger-border); }
+        .bg-null { background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; font-size: 12px; }
+
+        .btn-action { background: white; color: var(--primary); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .btn-action:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-box { background: white; width: 900px; max-width: 95%; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: popIn 0.3s ease-out; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .modal-header { padding: 25px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+        .modal-header h2 { font-size: 20px; font-weight: 800; color: var(--text-main); }
+        .modal-header p { font-size: 12px; color: var(--primary); font-weight: 700; text-transform: uppercase; margin-top: 5px; }
+        .close-btn { background: white; border: 1px solid var(--border); border-radius: 8px; width: 36px; height: 36px; font-size: 16px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { background: var(--danger-bg); color: var(--danger-txt); border-color: var(--danger-border); }
+        
+        .modal-body { padding: 30px; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+        .chart-container { height: 320px; width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        
+        .feedback-list { list-style: none; max-height: 320px; overflow-y: auto; padding-right: 5px; }
+        .feedback-list li { padding: 15px; background: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; font-size: 13px; line-height: 1.5; color: var(--text-main); display: flex; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .feedback-list li i { color: var(--primary); font-size: 16px; margin-top: 1px; }
+
+        #emptyState { padding: 100px 20px; text-align: center; color: var(--text-muted); }
+        #emptyState i { font-size: 60px; color: #cbd5e1; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo-container">
+            <div class="logo-icon"><i class="fas fa-layer-group"></i></div>
+            <div>
+                <div class="logo-text">Q-Master</div>
+                <div class="logo-sub">Operations BI</div>
+            </div>
+        </div>
+        
+        <div class="upload-area">
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
+            <button class="btn-upload" onclick="document.getElementById('excelFileInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i> Cargar Base Excel
+            </button>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <div class="kpi-side">
+            <div class="kpi-item">
+                <span class="kpi-label">Volumen Asesores</span>
+                <span class="kpi-val" id="kpi-agents">0</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-label" id="kpi-dynamic-label">Promedio General</span>
+                <span class="kpi-val highlight" id="kpi-avg">0%</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div>
+                <h1>Gestión de Desempeño</h1>
+                <p>Matriz dinámica interactiva</p>
+            </div>
+            <div class="filters">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar asesor..." onkeyup="aplicarFiltros()">
+                </div>
+                <select class="filter-select" id="areaFilter" onchange="aplicarFiltros()">
+                    <option value="all">Todas las Áreas</option>
+                </select>
+                <select class="filter-select" id="weekFilter" onchange="aplicarFiltros()" style="border-color: var(--primary); color: var(--primary);">
+                    <option value="all">Últimas 4 Semanas</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="table-card">
+                <table id="dataTable">
+                    <thead id="tableHead">
+                        <tr><th>Área</th><th>Asesor</th><th>Cargando...</th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="10">
+                                <div id="emptyState">
+                                    <i class="fas fa-file-excel"></i>
+                                    <h2>Plataforma Inicializada</h2>
+                                    <p>Sube el archivo Excel bloqueado. El sistema extraerá la data y áreas desde la Semana 1.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="agentModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalAgentName">Nombre</h2>
+                    <p id="modalAgentArea">Área</p>
+                </div>
+                <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <h3 style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 15px; letter-spacing: 1px;">CURVA DE DESEMPEÑO</h3>
+                    <div class="chart-container"><canvas id="modalChart"></canvas></div>
+                </div>
+                <div>
+                    <h3 style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 15px; letter-spacing: 1px;">REGISTRO DE FEEDBACK</h3>
+                    <ul class="feedback-list" id="modalFeedback"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let datosGlobales = [];
+        let weekKeysGlobal = [];
+        let agentChartObj = null;
+
+        const redondear = val => (val === "" || isNaN(val)) ? "-" : Math.round(Number(val));
+        const getBadge = nota => {
+            if (nota === "-") return `<span class="score-badge bg-null">-</span>`;
+            return `<span class="score-badge ${nota >= 95 ? 'bg-green' : (nota >= 90 ? 'bg-yellow' : 'bg-red')}">${nota}</span>`;
+        };
+
+        // Motor Analítico Corregido (Detecta Áreas con Prioridad)
+        document.getElementById('excelFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const status = document.getElementById('uploadStatus');
+            status.style.display = "block";
+            status.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Extrayendo data...";
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("resultado")) || workbook.SheetNames[0]], {header: 1, defval: ""});
+                
+                let headerIdx = rows.findIndex(r => r.join(" ").toUpperCase().includes("PROMEDIO ANUAL"));
+                if (headerIdx === -1) { alert("Estructura Excel no reconocida."); return; }
+
+                const headers = rows[headerIdx].map(h => String(h).trim().toUpperCase());
+                const idxAgente = headers.findIndex(h => h.includes("ÁREA") || h.includes("AGENTE"));
+                const idxAnual = headers.findIndex(h => h.includes("PROMEDIO ANUAL") || h === "ANUAL");
+                const idxFeedback = headers.findIndex(h => h.includes("FEEDBACK") || h.includes("OPORTUNIDAD"));
+
+                const weekCols = {};
+                headers.forEach((h, i) => { if(/^S\d+/.test(h)) weekCols[h] = i; });
+                weekKeysGlobal = Object.keys(weekCols).sort((a,b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,'')));
+
+                let parsedData = [];
+                let currentArea = "General";
+                const areaIdentifiers = ["OFICINAS CENTRALES", "SERVICIO TÉCNICO", "SERVICIO TECNICO", "E COMMERCE", "TRANSPORTE", "ECOMMERCE"];
+
+                for (let i = headerIdx + 1; i < rows.length; i++) {
+                    let row = rows[i];
+                    let textContent = String(row[idxAgente] || row[0] || row[1] || "").trim();
+                    
+                    if (!textContent || textContent.toUpperCase() === "ÁREA" || textContent.toUpperCase() === "AGENTE") continue;
+
+                    let upperText = textContent.toUpperCase();
+                    
+                    // 1. Verificar si es un Área (Tenga o no tenga promedios al lado)
+                    let isArea = areaIdentifiers.some(a => upperText.includes(a)) && upperText.length < 35;
+                    let isSum = upperText.startsWith("PROMEDIO") || upperText.startsWith("TOTAL");
+
+                    if (isArea && !isSum) {
+                        currentArea = textContent.replace(/[-_]/g, '').trim(); // Actualizamos el Área activa
+                        continue; // No procesamos esta línea como agente
+                    }
+
+                    if (isSum) {
+                        continue; // Ignoramos las líneas de totales generales
+                    }
+
+                    // 2. Verificar si es un Agente (Tiene que tener notas en alguna semana o en anual)
+                    let hasScores = weekKeysGlobal.some(wk => row[weekCols[wk]] !== "" && row[weekCols[wk]] !== undefined);
+                    let hasAnual = row[idxAnual] !== "" && row[idxAnual] !== undefined;
+
+                    if (hasScores || hasAnual) {
+                        // ES UN AGENTE
+                        let history = {};
+                        weekKeysGlobal.forEach(wk => history[wk] = redondear(row[weekCols[wk]]));
+
+                        parsedData.push({ 
+                            Name: textContent, 
+                            Area: currentArea, 
+                            History: history, 
+                            Anual: redondear(row[idxAnual]), 
+                            Feedback: [] 
+                        });
+
+                        if (idxFeedback > -1 && row[idxFeedback]) {
+                            parsedData[parsedData.length - 1].Feedback.push(String(row[idxFeedback]).trim());
+                        }
+                    } 
+                    // 3. Si no es Área, no es Sumatoria y NO tiene notas... ¡Es Feedback!
+                    else if (parsedData.length > 0) {
+                        let cleanFeedback = textContent.replace(/"/g, '').trim();
+                        if (cleanFeedback) parsedData[parsedData.length - 1].Feedback.push(cleanFeedback);
+                    }
+                }
+
+                datosGlobales = parsedData;
+                
+                const areaFilter = document.getElementById('areaFilter');
+                areaFilter.innerHTML = '<option value="all">Todas las Áreas</option>';
+                [...new Set(parsedData.map(d => d.Area))].sort().forEach(a => areaFilter.innerHTML += `<option value="${a}">${a}</option>`);
+
+                const weekFilter = document.getElementById('weekFilter');
+                weekFilter.innerHTML = '<option value="all">Últimas 4 Semanas</option>';
+                [...weekKeysGlobal].reverse().forEach(wk => weekFilter.innerHTML += `<option value="${wk}">Filtro: ${wk}</option>`);
+
+                aplicarFiltros(); 
+
+                status.innerHTML = "<i class='fas fa-check-circle'></i> Base Conectada";
+                setTimeout(() => status.style.display = "none", 3000);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Aplicador de Filtros y Dibujo de Tabla
+        function aplicarFiltros() {
+            if(!datosGlobales.length) return;
+
+            const texto = document.getElementById('searchInput').value.toLowerCase();
+            const area = document.getElementById('areaFilter').value;
+            const week = document.getElementById('weekFilter').value;
+
+            let datosFiltrados = datosGlobales.filter(agente => {
+                return agente.Name.toLowerCase().includes(texto) && (area === "all" || agente.Area === area);
+            });
+
+            let semanasAMostrar = (week === "all") ? weekKeysGlobal.slice(-4) : [week];
+
+            let theadHtml = `<tr><th>Área Operativa</th><th>Asesor</th>`;
+            semanasAMostrar.forEach(wk => {
+                theadHtml += `<th style="text-align:center; color:var(--primary);">${wk}</th>`;
+            });
+            theadHtml += `<th style="text-align:center;">Prom. Anual</th><th>Feedback y Oportunidades</th><th style="text-align:center;">Acción</th></tr>`;
+            document.getElementById('tableHead').innerHTML = theadHtml;
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            let sumaNotas = 0; let conteoNotas = 0;
+
+            datosFiltrados.forEach(agente => {
+                let tr = document.createElement('tr');
+                let tdHtml = `<td class="col-area">${agente.Area}</td><td><strong>${agente.Name}</strong></td>`;
+                
+                semanasAMostrar.forEach(wk => { 
+                    let nota = agente.History[wk];
+                    tdHtml += `<td style="text-align:center;">${getBadge(nota)}</td>`; 
+                    if(nota !== "-") { sumaNotas += nota; conteoNotas++; }
+                });
+                
+                tdHtml += `<td style="text-align:center;">${getBadge(agente.Anual)}</td>`;
+                
+                let feedbackHtml = "";
+                if (agente.Feedback.length > 0) {
+                    feedbackHtml = agente.Feedback.map(f => `<div class="feedback-item"><i class="fas fa-chevron-right"></i> <span>${f}</span></div>`).join('');
+                } else {
+                    feedbackHtml = `<span style='color:#cbd5e1; font-style: italic;'>Sin registro de mejora</span>`;
+                }
+                tdHtml += `<td class="col-feedback">${feedbackHtml}</td>`;
+                
+                tdHtml += `<td style="text-align:center;"><button class="btn-action" onclick="abrirModal('${agente.Name}')"><i class="fas fa-chart-line"></i> Detalle</button></td>`;
+                
+                tr.innerHTML = tdHtml;
+                tbody.appendChild(tr);
+            });
+
+            if(datosFiltrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-muted);">No se encontraron asesores.</td></tr>`;
+            }
+
+            document.getElementById('kpi-agents').innerText = datosFiltrados.length;
+            
+            const kpiLabel = document.getElementById('kpi-dynamic-label');
+            const kpiAvg = document.getElementById('kpi-avg');
+            
+            if(week !== "all") {
+                kpiLabel.innerText = `Promedio ${week}`;
+                kpiAvg.innerText = conteoNotas > 0 ? Math.round(sumaNotas / conteoNotas) + "%" : "N/A";
+            } else {
+                kpiLabel.innerText = `Promedio Anual (Filtro)`;
+                let sumaAnual = 0, conteoAnual = 0;
+                datosFiltrados.forEach(a => { if(a.Anual !== "-") { sumaAnual += a.Anual; conteoAnual++; }});
+                kpiAvg.innerText = conteoAnual > 0 ? Math.round(sumaAnual / conteoAnual) + "%" : "N/A";
+            }
+        }
+
+        function abrirModal(nombreAgente) {
+            const agente = datosGlobales.find(a => a.Name === nombreAgente);
+            document.getElementById('modalAgentName').innerText = agente.Name;
+            document.getElementById('modalAgentArea').innerText = agente.Area;
+
+            const list = document.getElementById('modalFeedback');
+            if(agente.Feedback.length > 0) {
+                list.innerHTML = agente.Feedback.map(f => `<li><i class="fas fa-check-circle"></i> ${f}</li>`).join('');
+            } else {
+                list.innerHTML = `<li style="color:#94a3b8">No hay registros de feedback en la base de datos.</li>`;
+            }
+
+            if(agentChartObj) agentChartObj.destroy();
+            const semanas = weekKeysGlobal;
+            const notas = semanas.map(s => agente.History[s] === "-" ? null : agente.History[s]);
+
+            agentChartObj = new Chart(document.getElementById('modalChart'), {
+                type: 'line',
+                data: {
+                    labels: semanas,
+                    datasets: [{
+                        label: 'Desempeño %', data: notas, 
+                        borderColor: '#3b82f6', borderWidth: 3,
+                        backgroundColor: 'rgba(59,130,246,0.1)', fill: true,
+                        pointBackgroundColor: '#ffffff', pointBorderColor: '#3b82f6', pointRadius: 5, tension: 0.4, spanGaps: true
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 70, max: 100 } }, plugins: { legend: {display: false} } }
+            });
+
+            document.getElementById('agentModal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('agentModal').style.display = 'none'; }
+    </script>
+</body>
+</html>
