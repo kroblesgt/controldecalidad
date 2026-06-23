@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Q-Master | Plataforma Analítica de Calidad</title>
+    <title>Control de Calidad – Experiencia Al Cliente</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,405 +12,1876 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+        /* --- VARIABLES GLOBALES DE DISEÑO --- */
         :root {
-            --bg-body: #f1f5f9; --bg-sidebar: #0f172a; --primary: #3b82f6; --primary-hover: #2563eb;
-            --surface: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0;
-            --success-bg: #d1fae5; --success-txt: #065f46; --success-border: #a7f3d0;
-            --warning-bg: #fef3c7; --warning-txt: #92400e; --warning-border: #fde68a;
-            --danger-bg: #fee2e2;  --danger-txt: #b91c1c;  --danger-border: #fecaca;
+            --bg-body: #f1f5f9; 
+            --bg-sidebar: #0f172a; 
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --surface: #ffffff; 
+            --text-main: #1e293b; 
+            --text-muted: #64748b; 
+            --border: #e2e8f0;
+            --success-txt: #065f46; 
+            --danger-bg: #fee2e2;  
+            --danger-txt: #b91c1c; 
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
         }
 
+        /* --- RESET Y TIPOGRAFÍA --- */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg-body); display: flex; height: 100vh; overflow: hidden; color: var(--text-main); }
-
-        /* --- SIDEBAR --- */
-        .sidebar { width: 280px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; z-index: 20; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
-        .logo-container { padding: 30px 25px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; }
-        .logo-icon { background: var(--primary); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4); }
-        .logo-text { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-        .logo-sub { display: block; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-
-        .upload-area { padding: 30px 25px; }
-        .btn-upload { background: var(--primary); color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; }
-        .btn-upload:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
         
-        #uploadStatus { text-align: center; margin-top: 15px; font-size: 13px; color: #34d399; font-weight: 600; display: none; padding: 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); }
+        /* Animaciones */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
 
-        .kpi-side { margin-top: auto; padding: 25px; background: rgba(0,0,0,0.2); }
+        /* --- OVERLAY DE LOGIN --- */
+        #authOverlay { position: fixed; inset: 0; background: var(--bg-sidebar); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
+        .login-box { background: white; padding: 40px; border-radius: 16px; width: 100%; max-width: 380px; text-align: center; box-shadow: var(--shadow-xl); }
+        .login-box h2 { margin-bottom: 25px; font-weight: 800; color: var(--text-main); font-size: 22px; }
+        .login-box input { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .login-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .login-box button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: background 0.2s; font-size: 14px; }
+        .login-box button:hover { background: var(--primary-hover); }
+        #loginError { color: var(--danger-txt); font-size: 13px; margin-top: 15px; display: none; font-weight: 600; padding: 12px; background: var(--danger-bg); border-radius: 8px; }
+
+        /* --- BARRA LATERAL (SIDEBAR) --- */
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; z-index: 20; box-shadow: 4px 0 15px rgba(0,0,0,0.15); flex-shrink: 0; }
+        .logo-container { padding: 30px 25px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; }
+        .logo-icon { background: var(--primary); width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: var(--shadow-sm); }
+        .logo-text { font-size: 19px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+        .logo-sub { display: block; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px;}
+
+        .user-info { padding: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .user-info p { font-size: 14px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-info .badges-container { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .user-info span { font-size: 10px; padding: 4px 8px; background: rgba(59,130,246,0.15); color: #60a5fa; border-radius: 6px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center;}
+        .user-info span.area-badge { background: rgba(16, 185, 129, 0.15); color: #34d399; transition: 0.2s; }
+        .user-info span.area-badge.editable { cursor: pointer; }
+        .user-info span.area-badge.editable:hover { background: rgba(16, 185, 129, 0.35); transform: translateY(-1px); }
+        
+        .btn-logout { margin-top: 15px; background: transparent; border: 1px solid #475569; color: #94a3b8; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-logout:hover { background: #334155; color: white; border-color: #64748b; }
+
+        .nav-menu { padding: 20px 0; flex: 1; overflow-y: auto; }
+        .nav-item { padding: 14px 25px; display: flex; align-items: center; gap: 14px; color: #94a3b8; font-weight: 600; font-size: 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.05); color: white; border-left-color: var(--primary); }
+        .nav-item i { font-size: 16px; width: 20px; text-align: center; }
+
+        .upload-area { padding: 20px 25px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .btn-upload { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform 0.2s, filter 0.2s; box-shadow: var(--shadow-sm); }
+        .btn-upload:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        .kpi-side { padding: 25px; background: rgba(0,0,0,0.25); border-top: 1px solid rgba(255,255,255,0.05); }
         .kpi-item { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
-        .kpi-label { font-size: 12px; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
-        .kpi-val { font-size: 20px; font-weight: 800; color: white; }
+        .kpi-item:last-child { margin-bottom: 0; }
+        .kpi-label { font-size: 12px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-val { font-size: 22px; font-weight: 800; color: white; }
         .kpi-val.highlight { color: #34d399; }
 
-        /* --- MAIN TOPBAR --- */
-        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .topbar { background: var(--surface); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        .topbar h1 { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        /* --- CONTENEDOR PRINCIPAL --- */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-body); }
+        .topbar { background: var(--surface); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; box-shadow: var(--shadow-sm); }
+        .topbar h1 { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; letter-spacing: -0.5px; }
         .topbar p { font-size: 13px; color: var(--text-muted); font-weight: 500; }
         
-        .filters { display: flex; gap: 12px; }
-        .search-box { position: relative; width: 280px; }
-        .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-        .search-box input { width: 100%; padding: 12px 15px 12px 42px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 13px; font-weight: 500; background: var(--bg-body); transition: 0.2s; }
-        .search-box input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-        select.filter-select { padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--bg-body); color: var(--text-main); min-width: 160px; }
-        select.filter-select:focus { border-color: var(--primary); }
+        .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;}
+        .search-box { position: relative; width: 220px; }
+        .search-box i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; }
+        .search-box input { width: 100%; padding: 10px 16px 10px 40px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 13px; background: var(--bg-body); font-weight: 500; transition: border-color 0.2s; }
+        .search-box input:focus { border-color: var(--primary); background: white; }
+        select.filter-select { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--bg-body); color: var(--text-main); transition: border-color 0.2s; }
+        select.filter-select:hover { border-color: #cbd5e1; }
 
-        /* --- TABLE AREA --- */
         .content { flex: 1; padding: 30px 40px; overflow-y: auto; }
-        .table-card { background: var(--surface); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
-        
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background: #f8fafc; padding: 16px 20px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
-        td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 500; vertical-align: middle; }
-        tbody tr:hover { background-color: #f1f5f9; }
-        
-        .col-area { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
-        .col-feedback { font-size: 13px; color: var(--text-muted); min-width: 250px; line-height: 1.6; }
-        .feedback-item { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
-        .feedback-item i { color: var(--primary); margin-top: 3px; font-size: 10px; }
-        
-        /* Badges */
-        .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 32px; border-radius: 6px; font-weight: 700; font-size: 14px; }
-        .bg-green { background: var(--success-bg); color: var(--success-txt); border: 1px solid var(--success-border); }
-        .bg-yellow { background: var(--warning-bg); color: var(--warning-txt); border: 1px solid var(--warning-border); }
-        .bg-red { background: var(--danger-bg); color: var(--danger-txt); border: 1px solid var(--danger-border); }
-        .bg-null { background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; font-size: 12px; }
+        .view-section { display: none; height: 100%; flex-direction: column; animation: fadeIn 0.4s ease-out; }
+        .view-section.active { display: flex; }
 
-        .btn-action { background: white; color: var(--primary); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .btn-action:hover { background: var(--primary); color: white; border-color: var(--primary); }
-
-        /* --- MODAL --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal-box { background: white; width: 900px; max-width: 95%; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: popIn 0.3s ease-out; }
-        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        /* --- DASHBOARD GERENCIAL Y TARJETAS --- */
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .card-dash { background: var(--surface); border-radius: 16px; border: 1px solid var(--border); padding: 25px; box-shadow: var(--shadow-md); transition: transform 0.2s; display: flex; flex-direction: column; justify-content: space-between;}
+        .card-dash:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
+        .card-dash h3 { font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;}
+        .card-dash .val { font-size: 32px; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 8px;}
         
-        .modal-header { padding: 25px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
-        .modal-header h2 { font-size: 20px; font-weight: 800; color: var(--text-main); }
-        .modal-header p { font-size: 12px; color: var(--primary); font-weight: 700; text-transform: uppercase; margin-top: 5px; }
-        .close-btn { background: white; border: 1px solid var(--border); border-radius: 8px; width: 36px; height: 36px; font-size: 16px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .trend { font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; }
+        .trend.up { background: #d1fae5; color: #059669; }
+        .trend.down { background: #fee2e2; color: #dc2626; }
+        .trend.neutral { background: #f1f5f9; color: #64748b; }
+
+        .dash-grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px; min-height: 320px; }
+        .dash-panel { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-md); border: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; }
+        .dash-panel h3 { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; margin-top: 0; display: flex; align-items: center; gap: 8px; }
+        
+        .ranking-list { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1; }
+        .rank-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); }
+        .rank-info { display: flex; flex-direction: column; }
+        .rank-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+        .rank-sub { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .rank-score { font-size: 15px; font-weight: 800; }
+
+        /* --- TABLAS Y SCROLL --- */
+        .table-card { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-md); border: 1px solid var(--border); display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+        .table-scroll { overflow-x: auto; overflow-y: auto; border-radius: 0 0 16px 16px; height: 100%; }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
+        th { background: #f8fafc; padding: 18px 25px; font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        td { padding: 16px 25px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; vertical-align: middle; color: var(--text-main); background: white; }
+        tbody tr { transition: background-color 0.2s; }
+        tbody tr:hover td { background-color: #f1f5f9; }
+        tbody tr:last-child td { border-bottom: none; }
+        .col-area { font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* --- ETIQUETAS Y ESTADOS --- */
+        .status-select { padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; border: 1px solid var(--border); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px auto; padding-right: 30px; transition: all 0.2s; }
+        
+        .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 32px; border-radius: 8px; font-weight: 800; font-size: 13px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: var(--shadow-sm); transition: transform 0.2s, box-shadow 0.2s; }
+        .score-badge.clickable { cursor: pointer; }
+        .score-badge.clickable:hover { transform: translateY(-2px) scale(1.05); box-shadow: var(--shadow-md); }
+        
+        .bg-null { background: var(--bg-body); color: var(--text-muted); border: 1px dashed #cbd5e1; font-size: 12px; text-shadow: none; box-shadow: none; cursor: default;}
+        .bg-null.clickable { cursor: pointer; border-color: #93c5fd; background: #eff6ff !important; color: var(--primary) !important; transition: all 0.2s;}
+        .bg-null.clickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); background: #dbeafe !important; border-color: var(--primary); }
+
+        .btn-action { background: white; color: var(--primary); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: var(--shadow-sm); }
+        .btn-action:hover { background: var(--primary); color: white; border-color: var(--primary); transform: translateY(-1px); }
+
+        /* --- MODALES --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 100; padding: 20px;}
+        .modal-box { background: white; width: 100%; max-width: 900px; max-height: 90vh; border-radius: 20px; box-shadow: var(--shadow-xl); display: flex; flex-direction: column; }
+        .modal-header { padding: 25px 35px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: #f8fafc; position: sticky; top: 0; z-index: 10; border-radius: 20px 20px 0 0; }
+        .modal-header h2 { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .close-btn { background: white; border: 1px solid var(--border); border-radius: 10px; width: 36px; height: 36px; cursor: pointer; font-size: 15px; color: var(--text-muted); transition: all 0.2s; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
         .close-btn:hover { background: var(--danger-bg); color: var(--danger-txt); border-color: var(--danger-border); }
+        .modal-body { padding: 30px 35px; flex: 1; overflow-y: auto; }
         
-        .modal-body { padding: 30px; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
-        .chart-container { height: 320px; width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
-        
-        .feedback-list { list-style: none; max-height: 320px; overflow-y: auto; padding-right: 5px; }
-        .feedback-list li { padding: 15px; background: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; font-size: 13px; line-height: 1.5; color: var(--text-main); display: flex; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .feedback-list li i { color: var(--primary); font-size: 16px; margin-top: 1px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background: var(--bg-body); color: var(--text-main); font-weight: 500; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .form-group textarea { resize: vertical; min-height: 100px; }
 
-        #emptyState { padding: 100px 20px; text-align: center; color: var(--text-muted); }
-        #emptyState i { font-size: 60px; color: #cbd5e1; margin-bottom: 20px; }
+        /* Pestañas de Configuración */
+        .settings-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 25px; gap: 15px; overflow-x: auto; padding-bottom: 5px;}
+        .tab-btn { padding: 10px; background: transparent; border: none; font-size: 12px; font-weight: 800; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        .users-list { max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: white; }
+        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); transition: background 0.2s; }
+        .user-row:hover { background: var(--bg-body); }
+        .user-row:last-child { border-bottom: none; }
+        
+        .perm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .perm-grid label { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-main); }
+        .perm-grid input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+
+        /* --- PANEL PERSONAL AGENTE --- */
+        #agentDashboard { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: auto 1fr; gap: 20px; height: 100%; }
+        .agent-notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 12px; margin-top: 15px; }
+        .agent-note-item { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: var(--shadow-sm); transition: transform 0.2s; }
+        .agent-note-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .agent-note-item span.week { font-size: 11px; color: var(--text-main); font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
+        .agent-note-item span.area-lbl { font-size: 9px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .feedback-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+        .feedback-list li { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid var(--border); font-size: 13px; line-height: 1.5; color: var(--text-main); }
     </style>
 </head>
 <body>
 
+    <div id="authOverlay">
+        <div class="logo-icon" style="margin-bottom: 25px; width: 70px; height: 70px; font-size: 35px;"><i class="fas fa-headset"></i></div>
+        <div class="login-box">
+            <h2>Acceso Operativo</h2>
+            <input type="email" id="emailInput" placeholder="Correo electrónico corporativo">
+            <input type="password" id="passwordInput" placeholder="Contraseña">
+            <button id="btnLogin">Ingresar al Panel</button>
+            <p id="loginError"></p>
+        </div>
+    </div>
+
     <aside class="sidebar">
         <div class="logo-container">
-            <div class="logo-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
             <div>
-                <div class="logo-text">Q-Master</div>
-                <div class="logo-sub">Operations BI</div>
+                <div class="logo-text">Calidad CX</div>
+                <div class="logo-sub">Grupo Distelsa</div>
             </div>
         </div>
         
-        <div class="upload-area">
-            <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
-            <button class="btn-upload" onclick="document.getElementById('excelFileInput').click()">
-                <i class="fas fa-cloud-upload-alt"></i> Cargar Base Excel
-            </button>
-            <div id="uploadStatus"></div>
+        <div class="user-info">
+            <p id="uiUserName" title="Cargando...">Cargando...</p>
+            <div class="badges-container">
+                <span id="uiUserRole">ROL</span>
+                <span id="uiUserArea" class="area-badge" style="display: none;" title="Áreas Asignadas">ÁREA</span>
+            </div>
+            <button class="btn-logout" id="btnLogout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
         </div>
 
-        <div class="kpi-side">
-            <div class="kpi-item">
-                <span class="kpi-label">Volumen Asesores</span>
+        <div class="nav-menu">
+            <div class="nav-item active" id="navMatriz" onclick="App.switchView('viewMatriz')"><i class="fas fa-table"></i> Matriz Operativa</div>
+            <div class="nav-item" id="navGerencial" onclick="App.switchView('viewGerencial')" style="display:none;"><i class="fas fa-chart-pie"></i> Tablero Directivo</div>
+            <div class="nav-item" id="navNps" onclick="App.switchView('viewNps')" style="display:none;"><i class="fas fa-smile-beam"></i> Módulo Satisfacción</div>
+            <div class="nav-item" id="navFirmas" onclick="App.switchView('viewFirmas')" style="display:none;"><i class="fas fa-file-signature"></i> Seguimiento de Firmas</div>
+            <div class="nav-item" id="navAgente" onclick="App.switchView('viewAgente', true)" style="display:none;"><i class="fas fa-user"></i> Mi Desempeño</div>
+        </div>
+
+        <div class="upload-area">
+            <button class="btn-upload" id="btnSettings" style="display: none; background: #334155; color: #f8fafc;">
+                <i class="fas fa-cogs"></i> Panel de Ajustes
+            </button>
+        </div>
+
+        <div class="kpi-side" id="kpiPanel">
+            <div class="kpi-item" id="kpiAgentsRow">
+                <span class="kpi-label" title="Agentes contemplados según los filtros activos de Área y Estatus">Asesores Filtrados</span>
                 <span class="kpi-val" id="kpi-agents">0</span>
             </div>
             <div class="kpi-item">
-                <span class="kpi-label" id="kpi-dynamic-label">Promedio General</span>
+                <span class="kpi-label">Meta Global</span>
+                <span class="kpi-val" id="kpi-meta">95%</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-label">Promedio Actual</span>
                 <span class="kpi-val highlight" id="kpi-avg">0%</span>
             </div>
         </div>
     </aside>
 
     <main class="main">
-        <div class="topbar">
+        <header class="topbar">
             <div>
-                <h1>Gestión de Desempeño</h1>
-                <p>Matriz dinámica interactiva</p>
+                <h1 id="mainTitle">Centro de Monitoreo</h1>
+                <p id="mainSubtitle">Gestión de Calidad y Retroalimentación</p>
             </div>
-            <div class="filters">
+            <div class="filters" id="topFilters">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Buscar asesor..." onkeyup="aplicarFiltros()">
+                    <input type="text" id="searchInput" placeholder="Buscar asesor...">
                 </div>
-                <select class="filter-select" id="areaFilter" onchange="aplicarFiltros()">
-                    <option value="all">Todas las Áreas</option>
+                <select class="filter-select" id="yearFilter"></select>
+                <select class="filter-select" id="areaFilter" style="display: none;">
+                    <option value="all">Todas mis Áreas</option>
                 </select>
-                <select class="filter-select" id="weekFilter" onchange="aplicarFiltros()" style="border-color: var(--primary); color: var(--primary);">
+                <select class="filter-select" id="statusFilter">
+                    <option value="all">Estatus: Todos</option>
+                </select>
+                <select class="filter-select" id="weekFilter">
                     <option value="all">Últimas 4 Semanas</option>
                 </select>
+                
+                <div style="width: 1px; height: 24px; background: var(--border); margin: 0 5px;"></div>
+                <button class="btn-action" id="btnExportar" style="display: none; background: #0284c7; color: white; border: none; padding: 10px 16px; height: 38px;" onclick="App.exportToExcel()" title="Exportar a Excel los datos en pantalla">
+                    <i class="fas fa-file-export"></i> Exportar
+                </button>
             </div>
-        </div>
+        </header>
 
-        <div class="content">
-            <div class="table-card">
-                <table id="dataTable">
-                    <thead id="tableHead">
-                        <tr><th>Área</th><th>Asesor</th><th>Cargando...</th></tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="10">
-                                <div id="emptyState">
-                                    <i class="fas fa-file-excel"></i>
-                                    <h2>Plataforma Inicializada</h2>
-                                    <p>Sube el archivo Excel bloqueado. El sistema extraerá la data y áreas desde la Semana 1.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <section class="content">
+            <div id="viewMatriz" class="view-section active">
+                
+                <div id="matrizToolbar" style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: white; padding: 15px 25px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                    <div>
+                        <h3 style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">Gestión de Calificaciones</h3>
+                        <p style="font-size: 12px; color: var(--text-muted);">Añade registros individuales o sube bases masivas desde Excel.</p>
+                    </div>
+                    <div style="margin-left: auto; display: flex; gap: 10px;">
+                        <button class="btn-action" id="btnIngresoManual" style="display: none; background: #8b5cf6; color: white; border: none;"><i class="fas fa-keyboard"></i> Ingreso Manual</button>
+                        <button class="btn-action" id="btnImportarPopup" style="display: none; background: #10b981; color: white; border: none;"><i class="fas fa-file-import"></i> Subir Excel</button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-scroll">
+                        <table id="dataTable">
+                            <thead id="tableHead">
+                                <tr><th>Área</th><th>Asesor</th><th>Estado Operativo</th><th>Promedio</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr><td colspan="10" style="text-align:center; padding: 60px; color: var(--text-muted); font-weight: 600;">Sincronizando información de la base de datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <div id="viewGerencial" class="view-section">
+                <div id="dashFilterWarning" style="display:none; background: #e0f2fe; color: #0284c7; padding: 12px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #bae6fd;">
+                    <i class="fas fa-filter"></i> Estás visualizando datos segmentados.
+                </div>
+                <div class="grid-cards">
+                    <div class="card-dash">
+                        <h3 title="Agentes inactivos/excluidos en Ajustes no afectan este valor.">Calidad Global <i class="fas fa-star" style="color:var(--primary);"></i></h3>
+                        <div><div class="val" id="dashAvg">0%</div><div id="dashAvgDelta" class="trend neutral">-- vs Sem Ant.</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Satisfacción Promedio <i class="fas fa-heart" style="color:#ec4899;"></i></h3>
+                        <div><div class="val" id="dashNps" style="color:#db2777;">0/10</div><div id="dashNpsDelta" class="trend neutral">-- vs Sem Ant.</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Asimilación (Firmas) <i class="fas fa-check-double" style="color:var(--success-txt);"></i></h3>
+                        <div><div class="val" id="dashComp" style="color: var(--success-txt);">0%</div><div style="font-size: 12px; color: var(--text-muted); font-weight: 600;" id="dashCompLbl">0 compromisos firmados</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Evaluaciones <i class="fas fa-clipboard-list" style="color:#f59e0b;"></i></h3>
+                        <div><div class="val" id="dashEvals" style="color:#d97706;">0</div><div style="font-size: 12px; color: var(--text-muted); font-weight: 600;" id="dashEvalsLbl">Registros operativos válidos</div></div>
+                    </div>
+                </div>
+                <div class="dash-grid-2">
+                    <div class="dash-panel"><h3><i class="fas fa-chart-line"></i> Evolución Histórica</h3><div style="flex: 1; min-height: 250px;"><canvas id="gerencialTrendChart"></canvas></div></div>
+                    <div class="dash-panel"><h3><i class="fas fa-chart-bar"></i> Comparativo por Área (Sem. Actual)</h3><div style="flex: 1; min-height: 250px;"><canvas id="gerencialAreaChart"></canvas></div></div>
+                </div>
+                <div class="dash-grid-2" style="grid-template-columns: 1fr 1fr; min-height: auto;">
+                    <div class="dash-panel"><h3><i class="fas fa-trophy"></i> Ranking de Áreas</h3><div class="ranking-list" id="rankAreas"></div></div>
+                    <div class="dash-panel"><h3><i class="fas fa-medal"></i> Desempeño de Asesores (Top / Alerta)</h3><div class="ranking-list" id="rankAsesores"></div></div>
+                </div>
+            </div>
+
+            <div id="viewNps" class="view-section">
+                <h2 style="margin-bottom: 20px; font-weight: 800; color: var(--text-main); font-size: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-smile-beam" style="color: #ec4899;"></i> Satisfacción de Asesores (NPS)
+                </h2>
+                <div style="background: #e0f2fe; color: #0369a1; padding: 12px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #bae6fd;">
+                    <i class="fas fa-info-circle"></i> Los datos de este tablero se obtienen automáticamente cuando el asesor firma de enterado su nota en la plataforma.
+                </div>
+                <div class="grid-cards">
+                    <div class="card-dash" style="background: linear-gradient(135deg, #1e293b, #0f172a); border:none;">
+                        <h3 style="color: #cbd5e1;">Índice NPS Global</h3>
+                        <div><div class="val" id="npsMainScore" style="color: white; font-size: 38px;">0</div><div class="trend" id="npsMainLabel" style="background: rgba(255,255,255,0.1); color: #cbd5e1;">Puntaje neto de lealtad</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Promotores <i class="fas fa-laugh-beam" style="color:#10b981;"></i></h3>
+                        <div><div class="val" id="npsPromoters" style="color:#10b981;">0%</div><div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Asesores muy satisfechos</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Detractores <i class="fas fa-frown" style="color:#ef4444;"></i></h3>
+                        <div><div class="val" id="npsDetractors" style="color:#ef4444;">0%</div><div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Asesores insatisfechos</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Encuestas Recabadas <i class="fas fa-poll" style="color:#3b82f6;"></i></h3>
+                        <div><div class="val" id="npsTotalSurveys" style="color:#3b82f6;">0</div><div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Firmas registradas válidas</div></div>
+                    </div>
+                </div>
+                <div class="dash-grid-2">
+                    <div class="dash-panel"><h3><i class="fas fa-chart-line"></i> Evolución de Satisfacción por Semana</h3><div style="flex: 1; min-height: 250px;"><canvas id="npsTrendChart"></canvas></div></div>
+                    <div class="dash-panel"><h3><i class="fas fa-chart-bar"></i> Satisfacción por Área</h3><div style="flex: 1; min-height: 250px;"><canvas id="npsAreaChart"></canvas></div></div>
+                </div>
+            </div>
+
+            <div id="viewFirmas" class="view-section">
+                <h2 style="margin-bottom: 20px; font-weight: 800; color: var(--text-main); font-size: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-file-signature" style="color: #f59e0b;"></i> Auditoría y Seguimiento de Firmas
+                </h2>
+                
+                <div style="background: #fffbeb; color: #b45309; padding: 12px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #fde68a;">
+                    <i class="fas fa-info-circle"></i> Mostrando únicamente las evaluaciones que <strong>ya cuentan con feedback redactado por el líder</strong> pero que el asesor aún no ha firmado de enterado.
+                </div>
+
+                <div class="grid-cards">
+                    <div class="card-dash">
+                        <h3>Total Requeridas</h3>
+                        <div><div class="val" id="firmasTotal">0</div><div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Evaluaciones evaluables</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Firmadas (Completado) <i class="fas fa-check-double" style="color:#10b981;"></i></h3>
+                        <div><div class="val" id="firmasDone" style="color:#10b981;">0</div></div>
+                    </div>
+                    <div class="card-dash" style="background: #fef2f2; border-color: #fecaca;">
+                        <h3 style="color:#b91c1c;">Pendientes (Alerta) <i class="fas fa-exclamation-circle"></i></h3>
+                        <div><div class="val" id="firmasPend" style="color:#b91c1c;">0</div></div>
+                    </div>
+                    <div class="card-dash">
+                        <h3>Cumplimiento de Firmas</h3>
+                        <div><div class="val" id="firmasPct" style="color:var(--primary);">0%</div></div>
+                    </div>
+                </div>
+
+                <div class="table-card" style="margin-top: 5px;">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Asesor Asignado</th>
+                                    <th>Área</th>
+                                    <th>Semana</th>
+                                    <th style="text-align: center;">Nota Operativa</th>
+                                    <th>Retroalimentación del Líder</th>
+                                    <th style="text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="firmasPendingBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="viewAgente" class="view-section">
+                <div id="agentDashboard">
+                    <div class="card-dash" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
+                        <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h3 id="agentDashboardTitle" style="margin-top: 0; font-size: 15px;">Mis Resultados Semanales</h3>
+                                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Haz clic en la calificación para leer el feedback y gestionar el compromiso.</p>
+                                <div class="agent-notes-grid" id="agentNotesGrid"></div>
+                            </div>
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;">
+                                <h3 style="margin-top: 0; color: #059669; font-size: 13px; display: flex; align-items: center; gap: 6px;"><i class="fas fa-medal"></i> Destacado</h3>
+                                <p id="famaSubtitle" style="font-size: 11px; color: #166534; margin-bottom: 15px;">Semanas con Excelencia (100%)</p>
+                                <div class="agent-notes-grid" id="agentBestPracticesGrid" style="grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 8px; margin-top: 0;"></div>
+                            </div>
+                            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px; display:flex; flex-direction:column;">
+                                <h3 style="margin-top: 0; color: #1d4ed8; font-size: 13px; display: flex; align-items: center; gap: 6px;"><i class="fas fa-chart-pie"></i> Aporte al Área</h3>
+                                <p id="agentAreaSub" style="font-size: 11px; color: #1e3a8a; margin-bottom: 15px;">Mi Promedio vs El Equipo</p>
+                                <div style="display: flex; flex-direction: column; gap: 12px; flex:1; justify-content:center;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;"><span style="color:var(--text-muted); font-weight:600;">Mi Promedio:</span><strong id="agentPersonalAvg" style="font-size:18px; color:var(--text-main);">0%</strong></div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;"><span style="color:var(--text-muted); font-weight:600;">Promedio General:</span><strong id="agentAreaAvg" style="font-size:18px; color:var(--text-main);">0%</strong></div>
+                                    <div id="agentAreaDiff" style="margin-top: 8px; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 800;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-dash" style="display: flex; flex-direction: column;">
+                        <h3 style="margin-top: 0; margin-bottom: 20px;">Curva de Evolución</h3>
+                        <div style="flex: 1; min-height: 200px;"><canvas id="agentMainChart"></canvas></div>
+                    </div>
+                    <div class="card-dash" style="display: flex; flex-direction: column;">
+                        <h3 style="margin-top: 0;">Últimas Observaciones</h3>
+                        <ul class="feedback-list" id="agentMainFeedback"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <div class="modal-overlay" id="agentModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <div>
-                    <h2 id="modalAgentName">Nombre</h2>
-                    <p id="modalAgentArea">Área</p>
-                </div>
-                <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
-            </div>
+    <div class="modal-overlay" id="areaModal">
+        <div class="modal-box fade-in" style="max-width: 450px; margin: auto;">
+            <div class="modal-header"><h2>Cambiar Vista de Área</h2><button class="close-btn" onclick="UI.closeModal('areaModal')"><i class="fas fa-times"></i></button></div>
             <div class="modal-body">
-                <div>
-                    <h3 style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 15px; letter-spacing: 1px;">CURVA DE DESEMPEÑO</h3>
-                    <div class="chart-container"><canvas id="modalChart"></canvas></div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Selecciona las áreas que deseas visualizar temporalmente en tu matriz.</p>
+                <div class="form-group"><div id="modalAreaChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"></div></div>
+                <button class="btn-action" onclick="App.saveMyArea()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Refrescar Matriz</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="manualEntryModal">
+        <div class="modal-box fade-in" style="max-width: 450px; margin: auto;">
+            <div class="modal-header"><h2>Registro Manual de Calidad</h2><button class="close-btn" onclick="UI.closeModal('manualEntryModal')"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Asesor y Área a Evaluar</label><select id="manualAgenteSelect"></select></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Año (Ej: 2026)</label><input type="number" id="manualAnio"></div>
+                    <div class="form-group"><label>Semana (Ej: S22)</label><input type="text" id="manualSemana" placeholder="S + Número"></div>
                 </div>
-                <div>
-                    <h3 style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 15px; letter-spacing: 1px;">REGISTRO DE FEEDBACK</h3>
-                    <ul class="feedback-list" id="modalFeedback"></ul>
+                <div class="form-group"><label>Calificación o Estatus</label><input type="text" id="manualNota" placeholder="Número o texto parametrizado en Ajustes"></div>
+                <button class="btn-action" onclick="App.saveManualEntry()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Guardar Calificación</button>
+                <p id="msgManual" style="font-size: 13px; font-weight: 800; color: var(--success-txt); text-align: center; margin-top: 15px; display: none;"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="feedbackModal">
+        <div class="modal-box fade-in" style="max-width: 900px; margin: auto;">
+            <div class="modal-header" style="flex-direction: column; padding-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;">
+                    <div>
+                        <h2 id="fbAgentName">Nombre del Asesor</h2>
+                        <p id="fbDetails" style="color: var(--primary); font-size: 14px; font-weight: 800; margin-top: 4px;">Semana -- | Área --</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div id="editNoteContainer" style="display:none; flex-direction:column; align-items:flex-end;">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <select id="inpEditArea" style="padding:8px; font-size:12px; border-radius:6px; border:1px solid var(--border); font-weight:600;" title="Modificar Área"></select>
+                                <input type="text" id="inpEditNote" style="width:70px; padding:8px; text-align:center; font-weight:bold; border:1px solid var(--border); border-radius:6px; font-size: 13px;" title="Modificar Nota" placeholder="Nota">
+                                <button class="btn-action" style="padding:8px 12px; font-size:12px; background: #facc15; color: #854d0e; border:none;" onclick="Interactions.saveEditedNote()" title="Guardar Cambios"><i class="fas fa-edit"></i> Guardar</button>
+                            </div>
+                        </div>
+                        <div id="fbBadgeZone" style="transform: scale(1.1); margin-right: 20px; margin-left: 10px;"></div>
+                        <button class="close-btn" onclick="UI.closeModal('feedbackModal')"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+
+                <div id="historialBox" style="margin-top: 15px; padding: 12px 15px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; width: 100%; display:none;">
+                    <h4 style="font-size:11px; color:#d97706; text-transform:uppercase; margin-bottom:8px;"><i class="fas fa-history"></i> Auditoría de Cambios del Registro</h4>
+                    <div id="historialList" style="font-size:11px; color:var(--text-main); display:flex; flex-direction:column; gap:6px; max-height:80px; overflow-y:auto;"></div>
+                </div>
+            </div>
+
+            <div class="modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div style="background: #f8fafc; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; position: relative;">
+                    <h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">1. Feedback del Líder</h3>
+                    <div class="form-group" style="flex: 1;"><textarea id="txtFeedbackLider" placeholder="Redacta la oportunidad de mejora para esta semana..." style="height: 100%; min-height: 120px;"></textarea></div>
+                    <div id="informativoToggleBox" style="display:none; margin-bottom: 15px; background: #e0f2fe; padding: 10px; border-radius: 8px; border: 1px solid #bae6fd;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #0284c7; font-size: 12px; margin-bottom: 0;">
+                            <input type="checkbox" id="chkEsInformativo" style="width: 16px; height: 16px; accent-color: #0284c7;">
+                            <strong>Métrica Informativa (No exigir firma del asesor)</strong>
+                        </label>
+                    </div>
+                    <button class="btn-action" id="btnSaveLider" style="justify-content: center; background: var(--text-main); color: white; border: none; padding: 14px;"><i class="fas fa-save"></i> Guardar Feedback</button>
+                    <p id="msgLider" style="font-size: 12px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Guardado exitosamente.</p>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column;">
+                    <h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">2. Firma del Asesor</h3>
+                    
+                    <div id="zonaFirmaAgente">
+                        <div class="form-group" id="divCompromiso">
+                            <label>Compromiso Operativo</label>
+                            <textarea id="txtCompromisoAgente" rows="3" placeholder="Define las acciones concretas para mejorar este resultado..."></textarea>
+                        </div>
+                        <div class="form-group" id="divEnterado" style="display: none; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #166534; font-size: 13px;">
+                                <input type="checkbox" id="chkEnteradoAsesor" style="width: 18px; height: 18px; accent-color: #166534;">
+                                <strong>Marcar de enterado (Sin observaciones del líder)</strong>
+                            </label>
+                        </div>
+                        <div class="form-group"><label>Evaluación del Acompañamiento (NPS)</label><select id="selNpsAgente"></select></div>
+                        <div class="form-group"><label>Comentario Adicional (Opcional)</label><input type="text" id="txtObsAgente" placeholder="¿Algo más que agregar sobre la evaluación?"></div>
+                        <button class="btn-action" id="btnSaveAgente" style="justify-content: center; background: var(--success-txt); color: white; border: none; padding: 14px; margin-top: auto; width: 100%;"><i class="fas fa-signature"></i> Firmar de Enterado</button>
+                    </div>
+
+                    <div id="zonaInfoExcepcion" style="display: none; height: 100%; align-items: center; justify-content: center; text-align: center; flex-direction: column; color: var(--text-muted);">
+                        <i class="fas fa-info-circle" style="font-size: 32px; margin-bottom: 10px; color: #3b82f6;"></i>
+                        <p style="font-size: 13px; font-weight: 600;">Registro Informativo.</p><p style="font-size: 11px;">Esta evaluación no requiere firma ni compromiso formal.</p>
+                    </div>
+                    <p id="msgAgente" style="font-size: 12px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Compromiso registrado correctamente.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let datosGlobales = [];
-        let weekKeysGlobal = [];
-        let agentChartObj = null;
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-box fade-in" style="max-width: 500px; margin: auto;">
+            <div class="modal-header"><h2>Subir Evaluaciones Masivas</h2><button class="close-btn" onclick="UI.closeModal('importModal')"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+                    <div class="form-group"><label>Año (Base)</label><input type="number" id="impAnio"></div>
+                    <div class="form-group"><label>Semana(s)</label><input type="text" id="impSemana" placeholder="Ej: S1, S2, 3, 15"></div>
+                </div>
+                <div class="form-group"><label>Subir para mis Áreas</label><select id="impArea" class="dynamic-area-select"><option value="Todas">Procesar mis áreas permitidas</option></select></div>
+                <div class="form-group" style="text-align: center; margin-top: 30px;">
+                    <input type="file" id="realFileInput" accept=".xlsx, .xls" style="display: none;">
+                    <button class="btn-action" id="btnSelectFile" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; background: var(--primary); color: white; border: none;"><i class="fas fa-file-excel"></i> Cargar Archivo Excel</button>
+                    <p id="impStatus" style="font-size: 13px; margin-top: 15px; font-weight: 800; color: var(--primary);"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        const redondear = val => (val === "" || isNaN(val)) ? "-" : Math.round(Number(val));
-        const getBadge = nota => {
-            if (nota === "-") return `<span class="score-badge bg-null">-</span>`;
-            return `<span class="score-badge ${nota >= 95 ? 'bg-green' : (nota >= 90 ? 'bg-yellow' : 'bg-red')}">${nota}</span>`;
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-box fade-in" style="max-width: 950px; height: 85vh; margin: auto;">
+            <div class="modal-header">
+                <div>
+                    <h2>Panel de Ajustes Generales</h2>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px; font-weight: 500;">Administración de credenciales, roles y diseño.</p>
+                </div>
+                <button class="close-btn" onclick="UI.closeModal('settingsModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding-top: 20px;">
+                <div class="settings-tabs">
+                    <button class="tab-btn active" id="btnTabUsuarios" onclick="App.switchSettingsTab('tabUsuarios')">Usuarios</button>
+                    <button class="tab-btn" id="btnTabRoles" onclick="App.switchSettingsTab('tabRoles')">Permisos</button>
+                    <button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas</button>
+                    <button class="tab-btn" id="btnTabEstados" onclick="App.switchSettingsTab('tabEstados')">Estados Asesor</button>
+                    <button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas y Textos</button>
+                    <button class="tab-btn" id="btnTabNps" onclick="App.switchSettingsTab('tabNps')">Encuesta NPS</button>
+                    <button class="tab-btn" id="btnTabOperativas" onclick="App.switchSettingsTab('tabOperativas')" style="color: #0284c7;">Reglas Operativas</button>
+                </div>
+
+                <div id="tabUsuarios" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px;">
+                    <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border);">
+                        <h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">CREAR / EDITAR PERFIL</h3>
+                        <div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div>
+                        <div class="form-group"><label>Correo Electrónico</label><input type="email" id="newUserEmail" placeholder="usuario@distelsa.com.gt"></div>
+                        <div class="form-group"><label>Contraseña (Min. 6 caracteres)</label><input type="password" id="newUserPass" placeholder="En blanco si solo actualizas datos"></div>
+                        <div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div>
+                        <div class="form-group"><label>Áreas Asignadas</label><div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto;"></div></div>
+                        <button class="btn-action" id="btnSaveUser" style="background: var(--text-main); color: white; width: 100%; justify-content: center; margin-top: 10px; padding: 14px; border: none;"><i class="fas fa-save"></i> Guardar Perfil</button>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Directorio de Equipo</h3>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button class="btn-action" id="btnExportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #10b981; color: white; border: none;" onclick="Admin.exportUsers()"><i class="fas fa-file-export"></i> Exportar</button>
+                                <button class="btn-action" id="btnImportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #3b82f6; color: white; border: none;" onclick="document.getElementById('fileImportUsers').click()"><i class="fas fa-file-import"></i> Importar</button>
+                                <input type="file" id="fileImportUsers" accept=".xlsx, .xls" style="display: none;" onchange="Admin.importUsers(event)">
+                                <div class="search-box" style="width: 150px;"><i class="fas fa-search"></i><input type="text" id="searchUserEdit" placeholder="Filtrar..." style="padding: 8px 8px 8px 30px;" onkeyup="Admin.filterUsers()"></div>
+                            </div>
+                        </div>
+                        <div class="users-list" id="activeUsersList" style="flex: 1;"></div>
+                    </div>
+                </div>
+
+                <div id="tabRoles" style="display: none; grid-template-columns: 1fr 2fr; gap: 40px;">
+                    <div style="display: flex; flex-direction: column;">
+                        <h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase;">Perfiles del Sistema</h3>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;"><input type="text" id="newRoleInput" placeholder="Nombre del nuevo rol..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none;"><button class="btn-action" style="padding: 10px 15px;" onclick="Admin.addRole()"><i class="fas fa-plus"></i></button></div>
+                        <div class="users-list" id="rolesListDiv" style="padding: 10px; flex: 1;"></div>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 20px; text-transform: uppercase;">Configurando Permisos: <span id="editingRoleName" style="color: var(--text-main);">Asesor</span></h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Operación y Matriz</h4>
+                                <div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;">
+                                    <label><input type="checkbox" id="chk_ver_global"> Ver Dashboard Directivo</label>
+                                    <label><input type="checkbox" id="chk_ver_area"> Ver Matriz de Calidad</label>
+                                    <label><input type="checkbox" id="chk_ver_propio"> Ver Desempeño Propio</label>
+                                    <label><input type="checkbox" id="chk_ver_nps"> Módulo Satisfacción (NPS)</label>
+                                    <label><input type="checkbox" id="chk_ver_firmas"> <strong style="color:#f59e0b;">Seguimiento de Firmas</strong></label>
+                                    <label><input type="checkbox" id="chk_subir_excel"> Ingreso de Notas (Excel/Manual)</label>
+                                    <label><input type="checkbox" id="chk_editar_notas"> Editar Calificaciones y Área</label>
+                                    <label><input type="checkbox" id="chk_cambiar_estado"> Administrar Estados (Desplegable)</label>
+                                    <label><input type="checkbox" id="chk_add_feedback"> Evaluar y dar Feedback</label>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Ajustes de Configuración</h4>
+                                <div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;">
+                                    <label title="Da acceso maestro a todo el engranaje"><input type="checkbox" id="chk_gestionar_sistema"> <strong style="color:var(--primary);">Acceso Total Configuración</strong></label>
+                                    <label><input type="checkbox" id="chk_cfg_usuarios"> Módulo: Usuarios (Crear/Editar)</label>
+                                    <label><input type="checkbox" id="chk_importar_usuarios"> <span style="color:#3b82f6;">Importar Usuarios (Excel)</span></label>
+                                    <label><input type="checkbox" id="chk_exportar_usuarios"> <span style="color:#10b981;">Exportar Directorio</span></label>
+                                    <label><input type="checkbox" id="chk_cfg_roles"> Módulo: Permisos</label>
+                                    <label><input type="checkbox" id="chk_cfg_areas"> Módulo: Áreas</label>
+                                    <label><input type="checkbox" id="chk_cfg_estados"> Módulo: Estados Asesor</label>
+                                    <label><input type="checkbox" id="chk_cfg_escalas"> Módulo: Escalas Numéricas</label>
+                                    <label><input type="checkbox" id="chk_cfg_nps"> Módulo: Encuesta NPS</label>
+                                    <label><input type="checkbox" id="chk_cfg_feedbacks"> Módulo: Reglas Operativas</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: right; margin-top: 25px;"><button class="btn-action" id="btnSaveRolePerms" style="background: var(--primary); color: white; display: inline-flex; padding: 12px 25px; border: none;"><i class="fas fa-shield-alt"></i> Aplicar Permisos</button></div>
+                    </div>
+                </div>
+
+                <div id="tabAreas" style="display: none;"><div id="areasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newAreaInput" placeholder="Nombre de la nueva área..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none;"><button class="btn-action" onclick="Admin.addArea()"><i class="fas fa-plus"></i> Agregar Área</button></div></div>
+                <div id="tabEstados" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 3fr 1fr 1fr; gap: 15px; font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 10px; padding: 0 10px; text-transform: uppercase;"><span>Color</span><span>Nombre</span><span style="text-align:center;">Suma a KPI</span><span></span></div><div id="estadosContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 650px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addEstadoRow()"><i class="fas fa-plus"></i> Añadir Estado</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveEstados()"><i class="fas fa-save"></i> Guardar Estados</button></div></div>
+                <div id="tabColores" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 1fr 1fr 2fr 1fr; gap: 15px; font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 10px; padding: 0 10px; text-transform: uppercase;"><span>Color</span><span>Mínimo</span><span>Máximo</span><span>Descripción</span><span></span></div><div id="escalasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addScaleRow()"><i class="fas fa-plus"></i> Añadir Nuevo Rango</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveScales()"><i class="fas fa-save"></i> Guardar Cambios</button></div></div>
+                <div id="tabNps" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 3fr 1fr; gap: 15px; font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 10px; padding: 0 10px; text-transform: uppercase;"><span>Valor Numérico</span><span>Etiqueta</span><span></span></div><div id="npsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 700px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addNpsRow()"><i class="fas fa-plus"></i> Añadir Opción</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveNps()"><i class="fas fa-save"></i> Guardar Encuesta</button></div></div>
+                <div id="tabOperativas" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-bolt"></i> Auto-Cierre por Excelencia</h4><div class="form-group"><label>Umbral Numérico (Ej. 100)</label><input type="number" id="cfgAutoClose" placeholder="Dejar en 0 si todas requieren firma"></div></div>
+                            <div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Excepciones Manuales</h4><div class="form-group"><label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="cfgAllowInformativo" style="width:18px; height:18px;"> Habilitar botón "Solo Informativo"</label></div></div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> Objetivos y Gamificación</h4><div class="form-group"><label>Meta de Calidad (%)</label><input type="number" id="cfgMetaGlobal"></div><div class="form-group"><label>Umbral Destacado (%)</label><input type="number" id="cfgFamaThreshold"></div></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;"><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveFeedbackRules()"><i class="fas fa-save"></i> Guardar Reglas Operativas</button></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLmJuFHDIKMMAfshOdDPnDEuY1KCULa2U",
+            authDomain: "control-de-calidad-d3bb7.firebaseapp.com",
+            projectId: "control-de-calidad-d3bb7",
+            storageBucket: "control-de-calidad-d3bb7.firebasestorage.app",
+            messagingSenderId: "1071480933734",
+            appId: "1:1071480933734:web:c4152715cff99f4006cca7"
         };
 
-        // Motor Analítico Corregido (Detecta Áreas con Prioridad)
-        document.getElementById('excelFileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const adminApp = initializeApp(firebaseConfig, "AdminApp");
+        const adminAuth = getAuth(adminApp);
 
-            const status = document.getElementById('uploadStatus');
-            status.style.display = "block";
-            status.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Extrayendo data...";
+        const initYearFilter = () => {
+            let yf = document.getElementById('yearFilter');
+            let currentY = new Date().getFullYear();
+            let yHTML = "";
+            for(let y = 2025; y <= 2030; y++) { yHTML += `<option value="${y}" ${y === currentY ? 'selected' : ''}>Año ${y}</option>`; }
+            yf.innerHTML = yHTML;
+            yf.addEventListener('change', () => { App.processRecordsForYear(); });
+            document.getElementById('manualAnio').value = currentY;
+            document.getElementById('impAnio').value = currentY;
+        };
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("resultado")) || workbook.SheetNames[0]], {header: 1, defval: ""});
+        window.State = {
+            user: { email: "", nombre: "", rol: "", areas: [], permisos: [] },
+            viewingAgentName: null, 
+            allRecords: [], 
+            records: [], 
+            weekKeys: [],
+            charts: { agent: null, managerTrend: null, managerArea: null, npsTrend: null, npsArea: null },
+            unsubscribeSync: null, 
+            currentDocId: null, 
+            feedbackRules: { autoClose: 100, allowInformative: true, metaGlobal: 95, famaThreshold: 100 }, 
+            areas: ["Servicio Técnico", "Oficinas Centrales", "E Commerce", "Transporte"],
+            estadosList: [
+                { lbl: "Operativo", color: "#059669", calcProm: true },
+                { lbl: "IGSS", color: "#d97706", calcProm: true },
+                { lbl: "En Vacaciones", color: "#4f46e5", calcProm: true },
+                { lbl: "Inactivo/Baja", color: "#dc2626", calcProm: false }
+            ],
+            scales: [
+                { min: 95, max: 100, color: "#10b981", lbl: "Super Verde" },
+                { min: 90, max: 94, color: "#facc15", lbl: "Amarillo" },
+                { min: 11, max: 89, color: "#f43f5e", lbl: "Corinto" },
+                { min: 0, max: 10, color: "#ef4444", lbl: "Rojo" },
+                { min: -1, max: -1, color: "#3b82f6", lbl: "VACACIONES" },
+                { min: -1, max: -1, color: "#d97706", lbl: "IGSS" }
+            ],
+            npsOptions: [
+                { val: "10", lbl: "10 - Excelente retroalimentación" },
+                { val: "9", lbl: "9 - Buena retroalimentación" },
+                { val: "8", lbl: "8 - Aceptable" },
+                { val: "5", lbl: "5 - Podría mejorar" },
+                { val: "1", lbl: "1 - Inconforme con la sesión" }
+            ],
+            admin: { activeRoleEdit: "Agente", userListCache: [] }
+        };
+
+        window.UI = {
+            openModal: (id) => document.getElementById(id).style.display = 'flex',
+            closeModal: (id) => document.getElementById(id).style.display = 'none',
+            hasPerm: (p) => State.user.permisos.includes(p) || State.user.permisos.includes('chk_gestionar_sistema'),
+            
+            getBadgeStyle: (val) => {
+                if(val === "-" || val === "") return "background: transparent; color: var(--text-muted); border: 1px dashed var(--border); box-shadow: none; text-shadow: none;";
+                if(isNaN(val)) {
+                    let scale = State.scales.find(x => x.lbl.toUpperCase() === String(val).toUpperCase());
+                    return scale ? `background: ${scale.color};` : "background: var(--text-muted);";
+                }
+                let num = Number(val);
+                let scale = State.scales.find(x => num >= x.min && num <= x.max && x.min !== -1);
+                return scale ? `background: ${scale.color};` : "background: var(--text-muted);";
+            },
+
+            getBadgeHTML: (val, isClickable = false, clickFn = "") => {
+                let cssClass = (val === "-" || val === "") ? "score-badge bg-null" : "score-badge";
+                cssClass += isClickable ? " clickable" : "";
+                let fn = isClickable ? `onclick="${clickFn}"` : "";
+                let displayVal = val;
+                if((val === "-" || val === "") && isClickable) displayVal = '<i class="fas fa-plus" style="font-size: 10px;"></i>';
+                else if (val === "") displayVal = "-";
+                return `<span class="${cssClass}" style="${UI.getBadgeStyle(val)}" ${fn} title="${(val === '-' || val === '') && isClickable ? 'Añadir calificación' : ''}">${displayVal}</span>`;
+            },
+
+            showError: (msg) => {
+                const errBox = document.getElementById('loginError');
+                errBox.innerText = msg; errBox.style.display = 'block';
+                document.getElementById('btnLogin').innerText = "Ingresar al Panel";
+            },
+
+            updateSelects: () => {
+                let isGlobalData = State.user.areas.includes("Todas");
+                let permittedAreas = isGlobalData ? State.areas : State.areas.filter(a => State.user.areas.includes(a));
+                if (!isGlobalData) { State.user.areas.forEach(a => { if(!permittedAreas.includes(a)) permittedAreas.push(a); }); }
+
+                document.querySelectorAll('select.dynamic-area-select').forEach(select => {
+                    let currentVal = select.value;
+                    let html = (select.id === 'impArea') ? `<option value="Todas">Procesar mis áreas permitidas</option>` : "";
+                    permittedAreas.forEach(a => { if(a !== "Todas") html += `<option value="${a}">${a}</option>`; });
+                    if(select.id !== 'impArea' && (isGlobalData || permittedAreas.length > 1)) html += `<option value="Todas">Todas mis Áreas</option>`;
+                    select.innerHTML = html;
+                    if(Array.from(select.options).some(opt => opt.value === currentVal)) select.value = currentVal;
+                });
+
+                const userAreaChecks = document.getElementById('userAreaChecks');
+                if(userAreaChecks) {
+                    let hUser = permittedAreas.map(a => { if(a !== "Todas") return `<label><input type="checkbox" class="chk-area-user" value="${a}"> ${a}</label>`; return ''; }).join('');
+                    if (isGlobalData) hUser += `<label><input type="checkbox" class="chk-area-user" value="Todas"> <b style="color:var(--primary);">Todas las Áreas (Visión Global)</b></label>`;
+                    userAreaChecks.innerHTML = hUser;
+                }
+
+                const modalAreaChecks = document.getElementById('modalAreaChecks');
+                if(modalAreaChecks) {
+                    let hMod = permittedAreas.map(a => { if(a !== "Todas") return `<label><input type="checkbox" class="chk-area-modal" value="${a}"> ${a}</label>`; return ''; }).join('');
+                    if (isGlobalData || permittedAreas.length > 1) hMod += `<label><input type="checkbox" class="chk-area-modal" value="Todas"> <b style="color:var(--primary);">Todas (Mis Áreas)</b></label>`;
+                    modalAreaChecks.innerHTML = hMod;
+                }
+
+                let stFilter = document.getElementById('statusFilter');
+                if(stFilter) {
+                    let currSt = stFilter.value;
+                    let htmlStatus = '<option value="all">Estatus: Todos</option>';
+                    State.estadosList.forEach(e => htmlStatus += `<option value="${e.lbl}">${e.lbl}</option>`);
+                    stFilter.innerHTML = htmlStatus;
+                    if(Array.from(stFilter.options).some(o => o.value === currSt)) stFilter.value = currSt;
+                }
+            }
+        };
+
+        document.getElementById('btnLogin').addEventListener('click', () => {
+            const em = document.getElementById('emailInput').value.trim(); const pw = document.getElementById('passwordInput').value;
+            if(!em || !pw) return UI.showError("Por favor, ingresa tus credenciales completas.");
+            document.getElementById('btnLogin').innerText = "Validando...";
+            signInWithEmailAndPassword(auth, em, pw).catch(err => UI.showError("Credenciales incorrectas o bloqueado por intentos fallidos."));
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => signOut(auth));
+
+        onAuthStateChanged(auth, async (user) => {
+            const errBox = document.getElementById('loginError');
+            if (user) {
+                try {
+                    let inputEmail = document.getElementById('emailInput').value.trim() || user.email;
+                    let userDoc = await getDoc(doc(db, "usuarios", inputEmail));
+                    if(!userDoc.exists()) userDoc = await getDoc(doc(db, "usuarios", user.email));
+
+                    if(userDoc && userDoc.exists()) {
+                        let data = userDoc.data();
+                        let dbAreas = data.areas || data.area || [];
+                        let areasArray = Array.isArray(dbAreas) ? dbAreas : [dbAreas];
+                        if(areasArray.length === 0) areasArray = ["General"];
+                        
+                        State.user = { email: user.email, nombre: data.nombre, rol: data.rol, areas: areasArray, permisos: [] };
+                        
+                        const roleDoc = await getDoc(doc(db, "roles", data.rol)); if(roleDoc.exists()) State.user.permisos = roleDoc.data().permisos || [];
+                        const dbAreasRef = await getDoc(doc(db, "configuracion", "areas")); if(dbAreasRef.exists() && dbAreasRef.data().lista) State.areas = dbAreasRef.data().lista;
+                        const confDoc = await getDoc(doc(db, "configuracion", "escalas")); if(confDoc.exists() && confDoc.data().lista) State.scales = confDoc.data().lista;
+                        const estListDoc = await getDoc(doc(db, "configuracion", "estados_list")); if(estListDoc.exists() && estListDoc.data().lista) State.estadosList = estListDoc.data().lista;
+                        const npsDoc = await getDoc(doc(db, "configuracion", "nps")); if(npsDoc.exists() && npsDoc.data().lista) State.npsOptions = npsDoc.data().lista;
+                        const fbRulesDoc = await getDoc(doc(db, "configuracion", "feedback_rules")); if(fbRulesDoc.exists()) State.feedbackRules = { ...State.feedbackRules, ...fbRulesDoc.data() };
+                        
+                        document.getElementById('kpi-meta').innerText = (State.feedbackRules.metaGlobal || 95) + "%";
+
+                        initYearFilter(); UI.updateSelects(); 
+
+                        document.getElementById('uiUserName').innerText = State.user.nombre;
+                        document.getElementById('uiUserRole').innerText = State.user.rol;
+                        
+                        let badgeArea = document.getElementById('uiUserArea');
+                        let isGlobalData = State.user.areas.includes("Todas");
+                        
+                        if (State.user.rol === 'Lider' || State.user.rol === 'Admin') {
+                            badgeArea.style.display = 'inline-flex';
+                            let lbl = State.user.areas.length > 1 ? (isGlobalData ? "GLOBAL" : `${State.user.areas.length} ÁREAS`) : State.user.areas[0];
+                            if (State.user.areas.length > 1 || isGlobalData) {
+                                badgeArea.innerHTML = `${lbl} <i class="fas fa-edit" style="margin-left: 4px;"></i>`;
+                                badgeArea.classList.add('editable');
+                                badgeArea.onclick = () => { document.querySelectorAll('.chk-area-modal').forEach(cb => { cb.checked = State.user.areas.includes(cb.value); }); UI.openModal('areaModal'); };
+                            } else {
+                                badgeArea.innerHTML = `${lbl} <i class="fas fa-lock" style="margin-left: 4px; font-size: 9px; opacity: 0.7;"></i>`;
+                                badgeArea.classList.remove('editable'); badgeArea.onclick = null;
+                            }
+                        } else { badgeArea.style.display = 'none'; }
+
+                        App.applyPermissions();
+                        document.getElementById('authOverlay').style.display = 'none';
+                        App.startDataSync();
+                    } else { UI.showError(`Tu perfil no cuenta con habilitación en la base de datos.`); signOut(auth); }
+                } catch(e) { UI.showError("Falla de red interna."); signOut(auth); }
+            } else {
+                document.getElementById('authOverlay').style.display = 'flex'; errBox.style.display = 'none'; document.getElementById('btnLogin').innerText = "Ingresar al Panel";
+            }
+        });
+
+        window.App = {
+            applyPermissions: () => {
+                // Control de los botones de subida de notas (ahora viven en la toolbar de Matriz)
+                let canUpload = UI.hasPerm('chk_subir_excel');
+                document.getElementById('btnImportarPopup').style.display = canUpload ? 'flex' : 'none';
+                document.getElementById('btnIngresoManual').style.display = canUpload ? 'flex' : 'none';
                 
-                let headerIdx = rows.findIndex(r => r.join(" ").toUpperCase().includes("PROMEDIO ANUAL"));
-                if (headerIdx === -1) { alert("Estructura Excel no reconocida."); return; }
+                // Botón Exportar (ahora vive en la topbar general)
+                document.getElementById('btnExportar').style.display = (UI.hasPerm('chk_ver_global') || UI.hasPerm('chk_ver_area') || UI.hasPerm('chk_ver_nps')) ? 'flex' : 'none';
+                
+                // Botones Importar/Exportar Usuarios
+                document.getElementById('btnExportUsers').style.display = UI.hasPerm('chk_exportar_usuarios') || UI.hasPerm('chk_gestionar_sistema') ? 'inline-flex' : 'none';
+                document.getElementById('btnImportUsers').style.display = UI.hasPerm('chk_importar_usuarios') || UI.hasPerm('chk_gestionar_sistema') ? 'inline-flex' : 'none';
 
-                const headers = rows[headerIdx].map(h => String(h).trim().toUpperCase());
-                const idxAgente = headers.findIndex(h => h.includes("ÁREA") || h.includes("AGENTE"));
-                const idxAnual = headers.findIndex(h => h.includes("PROMEDIO ANUAL") || h === "ANUAL");
-                const idxFeedback = headers.findIndex(h => h.includes("FEEDBACK") || h.includes("OPORTUNIDAD"));
+                const confTabs = [{ id: 'tabUsuarios', perm: 'chk_cfg_usuarios', btn: 'btnTabUsuarios' }, { id: 'tabRoles', perm: 'chk_cfg_roles', btn: 'btnTabRoles' }, { id: 'tabAreas', perm: 'chk_cfg_areas', btn: 'btnTabAreas' }, { id: 'tabEstados', perm: 'chk_cfg_estados', btn: 'btnTabEstados' }, { id: 'tabColores', perm: 'chk_cfg_escalas', btn: 'btnTabColores' }, { id: 'tabNps', perm: 'chk_cfg_nps', btn: 'btnTabNps' }, { id: 'tabOperativas', perm: 'chk_cfg_feedbacks', btn: 'btnTabOperativas' }];
+                let hasAnyConf = false;
+                confTabs.forEach(t => { let hasP = UI.hasPerm(t.perm); document.getElementById(t.btn).style.display = hasP ? 'inline-block' : 'none'; if (hasP) hasAnyConf = true; });
+                document.getElementById('btnSettings').style.display = hasAnyConf ? 'flex' : 'none';
 
-                const weekCols = {};
-                headers.forEach((h, i) => { if(/^S\d+/.test(h)) weekCols[h] = i; });
-                weekKeysGlobal = Object.keys(weekCols).sort((a,b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,'')));
+                document.getElementById('navGerencial').style.display = UI.hasPerm('chk_ver_global') ? 'flex' : 'none';
+                document.getElementById('navMatriz').style.display = UI.hasPerm('chk_ver_area') ? 'flex' : 'none';
+                document.getElementById('navNps').style.display = UI.hasPerm('chk_ver_nps') ? 'flex' : 'none';
+                document.getElementById('navFirmas').style.display = UI.hasPerm('chk_ver_firmas') ? 'flex' : 'none';
+                document.getElementById('navAgente').style.display = UI.hasPerm('chk_ver_propio') ? 'flex' : 'none';
 
-                let parsedData = [];
-                let currentArea = "General";
-                const areaIdentifiers = ["OFICINAS CENTRALES", "SERVICIO TÉCNICO", "SERVICIO TECNICO", "E COMMERCE", "TRANSPORTE", "ECOMMERCE"];
+                let isGlobalData = State.user.areas.includes("Todas");
+                let filterUI = document.getElementById('areaFilter');
+                
+                if(isGlobalData || State.user.areas.length > 1) {
+                    filterUI.style.display = 'block';
+                    let htmlFilter = '<option value="all">Todas mis áreas</option>';
+                    let permittedAreas = isGlobalData ? State.areas : State.areas.filter(a => State.user.areas.includes(a));
+                    if (!isGlobalData) State.user.areas.forEach(a => { if(!permittedAreas.includes(a)) permittedAreas.push(a); });
+                    permittedAreas.forEach(a => { if(a !== 'Todas') htmlFilter += `<option value="${a}">${a}</option>` });
+                    filterUI.innerHTML = htmlFilter;
+                } else { filterUI.style.display = 'none'; }
 
-                for (let i = headerIdx + 1; i < rows.length; i++) {
-                    let row = rows[i];
-                    let textContent = String(row[idxAgente] || row[0] || row[1] || "").trim();
+                if(UI.hasPerm('chk_ver_area')) {
+                    document.getElementById('mainTitle').innerText = isGlobalData ? `Matriz Global` : `Matriz: ${State.user.areas.join(' y ')}`;
+                    App.switchView('viewMatriz');
+                } else if(UI.hasPerm('chk_ver_global')) {
+                    document.getElementById('mainTitle').innerText = isGlobalData ? `Tablero Directivo` : `Dashboard: ${State.user.areas.join(' y ')}`;
+                    App.switchView('viewGerencial');
+                } else if (UI.hasPerm('chk_ver_firmas')) {
+                    document.getElementById('mainTitle').innerText = `Auditoría Operativa`;
+                    App.switchView('viewFirmas');
+                } else if (UI.hasPerm('chk_ver_nps')) {
+                    document.getElementById('mainTitle').innerText = `Gestión de Satisfacción`;
+                    App.switchView('viewNps');
+                } else {
+                    State.viewingAgentName = State.user.nombre;
+                    document.getElementById('mainTitle').innerText = `Mi Desempeño`;
+                    App.switchView('viewAgente');
+                    document.getElementById('kpiPanel').style.display = 'none';
+                }
+            },
+
+            switchView: (viewId, isSelf = false) => {
+                if(viewId === 'viewAgente' && isSelf) { State.viewingAgentName = State.user.nombre; document.getElementById('mainTitle').innerText = `Mi Desempeño`; }
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                document.getElementById(viewId).classList.add('active');
+                
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                if(viewId === 'viewMatriz') document.getElementById('navMatriz').classList.add('active');
+                if(viewId === 'viewGerencial') document.getElementById('navGerencial').classList.add('active');
+                if(viewId === 'viewNps') document.getElementById('navNps').classList.add('active');
+                if(viewId === 'viewFirmas') document.getElementById('navFirmas').classList.add('active');
+                if(viewId === 'viewAgente') document.getElementById('navAgente').classList.add('active');
+                
+                if(viewId === 'viewGerencial') Renders.drawManager();
+                if(viewId === 'viewMatriz') Renders.drawMatrix();
+                if(viewId === 'viewAgente') Renders.drawAgent();
+                if(viewId === 'viewNps') Renders.drawNps();
+                if(viewId === 'viewFirmas') Renders.drawFirmas();
+            },
+
+            viewAgentDashboard: (agentName) => { State.viewingAgentName = agentName; document.getElementById('mainTitle').innerText = `Desempeño: ${agentName}`; App.switchView('viewAgente'); },
+
+            switchSettingsTab: (tabId) => {
+                ['tabUsuarios', 'tabRoles', 'tabColores', 'tabNps', 'tabAreas', 'tabEstados', 'tabOperativas'].forEach(id => document.getElementById(id).style.display = 'none');
+                document.getElementById(tabId).style.display = (tabId === 'tabRoles' || tabId === 'tabUsuarios') ? 'grid' : 'block';
+                document.querySelectorAll('#settingsModal .tab-btn').forEach(btn => { btn.classList.remove('active'); if(btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active'); });
+                if(tabId === 'tabRoles' || tabId === 'tabUsuarios') Admin.loadRoles();
+                if(tabId === 'tabColores') Admin.renderScales(); if(tabId === 'tabNps') Admin.renderNps(); if(tabId === 'tabAreas') Admin.renderAreas(); if(tabId === 'tabEstados') Admin.renderEstados(); if(tabId === 'tabUsuarios') Admin.loadUsers(); if(tabId === 'tabOperativas') Admin.renderFeedbackRules();
+            },
+
+            saveMyArea: async () => {
+                let sel = []; document.querySelectorAll('.chk-area-modal:checked').forEach(cb => sel.push(cb.value));
+                if(sel.length === 0) return alert("Debes seleccionar al menos un área de visualización.");
+                if(sel.includes("Todas")) sel = ["Todas"];
+                try {
+                    await setDoc(doc(db, "usuarios", State.user.email), { areas: sel }, { merge: true });
+                    State.user.areas = sel;
+                    let isGlobalData = sel.includes("Todas");
+                    let lbl = sel.length > 1 ? (isGlobalData ? "GLOBAL" : `${sel.length} ÁREAS`) : sel[0];
+                    document.getElementById('uiUserArea').innerHTML = `${lbl} <i class="fas fa-edit" style="margin-left: 4px;"></i>`;
+                    App.applyPermissions(); UI.closeModal('areaModal'); App.startDataSync();
+                } catch(e) { alert("Error de red."); }
+            },
+
+            startDataSync: () => {
+                if (State.unsubscribeSync) State.unsubscribeSync();
+                let isGlobalData = State.user.areas.includes("Todas");
+                let q;
+                if (isGlobalData) { q = query(collection(db, "notas_calidad")); } 
+                else if (UI.hasPerm('chk_ver_area') || UI.hasPerm('chk_ver_global') || UI.hasPerm('chk_ver_nps') || UI.hasPerm('chk_ver_firmas') || State.user.rol === 'Lider') {
+                    let areasQuery = State.user.areas.slice(0, 30); if(areasQuery.length === 0) areasQuery = ["AreaNoAsignada"];
+                    q = query(collection(db, "notas_calidad"), where("area", "in", areasQuery));
+                } else { q = query(collection(db, "notas_calidad"), where("id_asesor", "==", State.user.nombre)); }
+
+                State.unsubscribeSync = onSnapshot(q, async (snap) => {
+                    State.allRecords = []; snap.forEach(d => { State.allRecords.push({ idDoc: d.id, ...d.data() }); });
+                    App.processRecordsForYear();
+                });
+            },
+
+            processRecordsForYear: async () => {
+                let selYear = Number(document.getElementById('yearFilter').value);
+                State.records = []; let wSet = new Set();
+                State.allRecords.forEach(d => {
+                    let docAnio = d.anio;
+                    if(!docAnio) { let parts = d.idDoc.split('_'); if(parts.length >= 4) { let yr = parseInt(parts[parts.length-2]); if(!isNaN(yr)) docAnio = yr; } }
+                    if(!docAnio) docAnio = 2026; 
+                    if(docAnio === selYear) { State.records.push(d); if(d.semana) wSet.add(d.semana); }
+                });
+
+                State.weekKeys = Array.from(wSet).sort((a,b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,'')));
+                const estSnap = await getDoc(doc(db, "configuracion", "estados_agentes"));
+                let estadosDb = estSnap.exists() ? estSnap.data() : {};
+                
+                State.records.forEach(d => {
+                    let st = estadosDb[d.id_asesor] || 'Operativo';
+                    if(st === 'activo') st = 'Operativo'; if(st === 'inactivo') st = 'Inactivo/Baja'; if(st === 'vacaciones') st = 'En Vacaciones'; if(st === 'suspendido') st = 'Suspendido';
+                    d.estado = st;
+                });
+
+                refreshActiveView();
+                let wF = document.getElementById('weekFilter'); let selW = wF.value;
+                wF.innerHTML = '<option value="all">Visión General (Últimas 4)</option>';
+                [...State.weekKeys].reverse().forEach(wk => wF.innerHTML += `<option value="${wk}">Foco: ${wk}</option>`);
+                if(wF.querySelector(`option[value="${selW}"]`)) wF.value = selW;
+            },
+
+            exportToExcel: () => {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const filterUI = document.getElementById('areaFilter');
+                const fArea = filterUI && filterUI.style.display !== 'none' ? filterUI.value : "all";
+                const fStatus = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : "all";
+                const fWeek = document.getElementById('weekFilter').value;
+                const fYear = document.getElementById('yearFilter').value;
+
+                let isGlobalData = State.user.areas.includes("Todas");
+                let validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
+                let isNpsView = document.getElementById('viewNps').classList.contains('active');
+
+                let baseRecords = State.records.filter(r => {
+                    let matchSearch = r.id_asesor.toLowerCase().includes(search);
+                    let matchDropdown = (fArea === "all" || fArea === "Todas" || String(r.area).trim().toUpperCase() === String(fArea).trim().toUpperCase());
+                    let matchStatus = (fStatus === "all" || r.estado === fStatus);
+                    let matchSecurity = isGlobalData || validAreas.includes(String(r.area).trim().toUpperCase());
+                    let matchWeek = (fWeek === "all" || r.semana === fWeek);
                     
-                    if (!textContent || textContent.toUpperCase() === "ÁREA" || textContent.toUpperCase() === "AGENTE") continue;
+                    if (isNpsView && !r.nps_agente) return false;
+                    return matchSearch && matchDropdown && matchStatus && matchSecurity && matchWeek;
+                });
 
-                    let upperText = textContent.toUpperCase();
+                if (baseRecords.length === 0) return alert("No hay datos en pantalla para exportar bajo los filtros actuales.");
+
+                let exportData = [];
+                if (isNpsView) {
+                    exportData = baseRecords.map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Calificación Operativa": r.nota, "Nivel de Satisfacción (NPS)": r.nps_agente, "Comentario del Asesor": r.observacion_agente || "-", "Plan de Acción Firmado": r.compromiso_agente || "-", "Retroalimentación del Líder": r.feedback_lider || "-" }));
+                } else {
+                    let agMap = {};
+                    baseRecords.forEach(r => { let key = r.id_asesor + "_" + r.area; if(!agMap[key]) agMap[key] = { nombre: r.id_asesor, area: r.area, estado: r.estado, notas: {} }; agMap[key].notas[r.semana] = r; });
+                    let drawWeeks = (fWeek === "all") ? State.weekKeys : [fWeek];
+                    exportData = Object.values(agMap).map(ag => {
+                        let row = { "Área": ag.area, "Asesor": ag.nombre, "Estado": ag.estado };
+                        let sum = 0, count = 0;
+                        drawWeeks.forEach(wk => { let n = ag.notas[wk] ? ag.notas[wk].nota : ""; row[wk] = n; if(n !== "" && !isNaN(n)) { sum += Number(n); count++; } });
+                        row["Promedio General"] = count > 0 ? Math.round(sum/count) : ""; return row;
+                    });
+                }
+
+                const ws = XLSX.utils.json_to_sheet(exportData); const wb = XLSX.utils.book_new();
+                let sheetName = isNpsView ? "Satisfaccion_Asesores" : "Matriz_Calidad";
+                XLSX.utils.book_append_sheet(wb, ws, sheetName); XLSX.writeFile(wb, `${sheetName}_${fYear}_${new Date().getTime()}.xlsx`);
+            },
+
+            openManualEntry: async () => {
+                const snap = await getDocs(collection(db, "usuarios"));
+                let html = "<option value=''>Selecciona asesor y área...</option>";
+                let isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase()), agentesValidos = [];
+                snap.forEach(d => {
+                    let u = d.data(), uAreas = u.areas || [u.area];
+                    if(u.rol === 'Agente') { uAreas.forEach(ua => { let isMatch = isGlobalData || validAreas.includes(String(ua).trim().toUpperCase()); if(isMatch) agentesValidos.push({ id: d.id, nombre: u.nombre, area: ua || 'General' }); }); }
+                });
+                
+                agentesValidos.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(ag => { html += `<option value="${ag.nombre}" data-area="${ag.area}">${ag.nombre} (${ag.area})</option>`; });
+                document.getElementById('manualAgenteSelect').innerHTML = html; document.getElementById('manualSemana').value = ""; document.getElementById('manualNota').value = ""; document.getElementById('manualAnio').value = document.getElementById('yearFilter').value; document.getElementById('msgManual').style.display = 'none';
+                UI.openModal('manualEntryModal');
+            },
+
+            openSpecificManualEntry: async (agente, area, semana) => {
+                await App.openManualEntry();
+                let sel = document.getElementById('manualAgenteSelect'); let found = false;
+                for(let i = 0; i < sel.options.length; i++) { if(sel.options[i].value === agente && sel.options[i].getAttribute('data-area') === area) { sel.selectedIndex = i; found = true; break; } }
+                if(!found) { let opt = document.createElement('option'); opt.value = agente; opt.setAttribute('data-area', area); opt.innerText = `${agente} (${area})`; sel.appendChild(opt); sel.value = agente; }
+                document.getElementById('manualSemana').value = semana; document.getElementById('manualAnio').value = document.getElementById('yearFilter').value; setTimeout(() => document.getElementById('manualNota').focus(), 100);
+            },
+
+            saveManualEntry: async () => {
+                const sel = document.getElementById('manualAgenteSelect'); if(sel.selectedIndex <= 0) return alert("Selecciona un asesor.");
+                const agenteNombre = sel.value, agenteArea = sel.options[sel.selectedIndex].getAttribute('data-area'), semana = document.getElementById('manualSemana').value.trim().toUpperCase();
+                let notaRaw = document.getElementById('manualNota').value.trim().toUpperCase(); const anio = Number(document.getElementById('manualAnio').value);
+                
+                if(!semana || !notaRaw || !anio) return alert("Año, Semana y Calificación son obligatorios.");
+                let isNum = !isNaN(notaRaw); let notaFinal = isNum ? Math.round(Number(notaRaw)) : notaRaw;
+                let docId = `${agenteNombre.replace(/[^a-zA-Z0-9]/g, '')}_${agenteArea.replace(/[^a-zA-Z0-9]/g, '')}_${anio}_${semana}`;
+                
+                try {
+                    await setDoc(doc(db, "notas_calidad", docId), { id_asesor: agenteNombre, area: agenteArea, semana: semana, nota: notaFinal, anio: anio }, { merge: true });
+                    const msg = document.getElementById('msgManual'); msg.innerHTML = "<i class='fas fa-check'></i> Registro exitoso en la matriz."; msg.style.display = 'block'; setTimeout(() => UI.closeModal('manualEntryModal'), 2000);
+                } catch(e) { alert("Error al guardar la nota manualmente."); }
+            }
+        };
+
+        document.getElementById('btnIngresoManual').addEventListener('click', App.openManualEntry);
+
+        const Renders = {
+            drawMatrix: () => {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const filterUI = document.getElementById('areaFilter'); const fArea = filterUI && filterUI.style.display !== 'none' ? filterUI.value : "all";
+                const filterSt = document.getElementById('statusFilter'); const fStatus = filterSt ? filterSt.value : "all";
+                const fWeek = document.getElementById('weekFilter').value;
+
+                let agMap = {};
+                State.records.forEach(r => { let key = r.id_asesor + "_" + r.area; if(!agMap[key]) agMap[key] = { nombre: r.id_asesor, area: r.area, estado: r.estado, notas: {} }; agMap[key].notas[r.semana] = r; });
+
+                let isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
+                let filtrados = Object.values(agMap).filter(a => {
+                    return a.nombre.toLowerCase().includes(search) && (fArea === "all" || fArea === "Todas" || String(a.area).trim().toUpperCase() === String(fArea).trim().toUpperCase()) && (fStatus === "all" || a.estado === fStatus) && (isGlobalData || validAreas.includes(String(a.area).trim().toUpperCase()));
+                });
+
+                let drawWeeks = (fWeek === "all") ? State.weekKeys.slice(-4) : [fWeek];
+                let thead = `<tr><th>Área</th><th>Asesor Asignado</th><th>Estatus</th>`;
+                drawWeeks.forEach(wk => { let l = wk.length > 5 ? wk.substring(0,5) + '..' : wk; thead += `<th style="text-align:center" title="${wk}">${l}</th>` });
+                thead += `<th style="text-align:center">Promedio</th></tr>`; document.getElementById('tableHead').innerHTML = thead;
+
+                let sumGlobal = 0, countGlobal = 0, activeAgentsCount = 0;
+                let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999;
+                let canUploadAnywhere = UI.hasPerm('chk_subir_excel') || UI.hasPerm('chk_gestionar_sistema');
+
+                let htmlBody = filtrados.map(ag => {
+                    let selectDisabled = UI.hasPerm('chk_cambiar_estado') ? '' : 'disabled';
+                    let currStateObj = State.estadosList.find(x => x.lbl === ag.estado) || {lbl: ag.estado, color: '#64748b', calcProm: true};
+                    let cColor = currStateObj.color, agentIncludesInKPI = currStateObj.calcProm !== false;
+                    if(agentIncludesInKPI) activeAgentsCount++;
                     
-                    // 1. Verificar si es un Área (Tenga o no tenga promedios al lado)
-                    let isArea = areaIdentifiers.some(a => upperText.includes(a)) && upperText.length < 35;
-                    let isSum = upperText.startsWith("PROMEDIO") || upperText.startsWith("TOTAL");
+                    let selectHTML = `<select class="status-select" style="color: ${cColor}; border-color: ${cColor}; background-color: ${cColor}15;" onchange="this.style.color=this.options[this.selectedIndex].getAttribute('data-color'); this.style.borderColor=this.options[this.selectedIndex].getAttribute('data-color'); this.style.backgroundColor=this.options[this.selectedIndex].getAttribute('data-color')+'15'; Admin.changeAgentStatus('${ag.nombre}', this.value)" ${selectDisabled}>`;
+                    State.estadosList.forEach(e => { selectHTML += `<option value="${e.lbl}" data-color="${e.color}" style="color: #1e293b; background: #fff;" ${(ag.estado === e.lbl) ? 'selected' : ''}>${e.lbl}</option>`; });
+                    selectHTML += `</select>`;
 
-                    if (isArea && !isSum) {
-                        currentArea = textContent.replace(/[-_]/g, '').trim(); // Actualizamos el Área activa
-                        continue; // No procesamos esta línea como agente
-                    }
-
-                    if (isSum) {
-                        continue; // Ignoramos las líneas de totales generales
-                    }
-
-                    // 2. Verificar si es un Agente (Tiene que tener notas en alguna semana o en anual)
-                    let hasScores = weekKeysGlobal.some(wk => row[weekCols[wk]] !== "" && row[weekCols[wk]] !== undefined);
-                    let hasAnual = row[idxAnual] !== "" && row[idxAnual] !== undefined;
-
-                    if (hasScores || hasAnual) {
-                        // ES UN AGENTE
-                        let history = {};
-                        weekKeysGlobal.forEach(wk => history[wk] = redondear(row[weekCols[wk]]));
-
-                        parsedData.push({ 
-                            Name: textContent, 
-                            Area: currentArea, 
-                            History: history, 
-                            Anual: redondear(row[idxAnual]), 
-                            Feedback: [] 
-                        });
-
-                        if (idxFeedback > -1 && row[idxFeedback]) {
-                            parsedData[parsedData.length - 1].Feedback.push(String(row[idxFeedback]).trim());
+                    let rowHTML = `<td class="col-area">${ag.area}</td><td><strong style="cursor:pointer; color:var(--primary); transition: color 0.2s;" onmouseover="this.style.color='var(--primary-hover)'" onmouseout="this.style.color='var(--primary)'" onclick="App.viewAgentDashboard('${ag.nombre}')" title="Ver desempeño detallado del asesor">${ag.nombre}</strong></td><td>${selectHTML}</td>`;
+                    let sumAg = 0, countAg = 0;
+                    
+                    drawWeeks.forEach(wk => {
+                        let r = ag.notas[wk];
+                        if(r) {
+                            let isAutoClosed = !isNaN(r.nota) && Number(r.nota) >= autoCloseThresh, isTextExcepcion = isNaN(r.nota), dotColor = 'transparent';
+                            if (r.compromiso_agente) dotColor = 'var(--success-txt)'; 
+                            else if (isAutoClosed || r.es_informativo || isTextExcepcion) dotColor = '#3b82f6'; 
+                            else if (r.feedback_lider) dotColor = '#f59e0b'; 
+                            rowHTML += `<td style="text-align:center;"><div style="display:flex; flex-direction:column; align-items:center;">${UI.getBadgeHTML(r.nota, true, `Interactions.openFeedback('${r.idDoc}')`)}<div style="width:24px; height:4px; background:${dotColor}; border-radius:4px; margin-top:6px; transition: background 0.2s;"></div></div></td>`;
+                            if(!isNaN(r.nota)) { sumAg += Number(r.nota); countAg++; }
+                        } else { 
+                            if(canUploadAnywhere) rowHTML += `<td style="text-align:center;">${UI.getBadgeHTML("-", true, `App.openSpecificManualEntry('${ag.nombre}', '${ag.area}', '${wk}')`)}</td>`;
+                            else rowHTML += `<td style="text-align:center;">${UI.getBadgeHTML("-")}</td>`; 
                         }
-                    } 
-                    // 3. Si no es Área, no es Sumatoria y NO tiene notas... ¡Es Feedback!
-                    else if (parsedData.length > 0) {
-                        let cleanFeedback = textContent.replace(/"/g, '').trim();
-                        if (cleanFeedback) parsedData[parsedData.length - 1].Feedback.push(cleanFeedback);
+                    });
+
+                    let promAg = countAg > 0 ? Math.round(sumAg/countAg) : "-";
+                    rowHTML += `<td style="text-align:center;"><div style="display:flex; flex-direction:column; align-items:center;">${UI.getBadgeHTML(promAg, false)}</div></td>`;
+                    if(promAg !== "-" && agentIncludesInKPI) { sumGlobal += promAg; countGlobal++; }
+                    return `<tr style="${!agentIncludesInKPI ? 'opacity: 0.5;' : ''}">${rowHTML}</tr>`;
+                }).join('');
+
+                document.getElementById('tableBody').innerHTML = htmlBody || '<tr><td colspan="10" style="text-align:center; padding: 40px;">No se encontraron resultados</td></tr>';
+                document.getElementById('kpi-agents').innerText = activeAgentsCount;
+                let targetMeta = State.feedbackRules.metaGlobal || 95, calculatedGlobal = countGlobal > 0 ? Math.round(sumGlobal/countGlobal) : 0, kpiAvgEl = document.getElementById('kpi-avg');
+                kpiAvgEl.innerText = countGlobal > 0 ? calculatedGlobal + "%" : "N/A";
+                kpiAvgEl.style.color = calculatedGlobal >= targetMeta ? "var(--success-txt)" : "white";
+            },
+
+            drawManager: () => {
+                const fArea = document.getElementById('areaFilter') ? document.getElementById('areaFilter').value : "all";
+                const fStatus = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : "all";
+                
+                const warningBox = document.getElementById('dashFilterWarning');
+                if(fArea !== "all" || fStatus !== "all") {
+                    warningBox.style.display = "block";
+                    warningBox.innerHTML = `<i class="fas fa-filter"></i> Estás visualizando datos segmentados. Filtros activos -> Área: <strong>${fArea === 'Todas' ? 'Global' : fArea}</strong> | Estatus: <strong>${fStatus}</strong>`;
+                } else { warningBox.style.display = "none"; }
+
+                let dashboardRecords = State.records.filter(d => {
+                    return (fArea === "all" || fArea === "Todas" || String(d.area).trim().toUpperCase() === String(fArea).trim().toUpperCase()) && (fStatus === "all" || d.estado === fStatus);
+                });
+
+                let sumGlobal = 0, cGlobal = 0, npsGlobal = 0, npsC = 0, compC = 0, fbC = 0;
+                let sortedWeeks = [...State.weekKeys];
+                let currWk = sortedWeeks.length > 0 ? sortedWeeks[sortedWeeks.length - 1] : null;
+                let prevWk = sortedWeeks.length > 1 ? sortedWeeks[sortedWeeks.length - 2] : null;
+                let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999, targetMeta = State.feedbackRules.metaGlobal || 95;
+
+                let statsCurrWk = { sumN: 0, cN: 0, sumNps: 0, cNps: 0 }, statsPrevWk = { sumN: 0, cN: 0, sumNps: 0, cNps: 0 };
+                let wkData = {}; sortedWeeks.forEach(wk => wkData[wk] = { s:0, c:0 });
+                let areaStats = {}, agentStats = {};
+
+                let agentCalcProm = {};
+                State.records.forEach(d => { let currStateObj = State.estadosList.find(x => x.lbl === d.estado) || {calcProm: true}; agentCalcProm[d.id_asesor] = currStateObj.calcProm !== false; });
+
+                dashboardRecords.forEach(d => {
+                    let includeInAvg = agentCalcProm[d.id_asesor];
+                    if(includeInAvg) {
+                        if(!isNaN(d.nota)) { sumGlobal += Number(d.nota); cGlobal++; wkData[d.semana].s += Number(d.nota); wkData[d.semana].c++; }
+                        let isAutoClosed = !isNaN(d.nota) && Number(d.nota) >= autoCloseThresh;
+                        let isInfo = d.es_informativo || isAutoClosed || isNaN(d.nota);
+                        if(d.feedback_lider && !isInfo) fbC++;
+                        if(d.compromiso_agente && !isInfo) compC++;
+                        if(d.nps_agente) { npsGlobal += Number(d.nps_agente); npsC++; }
+
+                        if(d.semana === currWk) {
+                            if(!isNaN(d.nota)) { statsCurrWk.sumN += Number(d.nota); statsCurrWk.cN++; }
+                            if(d.nps_agente) { statsCurrWk.sumNps += Number(d.nps_agente); statsCurrWk.cNps++; }
+                            if(!areaStats[d.area]) areaStats[d.area] = { sum: 0, count: 0 };
+                            if(!isNaN(d.nota)) { areaStats[d.area].sum += Number(d.nota); areaStats[d.area].count++; }
+                            if(!agentStats[d.id_asesor]) agentStats[d.id_asesor] = { sum: 0, count: 0, area: d.area };
+                            if(!isNaN(d.nota)) { agentStats[d.id_asesor].sum += Number(d.nota); agentStats[d.id_asesor].count++; }
+                        }
+                        if(d.semana === prevWk) {
+                            if(!isNaN(d.nota)) { statsPrevWk.sumN += Number(d.nota); statsPrevWk.cN++; }
+                            if(d.nps_agente) { statsPrevWk.sumNps += Number(d.nps_agente); statsPrevWk.cNps++; }
+                        }
+                    }
+                });
+
+                let globalAvg = cGlobal > 0 ? Math.round(sumGlobal/cGlobal) : 0, globalNps = npsC > 0 ? (npsGlobal/npsC).toFixed(1) : "0";
+                
+                let avgEl = document.getElementById('dashAvg'); avgEl.innerText = globalAvg + "%"; avgEl.style.color = globalAvg >= targetMeta ? "var(--success-txt)" : "var(--primary)";
+                document.getElementById('dashNps').innerText = globalNps + "/10";
+                document.getElementById('dashComp').innerText = fbC > 0 ? Math.round((compC/fbC)*100) + "%" : "0%";
+                document.getElementById('dashCompLbl').innerText = `${compC} de ${fbC} compromisos documentados`;
+                document.getElementById('dashEvals').innerText = cGlobal; 
+
+                const renderDelta = (elId, currSum, currC, prevSum, prevC, isNps = false) => {
+                    let currAvg = currC > 0 ? (currSum/currC) : 0, prevAvg = prevC > 0 ? (prevSum/prevC) : 0;
+                    let el = document.getElementById(elId);
+                    if(prevC === 0 || currC === 0) { el.className = "trend neutral"; el.innerHTML = "Sin datos sem. ant."; return; }
+                    let diff = currAvg - prevAvg;
+                    if(diff > 0) { el.className = "trend up"; el.innerHTML = `<i class="fas fa-arrow-up"></i> +${isNps ? diff.toFixed(1) : Math.round(diff)} pts.`; } 
+                    else if (diff < 0) { el.className = "trend down"; el.innerHTML = `<i class="fas fa-arrow-down"></i> ${isNps ? diff.toFixed(1) : Math.round(diff)} pts.`; } 
+                    else { el.className = "trend neutral"; el.innerHTML = `<i class="fas fa-minus"></i> Se mantiene`; }
+                };
+
+                renderDelta('dashAvgDelta', statsCurrWk.sumN, statsCurrWk.cN, statsPrevWk.sumN, statsPrevWk.cN);
+                renderDelta('dashNpsDelta', statsCurrWk.sumNps, statsCurrWk.cNps, statsPrevWk.sumNps, statsPrevWk.cNps, true);
+
+                let plotDataLine = sortedWeeks.map(wk => wkData[wk].c > 0 ? Math.round(wkData[wk].s/wkData[wk].c) : null);
+                if(State.charts.managerTrend) State.charts.managerTrend.destroy();
+                State.charts.managerTrend = new Chart(document.getElementById('gerencialTrendChart'), {
+                    type: 'line', data: { labels: sortedWeeks, datasets: [{ label: 'Promedio Operativo', data: plotDataLine, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 5 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} } }
+                });
+
+                let areaList = []; for(let a in areaStats) { if(areaStats[a].count > 0) areaList.push({ name: a, avg: Math.round(areaStats[a].sum / areaStats[a].count) }); }
+                areaList.sort((a,b) => b.avg - a.avg);
+
+                if(State.charts.managerArea) State.charts.managerArea.destroy();
+                State.charts.managerArea = new Chart(document.getElementById('gerencialAreaChart'), {
+                    type: 'bar', data: { labels: areaList.map(x => x.name), datasets: [{ data: areaList.map(x => x.avg), backgroundColor: '#10b981', borderRadius: 4 }] },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} } }
+                });
+
+                let htmlAreas = areaList.map((a, i) => {
+                    let colorBadge = i === 0 ? "color:#eab308;" : (i === areaList.length -1 ? "color:#dc2626;" : "color:var(--text-muted);");
+                    let icon = i === 0 ? "fa-star" : (i === areaList.length -1 ? "fa-exclamation-triangle" : "fa-building");
+                    return `<div class="rank-item"><div class="rank-info"><span class="rank-name"><i class="fas ${icon}" style="${colorBadge} margin-right:6px;"></i> ${a.name}</span></div><span class="rank-score" style="${UI.getBadgeStyle(a.avg).replace('background:', 'color:').replace(';', ' !important;')} background:transparent;">${a.avg}%</span></div>`;
+                }).join('');
+                document.getElementById('rankAreas').innerHTML = htmlAreas || '<div style="padding:15px; text-align:center; color:var(--text-muted); font-size:12px;">Sin evaluaciones esta semana.</div>';
+
+                let agentList = []; for(let ag in agentStats) { if(agentStats[ag].count > 0) agentList.push({ name: ag, area: agentStats[ag].area, avg: Math.round(agentStats[ag].sum / agentStats[ag].count) }); }
+                agentList.sort((a,b) => b.avg - a.avg);
+                
+                let topAgents = agentList.slice(0, 3), bottomAgents = agentList.length > 3 ? agentList.slice(-3).reverse() : [];
+                let htmlAgents = topAgents.map(ag => `<div class="rank-item" style="border-left: 4px solid #10b981;"><div class="rank-info"><span class="rank-name">${ag.name}</span><span class="rank-sub">${ag.area}</span></div><span class="rank-score" style="color:#10b981;">${ag.avg}%</span></div>`).join('');
+                if(bottomAgents.length > 0) {
+                    htmlAgents += `<div style="text-align:center; padding:10px 0; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Atención Requerida</div>`;
+                    htmlAgents += bottomAgents.map(ag => `<div class="rank-item" style="border-left: 4px solid #ef4444;"><div class="rank-info"><span class="rank-name">${ag.name}</span><span class="rank-sub">${ag.area}</span></div><span class="rank-score" style="color:#ef4444;">${ag.avg}%</span></div>`).join('');
+                }
+                document.getElementById('rankAsesores').innerHTML = htmlAgents || '<div style="padding:15px; text-align:center; color:var(--text-muted); font-size:12px;">Sin datos para rankear.</div>';
+            },
+
+            drawFirmas: () => {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const fArea = document.getElementById('areaFilter') ? document.getElementById('areaFilter').value : "all";
+                const fWeek = document.getElementById('weekFilter').value;
+
+                let isGlobalData = State.user.areas.includes("Todas");
+                let validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
+                let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999;
+
+                let reqSignatures = State.records.filter(r => {
+                    let matchSearch = r.id_asesor.toLowerCase().includes(search);
+                    let matchDropdown = (fArea === "all" || fArea === "Todas" || String(r.area).trim().toUpperCase() === String(fArea).trim().toUpperCase());
+                    let matchSecurity = isGlobalData || validAreas.includes(String(r.area).trim().toUpperCase());
+                    let matchWeek = (fWeek === "all" || r.semana === fWeek);
+                    let isNum = !isNaN(r.nota) && r.nota !== "";
+                    let needsSig = isNum && Number(r.nota) < autoCloseThresh;
+                    let notInfo = !r.es_informativo;
+                    let hasFeedback = !!r.feedback_lider;
+
+                    return matchSearch && matchDropdown && matchSecurity && matchWeek && needsSig && notInfo && hasFeedback;
+                });
+
+                let signed = reqSignatures.filter(r => !!r.compromiso_agente);
+                let pending = reqSignatures.filter(r => !r.compromiso_agente);
+
+                document.getElementById('firmasTotal').innerText = reqSignatures.length;
+                document.getElementById('firmasDone').innerText = signed.length;
+                document.getElementById('firmasPend').innerText = pending.length;
+                document.getElementById('firmasPct').innerText = reqSignatures.length > 0 ? Math.round((signed.length / reqSignatures.length) * 100) + "%" : "0%";
+
+                let tbody = pending.map(r => `
+                    <tr>
+                        <td><strong style="color:var(--text-main);">${r.id_asesor}</strong></td>
+                        <td class="col-area">${r.area}</td>
+                        <td><span style="font-size:12px; font-weight:800; background:#f1f5f9; padding:4px 8px; border-radius:6px; border:1px solid var(--border);">${r.semana}</span></td>
+                        <td style="text-align: center;">${UI.getBadgeHTML(r.nota)}</td>
+                        <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:var(--text-muted);" title="${r.feedback_lider}">${r.feedback_lider}</td>
+                        <td style="text-align: center;"><button class="btn-action" style="padding: 6px 12px; font-size:11px;" onclick="Interactions.openFeedback('${r.idDoc}')"><i class="fas fa-eye"></i> Revisar</button></td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('firmasPendingBody').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center; padding: 40px; color:var(--text-muted); font-size:14px; font-weight:600;"><i class="fas fa-check-circle" style="color:var(--success-txt); font-size:24px; display:block; margin-bottom:10px;"></i>No hay firmas pendientes con los filtros actuales. ¡Todo al día!</td></tr>';
+            },
+
+            drawNps: () => {
+                const fArea = document.getElementById('areaFilter') ? document.getElementById('areaFilter').value : "all";
+                const fStatus = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : "all";
+                const fWeek = document.getElementById('weekFilter').value;
+
+                let isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
+                let npsRecords = State.records.filter(r => {
+                    return (fArea === "all" || fArea === "Todas" || String(r.area).trim().toUpperCase() === String(fArea).trim().toUpperCase()) && (fStatus === "all" || r.estado === fStatus) && (isGlobalData || validAreas.includes(String(r.area).trim().toUpperCase())) && (fWeek === "all" || r.semana === fWeek) && r.nps_agente;
+                });
+
+                let promoters = 0, passives = 0, detractors = 0, totalSurveys = npsRecords.length;
+                let wkData = {}; State.weekKeys.forEach(wk => wkData[wk] = { p:0, t:0, d:0 });
+                let areaStats = {};
+
+                npsRecords.forEach(r => {
+                    let val = Number(r.nps_agente), type = "passive";
+                    if (val >= 9) { promoters++; type = "promoter"; wkData[r.semana].p++; }
+                    else if (val >= 7) { passives++; type = "passive"; }
+                    else { detractors++; type = "detractor"; wkData[r.semana].d++; }
+                    wkData[r.semana].t++;
+                    if (!areaStats[r.area]) areaStats[r.area] = { p:0, t:0, d:0 };
+                    areaStats[r.area].t++;
+                    if (type === "promoter") areaStats[r.area].p++;
+                    if (type === "detractor") areaStats[r.area].d++;
+                });
+
+                let pctPromoters = totalSurveys > 0 ? (promoters / totalSurveys) * 100 : 0;
+                let pctDetractors = totalSurveys > 0 ? (detractors / totalSurveys) * 100 : 0;
+                let npsIndex = Math.round(pctPromoters - pctDetractors);
+
+                document.getElementById('npsMainScore').innerText = totalSurveys > 0 ? npsIndex : "0";
+                let lblEl = document.getElementById('npsMainLabel');
+                if (npsIndex > 50) { lblEl.innerHTML = "<i class='fas fa-check-circle'></i> Excelente Cultura"; lblEl.style.color = "#10b981"; }
+                else if (npsIndex > 0) { lblEl.innerHTML = "<i class='fas fa-arrow-up'></i> Positivo"; lblEl.style.color = "#3b82f6"; }
+                else if (npsIndex < 0) { lblEl.innerHTML = "<i class='fas fa-exclamation-triangle'></i> Atención Requerida"; lblEl.style.color = "#ef4444"; }
+                else { lblEl.innerHTML = "Puntaje Neto de Lealtad"; lblEl.style.color = "#cbd5e1"; }
+
+                document.getElementById('npsPromoters').innerText = Math.round(pctPromoters) + "%"; document.getElementById('npsDetractors').innerText = Math.round(pctDetractors) + "%"; document.getElementById('npsTotalSurveys').innerText = totalSurveys;
+
+                let sortedWeeks = [...State.weekKeys];
+                let plotDataLine = sortedWeeks.map(wk => { let wInfo = wkData[wk]; if (wInfo.t === 0) return null; return Math.round(((wInfo.p / wInfo.t) * 100) - ((wInfo.d / wInfo.t) * 100)); });
+
+                if(State.charts.npsTrend) State.charts.npsTrend.destroy();
+                State.charts.npsTrend = new Chart(document.getElementById('npsTrendChart'), {
+                    type: 'line', data: { labels: sortedWeeks, datasets: [{ label: 'Score NPS', data: plotDataLine, borderColor: '#ec4899', backgroundColor: 'rgba(236, 72, 153, 0.1)', fill: true, tension: 0.3, pointRadius: 5 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { suggestedMin: -100, suggestedMax: 100 } } }
+                });
+
+                let areaList = []; for(let a in areaStats) { if(areaStats[a].t > 0) { areaList.push({ name: a, score: Math.round(((areaStats[a].p / areaStats[a].t) * 100) - ((areaStats[a].d / areaStats[a].t) * 100)) }); } }
+                areaList.sort((a,b) => b.score - a.score);
+
+                if(State.charts.npsArea) State.charts.npsArea.destroy();
+                State.charts.npsArea = new Chart(document.getElementById('npsAreaChart'), {
+                    type: 'bar', data: { labels: areaList.map(x => x.name), datasets: [{ data: areaList.map(x => x.score), backgroundColor: areaList.map(x => x.score >= 0 ? '#10b981' : '#ef4444'), borderRadius: 4 }] },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { x: { suggestedMin: -100, suggestedMax: 100 } } }
+                });
+            },
+
+            drawAgent: () => {
+                let targetAgent = State.viewingAgentName || State.user.nombre;
+                document.getElementById('agentDashboardTitle').innerText = (targetAgent === State.user.nombre) ? "Mis Resultados Semanales" : `Desempeño: ${targetAgent}`;
+
+                let myRecords = State.records.filter(d => d.id_asesor === targetAgent);
+                let notesHTML = "", chartData = [], sum = 0, count = 0;
+                let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999, famaThresh = Number(State.feedbackRules.famaThreshold) || 100;
+                
+                document.getElementById('famaSubtitle').innerText = `Semanas con Excelencia (${famaThresh}%)`;
+
+                State.weekKeys.forEach(wk => {
+                    let notesForWeek = myRecords.filter(x => x.semana === wk);
+                    if(notesForWeek.length > 0) {
+                        notesForWeek.forEach(note => {
+                            notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl" title="${note.area}">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`;
+                            chartData.push(note.nota); if(!isNaN(note.nota)){ sum+=Number(note.nota); count++;}
+                        });
+                    } else { notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl">-</span>${UI.getBadgeHTML("-")}</div>`; chartData.push(null); }
+                });
+                
+                document.getElementById('agentNotesGrid').innerHTML = notesHTML;
+                
+                let finalPromAgente = count > 0 ? Math.round(sum/count) : 0, targetMeta = State.feedbackRules.metaGlobal || 95, kpiAvgEl = document.getElementById('kpi-avg');
+                kpiAvgEl.innerText = count > 0 ? finalPromAgente + "%" : "N/A"; kpiAvgEl.style.color = finalPromAgente >= targetMeta ? "var(--success-txt)" : "white";
+                document.getElementById('agentPersonalAvg').innerText = count > 0 ? finalPromAgente + "%" : "-";
+                
+                let agentAreas = [...new Set(myRecords.map(r => r.area))], areaRecords = State.records.filter(d => agentAreas.includes(d.area)), areaSum = 0, areaCount = 0, areaCalcProm = {};
+                State.records.forEach(d => { let currStateObj = State.estadosList.find(x => x.lbl === d.estado) || {calcProm: true}; areaCalcProm[d.id_asesor] = currStateObj.calcProm !== false; });
+                areaRecords.forEach(d => { if (areaCalcProm[d.id_asesor] && !isNaN(d.nota)) { areaSum += Number(d.nota); areaCount++; } });
+                
+                let areaAvg = areaCount > 0 ? Math.round(areaSum/areaCount) : 0; document.getElementById('agentAreaAvg').innerText = areaCount > 0 ? areaAvg + "%" : "-";
+                let diffBox = document.getElementById('agentAreaDiff');
+                if (count > 0 && areaCount > 0) {
+                    let diff = finalPromAgente - areaAvg;
+                    if (diff > 0) { diffBox.style.backgroundColor = "#dcfce7"; diffBox.style.color = "#166534"; diffBox.innerHTML = `<i class="fas fa-arrow-up"></i> +${diff}% por encima de la media`; } 
+                    else if (diff < 0) { diffBox.style.backgroundColor = "#fee2e2"; diffBox.style.color = "#991b1b"; diffBox.innerHTML = `<i class="fas fa-arrow-down"></i> ${Math.abs(diff)}% por debajo de la media`; } 
+                    else { diffBox.style.backgroundColor = "#f1f5f9"; diffBox.style.color = "#475569"; diffBox.innerHTML = `<i class="fas fa-equals"></i> Igual a la media del área`; }
+                } else { diffBox.style.backgroundColor = "transparent"; diffBox.innerHTML = ""; }
+
+                let perfectRecords = myRecords.filter(x => !isNaN(x.nota) && Number(x.nota) >= famaThresh), bestHTML = "";
+                if (perfectRecords.length > 0) {
+                    perfectRecords.forEach(note => { bestHTML += `<div class="agent-note-item" style="background: white; border-color: #86efac; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);"><span class="week" style="color:#059669;">${note.semana}</span><span class="area-lbl">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`; });
+                } else { bestHTML = `<div style="grid-column: 1/-1; text-align: center; font-size: 11px; color: #15803d; padding: 15px 0;"><i class="fas fa-seedling" style="font-size: 16px; display:block; margin-bottom:6px; opacity:0.7;"></i>Aún no hay registros en la meta.<br>¡Se puede lograr!</div>`; }
+                document.getElementById('agentBestPracticesGrid').innerHTML = bestHTML;
+
+                if(State.charts.agent) State.charts.agent.destroy();
+                State.charts.agent = new Chart(document.getElementById('agentMainChart'), {
+                    type: 'line', data: { labels: State.weekKeys, datasets: [{ data: chartData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { suggestedMin: 50, suggestedMax: 100 } } }
+                });
+
+                let fbList = myRecords.filter(x => x.feedback_lider || x.es_informativo).reverse().slice(0, 6);
+                let fbHTML = fbList.map(r => {
+                    let isAutoClosed = !isNaN(r.nota) && Number(r.nota) >= autoCloseThresh, isInfo = r.es_informativo || isAutoClosed || isNaN(r.nota), statusElement = '';
+                    if (r.compromiso_agente) statusElement = `<span style="color:var(--success-txt); font-weight:700;"><i class="fas fa-check-double"></i> Agente: ${r.compromiso_agente}</span>`;
+                    else if (isInfo) statusElement = `<span style="color:#0284c7; font-weight:700; background: #e0f2fe; padding: 4px 8px; border-radius: 4px;"><i class="fas fa-info-circle"></i> Registro Informativo. No requiere firma.</span>`;
+                    else statusElement = `<span style="color:var(--danger-txt); font-size:11px; font-weight:700; background: var(--danger-bg); padding: 4px 8px; border-radius: 4px;">Firma Pendiente Requerida</span>`;
+
+                    return `<li><strong>Semana ${r.semana} (${r.area}):</strong> ${r.feedback_lider || '<em>Evaluación sin observaciones textuales.</em>'} <div style="margin-top: 8px;">${statusElement}</div></li>`;
+                }).join('');
+                document.getElementById('agentMainFeedback').innerHTML = fbHTML || "<li>Excelente, no hay observaciones recientes.</li>";
+            }
+        };
+
+        const refreshActiveView = () => {
+            const active = document.querySelector('.view-section.active')?.id;
+            if(active === 'viewMatriz') Renders.drawMatrix();
+            if(active === 'viewGerencial') Renders.drawManager();
+            if(active === 'viewNps') Renders.drawNps();
+            if(active === 'viewFirmas') Renders.drawFirmas();
+        };
+
+        document.getElementById('searchInput').addEventListener('keyup', refreshActiveView);
+        if(document.getElementById('areaFilter')) document.getElementById('areaFilter').addEventListener('change', refreshActiveView);
+        if(document.getElementById('statusFilter')) document.getElementById('statusFilter').addEventListener('change', refreshActiveView);
+        document.getElementById('weekFilter').addEventListener('change', refreshActiveView);
+
+        // --- ADMINISTRACIÓN CORE Y AJUSTES ---
+        document.getElementById('btnSettings').addEventListener('click', () => { 
+            UI.openModal('settingsModal'); 
+            const confTabs = [
+                { id: 'tabUsuarios', btn: 'btnTabUsuarios' }, 
+                { id: 'tabRoles', btn: 'btnTabRoles' }, 
+                { id: 'tabAreas', btn: 'btnTabAreas' }, 
+                { id: 'tabEstados', btn: 'btnTabEstados' }, 
+                { id: 'tabColores', btn: 'btnTabColores' }, 
+                { id: 'tabNps', btn: 'btnTabNps' }, 
+                { id: 'tabOperativas', btn: 'btnTabOperativas' }
+            ];
+            for(let t of confTabs) { 
+                if(document.getElementById(t.btn).style.display !== 'none') { 
+                    document.getElementById(t.btn).click(); 
+                    break; 
+                } 
+            }
+        });
+
+        window.Interactions = {
+            openFeedback: (idDoc) => {
+                State.currentDocId = idDoc; 
+                let data = State.records.find(d => d.idDoc === idDoc);
+                if(!data) return;
+
+                document.getElementById('fbAgentName').innerText = data.id_asesor;
+                document.getElementById('fbDetails').innerText = `Semana: ${data.semana} | Área: ${data.area}`;
+                document.getElementById('fbBadgeZone').innerHTML = UI.getBadgeHTML(data.nota);
+
+                if(UI.hasPerm('chk_editar_notas') || UI.hasPerm('chk_gestionar_sistema')) {
+                    document.getElementById('editNoteContainer').style.display = 'flex';
+                    document.getElementById('inpEditNote').value = data.nota;
+                    let isGlobalData = State.user.areas.includes("Todas"), permittedAreas = isGlobalData ? State.areas : State.areas.filter(a => State.user.areas.includes(a));
+                    if (!isGlobalData && !permittedAreas.includes(data.area)) permittedAreas.push(data.area);
+                    document.getElementById('inpEditArea').innerHTML = permittedAreas.map(a => `<option value="${a}" ${a === data.area ? 'selected' : ''}>${a}</option>`).join('');
+                } else { document.getElementById('editNoteContainer').style.display = 'none'; }
+
+                if(data.historial_cambios && data.historial_cambios.length > 0) {
+                    document.getElementById('historialBox').style.display = 'block';
+                    document.getElementById('historialList').innerHTML = data.historial_cambios.map(h => {
+                        let dateObj = new Date(h.fecha), formDate = `${dateObj.getDate()}/${dateObj.getMonth()+1} ${dateObj.getHours()}:${dateObj.getMinutes() < 10 ? '0' : ''}${dateObj.getMinutes()}`;
+                        return `<div style="border-bottom: 1px dashed #fcd34d; padding-bottom: 4px;"><strong>${h.usuario}</strong> modificó el registro: ${h.detalle} el ${formDate}.</div>`;
+                    }).reverse().join('');
+                } else { document.getElementById('historialBox').style.display = 'none'; }
+
+                document.getElementById('txtFeedbackLider').value = data.feedback_lider || "";
+                document.getElementById('txtObsAgente').value = data.observacion_agente || "";
+                
+                const selNps = document.getElementById('selNpsAgente'); selNps.innerHTML = State.npsOptions.map(opt => `<option value="${opt.val}">${opt.lbl}</option>`).join('');
+                if(data.nps_agente) selNps.value = data.nps_agente;
+
+                let isLider = UI.hasPerm('chk_add_feedback') || UI.hasPerm('chk_gestionar_sistema');
+                document.getElementById('txtFeedbackLider').disabled = !isLider; document.getElementById('btnSaveLider').style.display = isLider ? 'flex' : 'none'; document.getElementById('msgLider').style.display = 'none';
+
+                let chkInfoToggle = document.getElementById('informativoToggleBox');
+                if (State.feedbackRules.allowInformative && isLider) { chkInfoToggle.style.display = 'block'; document.getElementById('chkEsInformativo').checked = !!data.es_informativo; } 
+                else { chkInfoToggle.style.display = 'none'; }
+
+                let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999;
+                let isTextExcepcion = isNaN(data.nota);
+                let isInfo = data.es_informativo || isTextExcepcion; 
+                let isMe = (State.user.nombre === data.id_asesor);
+                let canSign = isMe && !isInfo; 
+
+                // Lógica dinámica: Mostrar Textarea vs Checkbox
+                if (data.compromiso_agente) {
+                    document.getElementById('divCompromiso').style.display = 'block';
+                    document.getElementById('divEnterado').style.display = 'none';
+                    document.getElementById('txtCompromisoAgente').value = data.compromiso_agente;
+                } else {
+                    if (data.feedback_lider) {
+                        document.getElementById('divCompromiso').style.display = 'block';
+                        document.getElementById('divEnterado').style.display = 'none';
+                    } else {
+                        document.getElementById('divCompromiso').style.display = 'none';
+                        document.getElementById('divEnterado').style.display = 'block';
+                        document.getElementById('chkEnteradoAsesor').checked = false;
                     }
                 }
 
-                datosGlobales = parsedData;
+                document.getElementById('txtCompromisoAgente').disabled = !canSign;
+                document.getElementById('chkEnteradoAsesor').disabled = !canSign;
+                selNps.disabled = !canSign;
+                document.getElementById('txtObsAgente').disabled = !canSign;
                 
-                const areaFilter = document.getElementById('areaFilter');
-                areaFilter.innerHTML = '<option value="all">Todas las Áreas</option>';
-                [...new Set(parsedData.map(d => d.Area))].sort().forEach(a => areaFilter.innerHTML += `<option value="${a}">${a}</option>`);
+                let btnAgent = document.getElementById('btnSaveAgente'), msgAgent = document.getElementById('msgAgente'), zonaFirma = document.getElementById('zonaFirmaAgente'), zonaInfo = document.getElementById('zonaInfoExcepcion');
 
-                const weekFilter = document.getElementById('weekFilter');
-                weekFilter.innerHTML = '<option value="all">Últimas 4 Semanas</option>';
-                [...weekKeysGlobal].reverse().forEach(wk => weekFilter.innerHTML += `<option value="${wk}">Filtro: ${wk}</option>`);
+                if (isInfo) {
+                    zonaFirma.style.display = 'none'; zonaInfo.style.display = 'flex'; btnAgent.style.display = 'none'; msgAgent.style.display = 'none';
+                } else {
+                    zonaFirma.style.display = 'block'; zonaInfo.style.display = 'none';
+                    if(data.compromiso_agente) { btnAgent.style.display = 'none'; msgAgent.style.display = 'block'; msgAgent.innerHTML = "<i class='fas fa-lock'></i> Compromiso cerrado y archivado."; } 
+                    else if(canSign) { btnAgent.style.display = 'flex'; msgAgent.style.display = 'none'; } 
+                    else { btnAgent.style.display = 'none'; msgAgent.style.display = 'none'; }
+                }
 
-                aplicarFiltros(); 
+                UI.openModal('feedbackModal');
+                
+                document.getElementById('btnSaveLider').onclick = async () => {
+                    const txt = document.getElementById('txtFeedbackLider').value.trim(), infoChecked = document.getElementById('chkEsInformativo').checked;
+                    if(!txt && !infoChecked) return alert("Se requiere redactar retroalimentación si la nota exige firma.");
+                    try {
+                        await setDoc(doc(db, "notas_calidad", idDoc), { feedback_lider: txt, es_informativo: infoChecked }, { merge: true });
+                        document.getElementById('msgLider').style.display = 'block'; setTimeout(() => document.getElementById('msgLider').style.display = 'none', 3000); setTimeout(() => Interactions.openFeedback(idDoc), 500);
+                    } catch(e) { alert("Error de red."); }
+                };
 
-                status.innerHTML = "<i class='fas fa-check-circle'></i> Base Conectada";
-                setTimeout(() => status.style.display = "none", 3000);
+                document.getElementById('btnSaveAgente').onclick = async () => {
+                    let comp = "";
+                    if (data.feedback_lider) {
+                        comp = document.getElementById('txtCompromisoAgente').value.trim();
+                        if(!comp) return alert("Debes documentar tu plan de acción ya que el líder dejó retroalimentación.");
+                    } else {
+                        if(!document.getElementById('chkEnteradoAsesor').checked) return alert("Debes marcar la casilla de enterado para continuar.");
+                        comp = "Enterado (Sin observaciones)";
+                    }
+
+                    try {
+                        await setDoc(doc(db, "notas_calidad", idDoc), { 
+                            compromiso_agente: comp, 
+                            nps_agente: document.getElementById('selNpsAgente').value, 
+                            observacion_agente: document.getElementById('txtObsAgente').value 
+                        }, { merge: true });
+                        btnAgent.style.display = 'none'; msgAgent.style.display = 'block';
+                        msgAgent.innerHTML = "<i class='fas fa-check-circle'></i> Documento firmado de forma segura.";
+                    } catch(e) { alert("Error guardando la firma."); }
+                };
+            },
+
+            saveEditedNote: async () => {
+                if(!State.currentDocId) return;
+                let data = State.records.find(d => d.idDoc === State.currentDocId), valInput = document.getElementById('inpEditNote').value.trim().toUpperCase(), areaInput = document.getElementById('inpEditArea').value;
+                let noteChanged = valInput !== String(data.nota).toUpperCase(), areaChanged = areaInput !== data.area;
+
+                if(!noteChanged && !areaChanged) return alert("No hay cambios en la calificación o área.");
+                if(!valInput) return alert("El campo de nota no puede quedar vacío.");
+
+                let isNum = !isNaN(valInput), nuevaNotaFinal = isNum ? Math.round(Number(valInput)) : valInput, oldNota = data.nota || "Ninguna", auditText = "";
+                if (noteChanged && areaChanged) auditText = `De ${oldNota} a ${nuevaNotaFinal} y se trasladó a ${areaInput}`; else if (noteChanged) auditText = `De ${oldNota} a ${nuevaNotaFinal}`; else if (areaChanged) auditText = `Se movió de ${data.area} a ${areaInput}`;
+
+                let auditEntry = { fecha: new Date().toISOString(), usuario: State.user.nombre, detalle: auditText }, historyArr = data.historial_cambios || []; historyArr.push(auditEntry);
+
+                try {
+                    await setDoc(doc(db, "notas_calidad", State.currentDocId), { nota: nuevaNotaFinal, area: areaInput, historial_cambios: historyArr }, { merge: true });
+                    document.getElementById('fbBadgeZone').innerHTML = UI.getBadgeHTML(nuevaNotaFinal); alert("Modificación guardada exitosamente en la matriz."); setTimeout(() => Interactions.openFeedback(State.currentDocId), 500);
+                } catch(e) { alert("Fallo al actualizar el registro."); }
+            }
+        };
+
+        // --- IMPORTACIÓN EXCEL MASIVA (Con Paginador de 450 y Anti-Congelamiento) ---
+        document.getElementById('btnImportarPopup').addEventListener('click', () => UI.openModal('importModal'));
+        document.getElementById('btnSelectFile').addEventListener('click', () => document.getElementById('realFileInput').click());
+
+        document.getElementById('realFileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            const semRaw = document.getElementById('impSemana').value.toUpperCase().trim();
+            const anio = Number(document.getElementById('impAnio').value);
+            const areaFiltro = document.getElementById('impArea').value;
+            const statusNode = document.getElementById('impStatus');
+
+            if (!file || !semRaw || !anio) return alert("Asegúrate de ingresar el Año y la(s) Semana(s) (Ej. S1, S2).");
+
+            const semanasRequested = semRaw.split(',').map(s => s.trim()).filter(s => s);
+            
+            statusNode.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Extrayendo archivo...";
+            await new Promise(r => setTimeout(r, 50)); 
+
+            const reader = new FileReader();
+            
+            reader.onload = async function(evt) {
+                try {
+                    statusNode.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Leyendo estructura del Excel...";
+                    await new Promise(r => setTimeout(r, 50)); 
+
+                    const workbook = XLSX.read(new Uint8Array(evt.target.result), {type: 'array'});
+                    let targetSheet = null, targetRows = null, headerRowIdx = -1, weekColMap = [], idxAgente = -1;
+
+                    for (let sheetName of workbook.SheetNames) {
+                        let sheet = workbook.Sheets[sheetName];
+                        let rows = XLSX.utils.sheet_to_json(sheet, {header: 1}); 
+                        
+                        let searchLimit = Math.min(rows.length, 100);
+
+                        for (let r = 0; r < searchLimit; r++) {
+                            if(!rows[r] || rows[r].length === 0) continue;
+                            
+                            let rowHeaders = rows[r].map(h => String(h || "").trim().toUpperCase());
+                            let tempIdxAgente = rowHeaders.findIndex(h => h.includes("ÁREA") || h.includes("AGENTE") || h.includes("ASESOR") || h.includes("NOMBRE"));
+                            if (tempIdxAgente === -1) continue; 
+                            
+                            let tempMap = [];
+                            for (let reqSem of semanasRequested) {
+                                let semOptions = [reqSem];
+                                if (reqSem.startsWith('S')) semOptions.push(reqSem.substring(1));
+                                if (!isNaN(reqSem)) semOptions.push('S' + reqSem);
+
+                                for (let opt of semOptions) {
+                                    let foundIdx = rowHeaders.indexOf(opt);
+                                    if (foundIdx !== -1) {
+                                        tempMap.push({ requested: reqSem, colIdx: foundIdx, officialName: reqSem.startsWith('S') ? reqSem : (!isNaN(reqSem) ? 'S'+reqSem : reqSem) });
+                                        break;
+                                    }
+                                }
+                            }
+                            if (tempMap.length > 0) { targetSheet = sheetName; targetRows = rows; headerRowIdx = r; idxAgente = tempIdxAgente; weekColMap = tempMap; break; }
+                        }
+                        if (targetSheet) break;
+                    }
+
+                    if (!targetSheet) throw new Error(`No se encontró ninguna de las semanas solicitadas en el Excel.`);
+
+                    statusNode.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando y filtrando filas...";
+                    await new Promise(r => setTimeout(r, 50));
+
+                    let areaTracker = "General", countUploads = 0;
+                    let isGlobalData = State.user.areas.includes("Todas");
+                    let validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
+
+                    let batches = [writeBatch(db)];
+                    let currentBatchIdx = 0;
+                    let operationsInCurrentBatch = 0;
+
+                    for (let i = headerRowIdx + 1; i < targetRows.length; i++) {
+                        if(!targetRows[i] || targetRows[i].length === 0) continue;
+                        let content = String(targetRows[i][idxAgente] || "").trim();
+                        if (!content) continue;
+
+                        let contentUpper = content.toUpperCase();
+                        let matchedArea = State.areas.find(a => String(a).trim().toUpperCase() === contentUpper);
+                        if (matchedArea) { areaTracker = matchedArea; continue; }
+                        
+                        if (contentUpper.includes("PROMEDIO") || contentUpper.includes("TOTAL") || contentUpper === "ÁREA" || contentUpper === "AGENTE") continue;
+                        if (areaFiltro !== "Todas" && areaTracker.toUpperCase() !== areaFiltro.toUpperCase()) continue;
+                        if (!isGlobalData && !validAreas.includes(areaTracker.toUpperCase())) continue;
+
+                        for (let wMap of weekColMap) {
+                            let notaRaw = targetRows[i][wMap.colIdx];
+                            if(notaRaw !== "" && notaRaw !== null && notaRaw !== undefined) {
+                                let docId = `${content.replace(/[^a-zA-Z0-9]/g, '')}_${areaTracker.replace(/[^a-zA-Z0-9]/g, '')}_${anio}_${wMap.officialName}`;
+                                
+                                batches[currentBatchIdx].set(doc(db, "notas_calidad", docId), { 
+                                    id_asesor: content, area: areaTracker, semana: wMap.officialName, nota: isNaN(notaRaw) ? String(notaRaw).toUpperCase() : Math.round(Number(notaRaw)), anio: anio
+                                }, { merge: true });
+                                
+                                countUploads++;
+                                operationsInCurrentBatch++;
+
+                                if (operationsInCurrentBatch >= 450) {
+                                    batches.push(writeBatch(db));
+                                    currentBatchIdx++;
+                                    operationsInCurrentBatch = 0;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if(countUploads === 0) throw new Error("No se extrajeron datos. Revisa áreas y valores numéricos.");
+                    
+                    statusNode.innerHTML = `<i class='fas fa-cloud-upload-alt'></i> Guardando ${countUploads} registros...`;
+                    await new Promise(r => setTimeout(r, 50));
+
+                    for(let b of batches) { await b.commit(); }
+
+                    statusNode.innerHTML = `<i class='fas fa-check-circle'></i> Importación exitosa de ${countUploads} notas.`;
+                    setTimeout(() => { UI.closeModal('importModal'); statusNode.innerHTML=""; document.getElementById('impSemana').value=""; document.getElementById('realFileInput').value=""; }, 3000);
+                } catch(error) { 
+                    console.error(error);
+                    statusNode.innerHTML = `<span style="color:var(--danger-txt)"><i class="fas fa-exclamation-triangle"></i> Fallo: ${error.message}</span>`; 
+                }
             };
+            
             reader.readAsArrayBuffer(file);
         });
 
-        // Aplicador de Filtros y Dibujo de Tabla
-        function aplicarFiltros() {
-            if(!datosGlobales.length) return;
-
-            const texto = document.getElementById('searchInput').value.toLowerCase();
-            const area = document.getElementById('areaFilter').value;
-            const week = document.getElementById('weekFilter').value;
-
-            let datosFiltrados = datosGlobales.filter(agente => {
-                return agente.Name.toLowerCase().includes(texto) && (area === "all" || agente.Area === area);
-            });
-
-            let semanasAMostrar = (week === "all") ? weekKeysGlobal.slice(-4) : [week];
-
-            let theadHtml = `<tr><th>Área Operativa</th><th>Asesor</th>`;
-            semanasAMostrar.forEach(wk => {
-                theadHtml += `<th style="text-align:center; color:var(--primary);">${wk}</th>`;
-            });
-            theadHtml += `<th style="text-align:center;">Prom. Anual</th><th>Feedback y Oportunidades</th><th style="text-align:center;">Acción</th></tr>`;
-            document.getElementById('tableHead').innerHTML = theadHtml;
-
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-            
-            let sumaNotas = 0; let conteoNotas = 0;
-
-            datosFiltrados.forEach(agente => {
-                let tr = document.createElement('tr');
-                let tdHtml = `<td class="col-area">${agente.Area}</td><td><strong>${agente.Name}</strong></td>`;
-                
-                semanasAMostrar.forEach(wk => { 
-                    let nota = agente.History[wk];
-                    tdHtml += `<td style="text-align:center;">${getBadge(nota)}</td>`; 
-                    if(nota !== "-") { sumaNotas += nota; conteoNotas++; }
+        window.Admin = {
+            changeAgentStatus: async (name, newStatus) => { try { await setDoc(doc(db, "configuracion", "estados_agentes"), { [name]: newStatus }, { merge: true }); } catch(e) { alert("Bloqueo de red."); } },
+            loadUsers: async () => {
+                const snap = await getDocs(collection(db, "usuarios")); State.admin.userListCache = [];
+                let isGlobalData = State.user.areas.includes("Todas"), myAreas = State.user.areas.map(a => a.toUpperCase()), myRole = State.user.rol;
+                snap.forEach(d => {
+                    let uData = d.data(), uAreas = uData.areas || [uData.area || "General"];
+                    if (myRole !== 'Admin' && uData.rol === 'Admin') return;
+                    let hasAccess = isGlobalData;
+                    if(!hasAccess) hasAccess = uAreas.some(ua => myAreas.includes(String(ua).toUpperCase()));
+                    if (hasAccess) State.admin.userListCache.push({id: d.id, ...uData});
                 });
+                Admin.drawUsers(State.admin.userListCache);
+            },
+            drawUsers: (list) => { document.getElementById('activeUsersList').innerHTML = list.map(u => `<div class="user-row"><div><div style="font-size:13px; font-weight:800; color:var(--text-main);">${u.nombre}</div><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${u.id} | Áreas: ${u.areas ? u.areas.join(', ') : (u.area || "General")}</div></div><button class="btn-action" style="padding: 6px 10px; font-size:11px;" onclick="Admin.prepEditUser('${u.id}', '${u.nombre}', '${u.rol}', '${u.areas ? u.areas.join(', ') : (u.area || "General")}')"><i class="fas fa-edit"></i> ${u.rol}</button></div>`).join(''); },
+            filterUsers: () => { const term = document.getElementById('searchUserEdit').value.toLowerCase(); Admin.drawUsers(State.admin.userListCache.filter(u => u.nombre.toLowerCase().includes(term) || u.id.toLowerCase().includes(term))); },
+            prepEditUser: (email, nombre, rol, areasString) => {
+                document.getElementById('newUserEmail').value = email; document.getElementById('newUserName').value = nombre; document.getElementById('newUserRole').value = rol; document.getElementById('newUserPass').value = ""; 
+                let areaList = areasString.split(',').map(s => s.trim());
+                document.querySelectorAll('.chk-area-user').forEach(cb => { cb.checked = areaList.includes(cb.value); });
+            },
+            
+            // NUEVO: Exportar Usuarios
+            exportUsers: () => {
+                if(State.admin.userListCache.length === 0) return alert("No hay usuarios cargados para exportar.");
+                let exportData = State.admin.userListCache.map(u => ({
+                    "Nombre": u.nombre,
+                    "Correo": u.id,
+                    "Contraseña": "", // Dejar en blanco por seguridad
+                    "Rol": u.rol,
+                    "Áreas": u.areas ? u.areas.join(", ") : (u.area || "General")
+                }));
+                const ws = XLSX.utils.json_to_sheet(exportData); 
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Directorio_Usuarios"); 
+                XLSX.writeFile(wb, `Usuarios_Distelsa_${new Date().getTime()}.xlsx`);
+            },
+
+            // NUEVO: Importar Usuarios Masivamente
+            importUsers: async (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
                 
-                tdHtml += `<td style="text-align:center;">${getBadge(agente.Anual)}</td>`;
-                
-                let feedbackHtml = "";
-                if (agente.Feedback.length > 0) {
-                    feedbackHtml = agente.Feedback.map(f => `<div class="feedback-item"><i class="fas fa-chevron-right"></i> <span>${f}</span></div>`).join('');
-                } else {
-                    feedbackHtml = `<span style='color:#cbd5e1; font-style: italic;'>Sin registro de mejora</span>`;
+                const btn = document.getElementById('btnImportUsers');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Subiendo...";
+                btn.disabled = true;
+
+                const reader = new FileReader();
+                reader.onload = async (evt) => {
+                    try {
+                        const workbook = XLSX.read(new Uint8Array(evt.target.result), {type: 'array'});
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet);
+                        
+                        let count = 0;
+                        for(let row of rows) {
+                            let nombre = row["Nombre"];
+                            let correo = row["Correo"];
+                            let pass = row["Contraseña"]; 
+                            let rol = row["Rol"] || "Agente";
+                            let areasRaw = row["Áreas"] || "General";
+                            
+                            if(!correo || !nombre) continue;
+                            correo = String(correo).trim().toLowerCase();
+                            let areas = String(areasRaw).split(',').map(a => a.trim());
+
+                            // Crear en Firebase Auth si trae contraseña (ignora si ya existe)
+                            if(pass && String(pass).length >= 6) {
+                                try { await createUserWithEmailAndPassword(adminAuth, correo, String(pass)); } catch(err) {} 
+                            }
+
+                            // Actualizar info en Firestore
+                            await setDoc(doc(db, "usuarios", correo), { nombre: nombre, rol: rol, areas: areas }, { merge: true });
+                            count++;
+                        }
+                        alert(`¡Éxito! Se importaron/actualizaron ${count} usuarios en la base de datos.`);
+                        Admin.loadUsers();
+                    } catch(error) {
+                        alert("Error procesando el Excel de usuarios: " + error.message);
+                    }
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    e.target.value = ""; // Limpiar input para permitir subir el mismo archivo de nuevo si se necesita
+                };
+                reader.readAsArrayBuffer(file);
+            },
+
+            loadRoles: async () => {
+                const snap = await getDocs(collection(db, "roles"));
+                let baseRoles = ['Admin', 'Lider', 'Agente']; snap.forEach(d => { if(!baseRoles.includes(d.id)) baseRoles.push(d.id); });
+                document.getElementById('rolesListDiv').innerHTML = baseRoles.map(r => { let d = snap.docs.find(x => x.id === r); return `<div class="user-row" style="cursor:pointer;" onclick="Admin.editRole('${r}', '${d ? d.data().permisos.join(',') : ""}')"><span style="font-size:13px; font-weight:800; color:var(--primary);"><i class="fas fa-shield-alt"></i> Rol: ${r}</span></div>`; }).join('');
+                const roleSelect = document.getElementById('newUserRole');
+                if (roleSelect) {
+                    let currentVal = roleSelect.value, allowedRoles = baseRoles;
+                    if(State.user.rol !== 'Admin') allowedRoles = allowedRoles.filter(r => r !== 'Admin' && r !== 'Lider');
+                    roleSelect.innerHTML = allowedRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+                    if (allowedRoles.includes(currentVal)) roleSelect.value = currentVal;
                 }
-                tdHtml += `<td class="col-feedback">${feedbackHtml}</td>`;
-                
-                tdHtml += `<td style="text-align:center;"><button class="btn-action" onclick="abrirModal('${agente.Name}')"><i class="fas fa-chart-line"></i> Detalle</button></td>`;
-                
-                tr.innerHTML = tdHtml;
-                tbody.appendChild(tr);
-            });
+            },
+            addRole: async () => {
+                const input = document.getElementById('newRoleInput'); const val = input.value.trim(); if(!val) return;
+                const snap = await getDocs(collection(db, "roles")); let exists = false; snap.forEach(d => { if(d.id.toLowerCase() === val.toLowerCase()) exists = true; });
+                if(['admin', 'lider', 'agente'].includes(val.toLowerCase())) exists = true;
+                if(exists) return alert("Este rol ya existe.");
+                try { await setDoc(doc(db, "roles", val), { permisos: [] }, { merge: true }); input.value = ""; Admin.loadRoles(); alert(`Rol "${val}" creado exitosamente.`); } catch(e) { alert("Error."); }
+            },
+            editRole: (role, permString) => {
+                State.admin.activeRoleEdit = role; document.getElementById('editingRoleName').innerText = role; let activePerms = permString.split(',');
+                // Permisos actualizados con Importar/Exportar
+                ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_subir_excel', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_add_feedback', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks'].forEach(c => { let checkbox = document.getElementById(c); if(checkbox) checkbox.checked = activePerms.includes(c); });
+            },
+            renderAreas: () => { document.getElementById('areasContainer').innerHTML = State.areas.map(a => `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);"><span style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fas fa-building" style="color:var(--primary); margin-right:8px;"></i> ${a}</span><button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteArea('${a}')"><i class="fas fa-trash"></i></button></div>`).join(''); },
+            addArea: async () => { const input = document.getElementById('newAreaInput'); const val = input.value.trim(); if(!val) return; if(State.areas.includes(val)) return alert("El área ya existe."); State.areas.push(val); try { await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas }, { merge: true }); input.value = ""; Admin.renderAreas(); UI.updateSelects(); } catch(e) { alert("Error."); State.areas.pop(); } },
+            deleteArea: async (areaName) => { if(!confirm(`¿Seguro que deseas eliminar: ${areaName}?`)) return; State.areas = State.areas.filter(a => a !== areaName); try { await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas }, { merge: true }); Admin.renderAreas(); UI.updateSelects(); } catch(e) { alert("Error."); } },
+            renderEstados: () => { document.getElementById('estadosContainer').innerHTML = State.estadosList.map(e => `<div style="display: grid; grid-template-columns: 1fr 3fr 1fr 1fr; gap: 15px; align-items: center;" class="est-row"><input type="color" value="${e.color}" class="st-col" style="width:100%; height:42px; border:1px solid var(--border); border-radius:6px; cursor:pointer;"><input type="text" value="${e.lbl}" class="form-input st-lbl" style="padding:10px;"><label style="display:flex; align-items:center; justify-content:center; gap:5px; font-size:12px; font-weight:700;"><input type="checkbox" class="st-calc" ${e.calcProm !== false ? 'checked' : ''} style="width:16px; height:16px;"> Suma</label><button class="btn-action" style="color:var(--danger-txt); border:none; justify-content:center; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>`).join(''); },
+            addEstadoRow: () => { State.estadosList.push({lbl:'', color:'#000000', calcProm: true}); Admin.renderEstados(); },
+            saveEstados: async () => { let freshList = []; document.querySelectorAll('.est-row').forEach(row => { freshList.push({ color: row.querySelector('.st-col').value, lbl: row.querySelector('.st-lbl').value.trim(), calcProm: row.querySelector('.st-calc').checked }); }); try { await setDoc(doc(db, "configuracion", "estados_list"), { lista: freshList }, { merge: true }); State.estadosList = freshList; alert("Estados del menú guardados."); UI.updateSelects(); App.processRecordsForYear(); } catch(e) { alert("Fallo al guardar."); } },
+            renderScales: () => { document.getElementById('escalasContainer').innerHTML = State.scales.map(e => `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr 2fr 1fr; gap: 15px; align-items: center;" class="esc-row"><input type="color" value="${e.color}" class="e-col" style="width:100%; height:42px; border:1px solid var(--border); border-radius:6px; cursor:pointer;"><input type="number" value="${e.min}" class="form-input e-min" style="padding:10px;"><input type="number" value="${e.max}" class="form-input e-max" style="padding:10px;"><input type="text" value="${e.lbl}" class="form-input e-lbl" style="padding:10px;" placeholder="Ej: Corinto o IGSS"><button class="btn-action" style="color:var(--danger-txt); border:none; justify-content:center; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>`).join(''); },
+            addScaleRow: () => { State.scales.push({min:0, max:0, color:'#000000', lbl:''}); Admin.renderScales(); },
+            saveScales: async () => { let freshScales = []; document.querySelectorAll('.esc-row').forEach(row => { freshScales.push({ color: row.querySelector('.e-col').value, min: Number(row.querySelector('.e-min').value), max: Number(row.querySelector('.e-max').value), lbl: row.querySelector('.e-lbl').value.trim() }); }); try { await setDoc(doc(db, "configuracion", "escalas"), { lista: freshScales }, { merge: true }); State.scales = freshScales; alert("Configuración guardada."); App.processRecordsForYear(); } catch(e) { alert("Fallo."); } },
+            renderNps: () => { document.getElementById('npsContainer').innerHTML = State.npsOptions.map(n => `<div style="display: grid; grid-template-columns: 1fr 3fr 1fr; gap: 15px; align-items: center;" class="nps-row"><input type="number" value="${n.val}" class="form-input n-val" style="padding:10px;"><input type="text" value="${n.lbl}" class="form-input n-lbl" style="padding:10px;"><button class="btn-action" style="color:var(--danger-txt); border:none; justify-content:center; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>`).join(''); },
+            addNpsRow: () => { State.npsOptions.push({val: "", lbl: ""}); Admin.renderNps(); },
+            saveNps: async () => { let freshNps = []; document.querySelectorAll('.nps-row').forEach(row => { freshNps.push({ val: row.querySelector('.n-val').value, lbl: row.querySelector('.n-lbl').value.trim() }); }); try { await setDoc(doc(db, "configuracion", "nps"), { lista: freshNps }, { merge: true }); State.npsOptions = freshNps; alert("Opciones de NPS guardadas."); } catch(e) { alert("Error."); } },
+            renderFeedbackRules: () => { document.getElementById('cfgAutoClose').value = State.feedbackRules.autoClose || ""; document.getElementById('cfgAllowInformativo').checked = !!State.feedbackRules.allowInformative; document.getElementById('cfgMetaGlobal').value = State.feedbackRules.metaGlobal || 95; document.getElementById('cfgFamaThreshold').value = State.feedbackRules.famaThreshold || 100; },
+            saveFeedbackRules: async () => { let rules = { autoClose: Number(document.getElementById('cfgAutoClose').value) || 100, allowInformative: document.getElementById('cfgAllowInformativo').checked, metaGlobal: Number(document.getElementById('cfgMetaGlobal').value) || 95, famaThreshold: Number(document.getElementById('cfgFamaThreshold').value) || 100 }; try { await setDoc(doc(db, "configuracion", "feedback_rules"), rules, { merge: true }); State.feedbackRules = rules; alert("Reglas guardadas."); document.getElementById('kpi-meta').innerText = rules.metaGlobal + "%"; App.applyPermissions(); App.processRecordsForYear(); } catch(e) { alert("Error al guardar."); } }
+        };
 
-            if(datosFiltrados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-muted);">No se encontraron asesores.</td></tr>`;
-            }
+        document.getElementById('btnSaveUser').addEventListener('click', async () => {
+            const email = document.getElementById('newUserEmail').value.trim().toLowerCase(), pass = document.getElementById('newUserPass').value, nombre = document.getElementById('newUserName').value.trim(), rol = document.getElementById('newUserRole').value;
+            if (State.user.rol !== 'Admin' && rol === 'Admin') return alert("No tienes permisos suficientes.");
+            let selectedAreas = []; document.querySelectorAll('.chk-area-user:checked').forEach(cb => selectedAreas.push(cb.value)); if(selectedAreas.includes("Todas")) selectedAreas = ["Todas"];
+            if(!email || !nombre || selectedAreas.length === 0) return alert("Correo, Nombre y al menos un Área son obligatorios.");
+            const btn = document.getElementById('btnSaveUser'); btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando...";
+            try { if(pass && pass.length >= 6) await createUserWithEmailAndPassword(adminAuth, email, pass); await setDoc(doc(db, "usuarios", email), { nombre, rol, areas: selectedAreas }, { merge: true }); alert("Actualización exitosa."); Admin.loadUsers(); document.getElementById('newUserEmail').value = ""; document.getElementById('newUserName').value = ""; document.getElementById('newUserPass').value = ""; document.querySelectorAll('.chk-area-user').forEach(cb => cb.checked = false); } catch (e) { alert("Error, revisa la información."); }
+            btn.innerHTML = "<i class='fas fa-save'></i> Guardar Perfil"; signOut(adminAuth).catch(()=>{});
+        });
 
-            document.getElementById('kpi-agents').innerText = datosFiltrados.length;
-            
-            const kpiLabel = document.getElementById('kpi-dynamic-label');
-            const kpiAvg = document.getElementById('kpi-avg');
-            
-            if(week !== "all") {
-                kpiLabel.innerText = `Promedio ${week}`;
-                kpiAvg.innerText = conteoNotas > 0 ? Math.round(sumaNotas / conteoNotas) + "%" : "N/A";
-            } else {
-                kpiLabel.innerText = `Promedio Anual (Filtro)`;
-                let sumaAnual = 0, conteoAnual = 0;
-                datosFiltrados.forEach(a => { if(a.Anual !== "-") { sumaAnual += a.Anual; conteoAnual++; }});
-                kpiAvg.innerText = conteoAnual > 0 ? Math.round(sumaAnual / conteoAnual) + "%" : "N/A";
-            }
-        }
+        document.getElementById('btnSaveRolePerms').addEventListener('click', async () => {
+            let selectedPerms = []; 
+            ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_subir_excel', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_add_feedback', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks'].forEach(c => { let checkbox = document.getElementById(c); if(checkbox && checkbox.checked) selectedPerms.push(c); });
+            try { await setDoc(doc(db, "roles", State.admin.activeRoleEdit), { permisos: selectedPerms }, { merge: true }); alert(`Permisos guardados para el rol: ${State.admin.activeRoleEdit}`); if(State.admin.activeRoleEdit === State.user.rol) { State.user.permisos = selectedPerms; App.applyPermissions(); } Admin.loadRoles(); } catch(e) { alert("Problema de escritura."); }
+        });
 
-        function abrirModal(nombreAgente) {
-            const agente = datosGlobales.find(a => a.Name === nombreAgente);
-            document.getElementById('modalAgentName').innerText = agente.Name;
-            document.getElementById('modalAgentArea').innerText = agente.Area;
-
-            const list = document.getElementById('modalFeedback');
-            if(agente.Feedback.length > 0) {
-                list.innerHTML = agente.Feedback.map(f => `<li><i class="fas fa-check-circle"></i> ${f}</li>`).join('');
-            } else {
-                list.innerHTML = `<li style="color:#94a3b8">No hay registros de feedback en la base de datos.</li>`;
-            }
-
-            if(agentChartObj) agentChartObj.destroy();
-            const semanas = weekKeysGlobal;
-            const notas = semanas.map(s => agente.History[s] === "-" ? null : agente.History[s]);
-
-            agentChartObj = new Chart(document.getElementById('modalChart'), {
-                type: 'line',
-                data: {
-                    labels: semanas,
-                    datasets: [{
-                        label: 'Desempeño %', data: notas, 
-                        borderColor: '#3b82f6', borderWidth: 3,
-                        backgroundColor: 'rgba(59,130,246,0.1)', fill: true,
-                        pointBackgroundColor: '#ffffff', pointBorderColor: '#3b82f6', pointRadius: 5, tension: 0.4, spanGaps: true
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 70, max: 100 } }, plugins: { legend: {display: false} } }
-            });
-
-            document.getElementById('agentModal').style.display = 'flex';
-        }
-
-        function closeModal() { document.getElementById('agentModal').style.display = 'none'; }
     </script>
 </body>
 </html>
