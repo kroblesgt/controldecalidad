@@ -128,7 +128,7 @@
         .table-scroll { overflow-x: auto; overflow-y: auto; border-radius: 0 0 16px 16px; height: 100%; }
         
         table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
-        th { background: #f8fafc; padding: 18px 25px; font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        th { background: #f8fafc; padding: 18px 25px; font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         td { padding: 16px 25px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; vertical-align: middle; color: var(--text-main); background: white; }
         tbody tr { transition: background-color 0.2s; }
         tbody tr:hover td { background-color: #f1f5f9; }
@@ -208,7 +208,7 @@
             <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
             <div>
                 <div class="logo-text">Calidad CX</div>
-                <div class="logo-sub">Grupo Distelsa</div>
+                <div class="logo-sub">Multi-Plataforma</div>
             </div>
         </div>
         
@@ -237,7 +237,7 @@
 
         <div class="kpi-side" id="kpiPanel">
             <div class="kpi-item" id="kpiAgentsRow">
-                <span class="kpi-label" title="Agentes contemplados según los filtros activos de Área y Estatus">Asesores Filtrados</span>
+                <span class="kpi-label" title="Agentes contemplados según los filtros activos">Asesores Filtrados</span>
                 <span class="kpi-val" id="kpi-agents">0</span>
             </div>
             <div class="kpi-item">
@@ -289,7 +289,7 @@
                         <p style="font-size: 12px; color: var(--text-muted);">Añade registros individuales o sube bases masivas desde Excel.</p>
                     </div>
                     <div style="margin-left: auto; display: flex; gap: 10px;">
-                        <button class="btn-action" id="btnIngresoManual" style="display: none; background: #8b5cf6; color: white; border: none;"><i class="fas fa-keyboard"></i> Ingreso Manual</button>
+                        <button class="btn-action" id="btnIngresoManual" style="display: none; background: #8b5cf6; color: white; border: none;"><i class="fas fa-keyboard"></i> Registrar Nota Manual</button>
                         <button class="btn-action" id="btnImportarPopup" style="display: none; background: #10b981; color: white; border: none;"><i class="fas fa-file-import"></i> Subir Excel</button>
                     </div>
                 </div>
@@ -484,6 +484,17 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="quickEmpresaModal">
+        <div class="modal-box fade-in" style="max-width: 400px; margin: auto;">
+            <div class="modal-header"><h2>Asignar Empresa</h2><button class="close-btn" onclick="UI.closeModal('quickEmpresaModal')"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Selecciona la empresa correspondiente para el registro de: <br><strong id="qeAgentName" style="color:var(--text-main); font-size: 14px;"></strong></p>
+                <div id="qeEmpresasChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px; max-height: 200px; overflow-y: auto;"></div>
+                <button class="btn-action" onclick="Admin.saveQuickEmpresa()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px; margin-top: 20px;"><i class="fas fa-save"></i> Confirmar Asignación</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="feedbackModal">
         <div class="modal-box fade-in" style="max-width: 900px; margin: auto;">
             <div class="modal-header" style="flex-direction: column; padding-bottom: 20px;">
@@ -539,7 +550,7 @@
                                 <strong>Marcar de enterado (Sin observaciones del líder)</strong>
                             </label>
                         </div>
-                        <div class="form-group"><label>Satisfaccion de Nota</label><select id="selNpsAgente"></select></div>
+                        <div class="form-group"><label>Evaluación del Acompañamiento (NPS)</label><select id="selNpsAgente"></select></div>
                         <div class="form-group"><label>Comentario Adicional (Opcional)</label><input type="text" id="txtObsAgente" placeholder="¿Algo más que agregar sobre la evaluación?"></div>
                         <button class="btn-action" id="btnSaveAgente" style="justify-content: center; background: var(--success-txt); color: white; border: none; padding: 14px; margin-top: auto; width: 100%;"><i class="fas fa-signature"></i> Firmar de Enterado</button>
                     </div>
@@ -584,22 +595,38 @@
             <div class="modal-body" style="padding-top: 20px;">
                 <div class="settings-tabs">
                     <button class="tab-btn active" id="btnTabUsuarios" onclick="App.switchSettingsTab('tabUsuarios')">Usuarios</button>
+                    <button class="tab-btn" id="btnTabEmpresas" onclick="App.switchSettingsTab('tabEmpresas')">Empresas</button>
+                    <button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas/Campañas</button>
                     <button class="tab-btn" id="btnTabRoles" onclick="App.switchSettingsTab('tabRoles')">Permisos</button>
-                    <button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas</button>
                     <button class="tab-btn" id="btnTabEstados" onclick="App.switchSettingsTab('tabEstados')">Estados Asesor</button>
-                    <button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas y Textos</button>
+                    <button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas</button>
                     <button class="tab-btn" id="btnTabNps" onclick="App.switchSettingsTab('tabNps')">Encuesta NPS</button>
                     <button class="tab-btn" id="btnTabOperativas" onclick="App.switchSettingsTab('tabOperativas')" style="color: #0284c7;">Reglas Operativas</button>
                 </div>
 
                 <div id="tabUsuarios" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px;">
-                    <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;">
                         <h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">CREAR / EDITAR PERFIL</h3>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">💡 <strong>Tip para Agentes Inactivos:</strong> Si dejas el correo vacío, el sistema guardará la asignación de su empresa únicamente para propósitos de la matriz, sin crearle un usuario.</p>
                         <div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div>
-                        <div class="form-group"><label>Correo Electrónico</label><input type="email" id="newUserEmail" placeholder="usuario@distelsa.com.gt"></div>
-                        <div class="form-group"><label>Contraseña (Min. 6 caracteres)</label><input type="password" id="newUserPass" placeholder="En blanco si solo actualizas datos"></div>
+                        <div class="form-group"><label>Correo Electrónico (Opcional)</label><input type="email" id="newUserEmail" placeholder="Dejar en blanco si ya no labora"></div>
+                        <div class="form-group"><label>Contraseña (Opcional - Min 6 car.)</label><input type="password" id="newUserPass" placeholder="Dejar en blanco si ya no labora"></div>
                         <div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div>
-                        <div class="form-group"><label>Áreas Asignadas</label><div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto;"></div></div>
+                        
+                        <div class="form-group">
+                            <label style="color: var(--primary);"><i class="fas fa-building"></i> Empresa(s) de Acceso (Multiselección)</label>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Marca todas las empresas a las que este usuario pertenece o tiene permiso de ver.</p>
+                            <div id="userEmpresaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #eff6ff; border-color: #bfdbfe;">
+                                </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="color: #10b981;"><i class="fas fa-sitemap"></i> Área(s) Asignada(s) (Multiselección)</label>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Marca las áreas o campañas específicas para este usuario.</p>
+                            <div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #f0fdf4; border-color: #bbf7d0;">
+                                </div>
+                        </div>
+                        
                         <button class="btn-action" id="btnSaveUser" style="background: var(--text-main); color: white; width: 100%; justify-content: center; margin-top: 10px; padding: 14px; border: none;"><i class="fas fa-save"></i> Guardar Perfil</button>
                     </div>
                     
@@ -614,6 +641,17 @@
                             </div>
                         </div>
                         <div class="users-list" id="activeUsersList" style="flex: 1;"></div>
+                    </div>
+                </div>
+
+                <div id="tabEmpresas" style="display: none;">
+                    <div style="background: #e0f2fe; color: #0284c7; padding: 12px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #bae6fd;">
+                        <i class="fas fa-info-circle"></i> <strong>Estructura Organizacional:</strong> Aquí puedes agregar o eliminar las empresas/outsourcers. Luego podrás vincular a cada usuario a una o varias de ellas desde la pestaña Usuarios.
+                    </div>
+                    <div id="empresasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div>
+                    <div style="display: flex; gap: 15px; max-width: 500px;">
+                        <input type="text" id="newEmpresaInput" placeholder="Nombre de la nueva empresa..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none;">
+                        <button class="btn-action" style="background: #0284c7; color:white; border:none;" onclick="Admin.addEmpresa()"><i class="fas fa-plus"></i> Agregar Empresa</button>
                     </div>
                 </div>
 
@@ -648,7 +686,7 @@
                                     <label><input type="checkbox" id="chk_importar_usuarios"> <span style="color:#3b82f6;">Importar Usuarios (Excel)</span></label>
                                     <label><input type="checkbox" id="chk_exportar_usuarios"> <span style="color:#10b981;">Exportar Directorio</span></label>
                                     <label><input type="checkbox" id="chk_cfg_roles"> Módulo: Permisos</label>
-                                    <label><input type="checkbox" id="chk_cfg_areas"> Módulo: Áreas</label>
+                                    <label><input type="checkbox" id="chk_cfg_areas"> Módulo: Áreas y Empresas</label>
                                     <label><input type="checkbox" id="chk_cfg_estados"> Módulo: Estados Asesor</label>
                                     <label><input type="checkbox" id="chk_cfg_escalas"> Módulo: Escalas Numéricas</label>
                                     <label><input type="checkbox" id="chk_cfg_nps"> Módulo: Encuesta NPS</label>
@@ -684,7 +722,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCLmJuFHDIKMMAfshOdDPnDEuY1KCULa2U",
@@ -713,15 +751,19 @@
         };
 
         window.State = {
-            user: { email: "", nombre: "", rol: "", areas: [], permisos: [] },
+            user: { email: "", nombre: "", rol: "", areas: [], empresas: [], permisos: [] },
+            usersMap: {}, 
             viewingAgentName: null, 
             allRecords: [], 
             records: [], 
             weekKeys: [],
             charts: { agent: null, managerTrend: null, managerArea: null, npsTrend: null, npsArea: null },
             unsubscribeSync: null, 
+            unsubscribeUsers: null,
             currentDocId: null, 
+            quickEmpresaTarget: { nombre: "", area: "" },
             feedbackRules: { autoClose: 100, allowInformative: true, metaGlobal: 95, famaThreshold: 100 }, 
+            empresas: ["Grupo Distelsa", "Pronto BPO"], 
             areas: ["Servicio Técnico", "Oficinas Centrales", "E Commerce", "Transporte"],
             estadosList: [
                 { lbl: "Operativo", color: "#059669", calcProm: true },
@@ -796,8 +838,14 @@
                 const userAreaChecks = document.getElementById('userAreaChecks');
                 if(userAreaChecks) {
                     let hUser = permittedAreas.map(a => { if(a !== "Todas") return `<label><input type="checkbox" class="chk-area-user" value="${a}"> ${a}</label>`; return ''; }).join('');
-                    if (isGlobalData) hUser += `<label><input type="checkbox" class="chk-area-user" value="Todas"> <b style="color:var(--primary);">Todas las Áreas (Visión Global)</b></label>`;
+                    if (isGlobalData) hUser += `<label><input type="checkbox" class="chk-area-user" value="Todas"> <b style="color:#10b981;">Permiso a Todas las Áreas</b></label>`;
                     userAreaChecks.innerHTML = hUser;
+                }
+
+                const userEmpresaChecks = document.getElementById('userEmpresaChecks');
+                if(userEmpresaChecks) {
+                    let hEmp = State.empresas.map(e => `<label><input type="checkbox" class="chk-empresa-user" value="${e}"> ${e}</label>`).join('');
+                    userEmpresaChecks.innerHTML = hEmp;
                 }
 
                 const modalAreaChecks = document.getElementById('modalAreaChecks');
@@ -837,11 +885,26 @@
 
                     if(userDoc && userDoc.exists()) {
                         let data = userDoc.data();
+                        
+                        const estAgentsDoc = await getDoc(doc(db, "configuracion", "estados_agentes"));
+                        let myStatus = (estAgentsDoc.exists() && estAgentsDoc.data()[data.nombre]) ? estAgentsDoc.data()[data.nombre] : 'Operativo';
+                        if(myStatus.toLowerCase().includes('inactiv') || myStatus.toLowerCase().includes('baja')) {
+                            UI.showError(`Tu perfil se encuentra INACTIVO. Acceso denegado a la plataforma.`);
+                            signOut(auth);
+                            return;
+                        }
+
+                        const dbEmpresasRef = await getDoc(doc(db, "configuracion", "empresas")); 
+                        if(dbEmpresasRef.exists() && dbEmpresasRef.data().lista) State.empresas = dbEmpresasRef.data().lista;
+
                         let dbAreas = data.areas || data.area || [];
                         let areasArray = Array.isArray(dbAreas) ? dbAreas : [dbAreas];
                         if(areasArray.length === 0) areasArray = ["General"];
+
+                        let empresasArray = data.empresas || State.empresas;
+                        if (data.rol === 'Admin') empresasArray = State.empresas;
                         
-                        State.user = { email: user.email, nombre: data.nombre, rol: data.rol, areas: areasArray, permisos: [] };
+                        State.user = { email: user.email, nombre: data.nombre, rol: data.rol, areas: areasArray, empresas: empresasArray, permisos: [] };
                         
                         const roleDoc = await getDoc(doc(db, "roles", data.rol)); if(roleDoc.exists()) State.user.permisos = roleDoc.data().permisos || [];
                         const dbAreasRef = await getDoc(doc(db, "configuracion", "areas")); if(dbAreasRef.exists() && dbAreasRef.data().lista) State.areas = dbAreasRef.data().lista;
@@ -876,6 +939,17 @@
                         App.applyPermissions();
                         document.getElementById('authOverlay').style.display = 'none';
                         App.startDataSync();
+
+                        if (State.unsubscribeUsers) State.unsubscribeUsers();
+                        State.unsubscribeUsers = onSnapshot(collection(db, "usuarios"), (snap) => {
+                            State.usersMap = {};
+                            snap.forEach(d => {
+                                let u = d.data();
+                                State.usersMap[u.nombre] = { id: d.id, areas: u.areas || [], empresas: u.empresas || [] };
+                            });
+                            if (State.allRecords.length > 0) App.processRecordsForYear();
+                        });
+
                     } else { UI.showError(`Tu perfil no cuenta con habilitación en la base de datos.`); signOut(auth); }
                 } catch(e) { UI.showError("Falla de red interna."); signOut(auth); }
             } else {
@@ -885,19 +959,16 @@
 
         window.App = {
             applyPermissions: () => {
-                // Control de los botones de subida de notas (ahora viven en la toolbar de Matriz)
                 let canUpload = UI.hasPerm('chk_subir_excel');
                 document.getElementById('btnImportarPopup').style.display = canUpload ? 'flex' : 'none';
                 document.getElementById('btnIngresoManual').style.display = canUpload ? 'flex' : 'none';
                 
-                // Botón Exportar (ahora vive en la topbar general)
                 document.getElementById('btnExportar').style.display = (UI.hasPerm('chk_ver_global') || UI.hasPerm('chk_ver_area') || UI.hasPerm('chk_ver_nps')) ? 'flex' : 'none';
                 
-                // Botones Importar/Exportar Usuarios
                 document.getElementById('btnExportUsers').style.display = UI.hasPerm('chk_exportar_usuarios') || UI.hasPerm('chk_gestionar_sistema') ? 'inline-flex' : 'none';
                 document.getElementById('btnImportUsers').style.display = UI.hasPerm('chk_importar_usuarios') || UI.hasPerm('chk_gestionar_sistema') ? 'inline-flex' : 'none';
 
-                const confTabs = [{ id: 'tabUsuarios', perm: 'chk_cfg_usuarios', btn: 'btnTabUsuarios' }, { id: 'tabRoles', perm: 'chk_cfg_roles', btn: 'btnTabRoles' }, { id: 'tabAreas', perm: 'chk_cfg_areas', btn: 'btnTabAreas' }, { id: 'tabEstados', perm: 'chk_cfg_estados', btn: 'btnTabEstados' }, { id: 'tabColores', perm: 'chk_cfg_escalas', btn: 'btnTabColores' }, { id: 'tabNps', perm: 'chk_cfg_nps', btn: 'btnTabNps' }, { id: 'tabOperativas', perm: 'chk_cfg_feedbacks', btn: 'btnTabOperativas' }];
+                const confTabs = [{ id: 'tabUsuarios', perm: 'chk_cfg_usuarios', btn: 'btnTabUsuarios' }, { id: 'tabRoles', perm: 'chk_cfg_roles', btn: 'btnTabRoles' }, { id: 'tabAreas', perm: 'chk_cfg_areas', btn: 'btnTabAreas' }, { id: 'tabEmpresas', perm: 'chk_cfg_areas', btn: 'btnTabEmpresas' }, { id: 'tabEstados', perm: 'chk_cfg_estados', btn: 'btnTabEstados' }, { id: 'tabColores', perm: 'chk_cfg_escalas', btn: 'btnTabColores' }, { id: 'tabNps', perm: 'chk_cfg_nps', btn: 'btnTabNps' }, { id: 'tabOperativas', perm: 'chk_cfg_feedbacks', btn: 'btnTabOperativas' }];
                 let hasAnyConf = false;
                 confTabs.forEach(t => { let hasP = UI.hasPerm(t.perm); document.getElementById(t.btn).style.display = hasP ? 'inline-block' : 'none'; if (hasP) hasAnyConf = true; });
                 document.getElementById('btnSettings').style.display = hasAnyConf ? 'flex' : 'none';
@@ -962,11 +1033,11 @@
             viewAgentDashboard: (agentName) => { State.viewingAgentName = agentName; document.getElementById('mainTitle').innerText = `Desempeño: ${agentName}`; App.switchView('viewAgente'); },
 
             switchSettingsTab: (tabId) => {
-                ['tabUsuarios', 'tabRoles', 'tabColores', 'tabNps', 'tabAreas', 'tabEstados', 'tabOperativas'].forEach(id => document.getElementById(id).style.display = 'none');
+                ['tabUsuarios', 'tabRoles', 'tabColores', 'tabNps', 'tabAreas', 'tabEmpresas', 'tabEstados', 'tabOperativas'].forEach(id => document.getElementById(id).style.display = 'none');
                 document.getElementById(tabId).style.display = (tabId === 'tabRoles' || tabId === 'tabUsuarios') ? 'grid' : 'block';
                 document.querySelectorAll('#settingsModal .tab-btn').forEach(btn => { btn.classList.remove('active'); if(btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active'); });
                 if(tabId === 'tabRoles' || tabId === 'tabUsuarios') Admin.loadRoles();
-                if(tabId === 'tabColores') Admin.renderScales(); if(tabId === 'tabNps') Admin.renderNps(); if(tabId === 'tabAreas') Admin.renderAreas(); if(tabId === 'tabEstados') Admin.renderEstados(); if(tabId === 'tabUsuarios') Admin.loadUsers(); if(tabId === 'tabOperativas') Admin.renderFeedbackRules();
+                if(tabId === 'tabColores') Admin.renderScales(); if(tabId === 'tabNps') Admin.renderNps(); if(tabId === 'tabAreas') Admin.renderAreas(); if(tabId === 'tabEmpresas') Admin.renderEmpresas(); if(tabId === 'tabEstados') Admin.renderEstados(); if(tabId === 'tabUsuarios') Admin.loadUsers(); if(tabId === 'tabOperativas') Admin.renderFeedbackRules();
             },
 
             saveMyArea: async () => {
@@ -1002,11 +1073,26 @@
             processRecordsForYear: async () => {
                 let selYear = Number(document.getElementById('yearFilter').value);
                 State.records = []; let wSet = new Set();
+                
+                let myEmpresas = State.user.empresas || State.empresas;
+                if (State.user.rol === 'Admin') myEmpresas = State.empresas;
+
                 State.allRecords.forEach(d => {
                     let docAnio = d.anio;
                     if(!docAnio) { let parts = d.idDoc.split('_'); if(parts.length >= 4) { let yr = parseInt(parts[parts.length-2]); if(!isNaN(yr)) docAnio = yr; } }
                     if(!docAnio) docAnio = 2026; 
-                    if(docAnio === selYear) { State.records.push(d); if(d.semana) wSet.add(d.semana); }
+                    
+                    if(docAnio === selYear) {
+                        let agentRecord = State.usersMap[d.id_asesor];
+                        let agentEmpresas = (agentRecord && agentRecord.empresas && agentRecord.empresas.length > 0) ? agentRecord.empresas : [];
+                        
+                        let hasEmpresaAccess = (agentEmpresas.length === 0) ? true : myEmpresas.some(emp => agentEmpresas.includes(emp));
+                        
+                        if(hasEmpresaAccess || State.user.rol === 'Admin') {
+                            State.records.push(d); 
+                            if(d.semana) wSet.add(d.semana);
+                        }
+                    }
                 });
 
                 State.weekKeys = Array.from(wSet).sort((a,b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,'')));
@@ -1074,10 +1160,23 @@
             openManualEntry: async () => {
                 const snap = await getDocs(collection(db, "usuarios"));
                 let html = "<option value=''>Selecciona asesor y área...</option>";
+                
                 let isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase()), agentesValidos = [];
+                let myEmpresas = State.user.empresas || State.empresas;
+                
                 snap.forEach(d => {
                     let u = d.data(), uAreas = u.areas || [u.area];
-                    if(u.rol === 'Agente') { uAreas.forEach(ua => { let isMatch = isGlobalData || validAreas.includes(String(ua).trim().toUpperCase()); if(isMatch) agentesValidos.push({ id: d.id, nombre: u.nombre, area: ua || 'General' }); }); }
+                    if(u.rol === 'Agente' || u.rol === 'Agente (Histórico)') { 
+                        let uEmpresas = (u.empresas && u.empresas.length > 0) ? u.empresas : [];
+                        let hasEmpresaAccess = (uEmpresas.length === 0) ? true : myEmpresas.some(emp => uEmpresas.includes(emp)) || State.user.rol === 'Admin';
+                        
+                        if (hasEmpresaAccess) {
+                            uAreas.forEach(ua => { 
+                                let isMatch = isGlobalData || validAreas.includes(String(ua).trim().toUpperCase()); 
+                                if(isMatch) agentesValidos.push({ id: d.id, nombre: u.nombre, area: ua || 'General' }); 
+                            }); 
+                        }
+                    }
                 });
                 
                 agentesValidos.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(ag => { html += `<option value="${ag.nombre}" data-area="${ag.area}">${ag.nombre} (${ag.area})</option>`; });
@@ -1145,7 +1244,25 @@
                     State.estadosList.forEach(e => { selectHTML += `<option value="${e.lbl}" data-color="${e.color}" style="color: #1e293b; background: #fff;" ${(ag.estado === e.lbl) ? 'selected' : ''}>${e.lbl}</option>`; });
                     selectHTML += `</select>`;
 
-                    let rowHTML = `<td class="col-area">${ag.area}</td><td><strong style="cursor:pointer; color:var(--primary); transition: color 0.2s;" onmouseover="this.style.color='var(--primary-hover)'" onmouseout="this.style.color='var(--primary)'" onclick="App.viewAgentDashboard('${ag.nombre}')" title="Ver desempeño detallado del asesor">${ag.nombre}</strong></td><td>${selectHTML}</td>`;
+                    let empTag = "";
+                    let canAssignEmpresa = UI.hasPerm('chk_cfg_usuarios') || State.user.rol === 'Admin' || State.user.rol === 'Lider';
+
+                    if (State.usersMap[ag.nombre] && State.usersMap[ag.nombre].empresas && State.usersMap[ag.nombre].empresas.length > 0) {
+                        let prefix = (State.usersMap[ag.nombre].id && !State.usersMap[ag.nombre].id.includes('@')) ? "📁 " : "";
+                        if(canAssignEmpresa) {
+                            empTag = `<div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; cursor: pointer;" onclick="Admin.quickAssignEmpresa('${ag.nombre}', '${ag.area}')" title="Clic para cambiar la empresa">${prefix}${State.usersMap[ag.nombre].empresas.join(', ')} <i class="fas fa-edit" style="opacity:0.5;"></i></div>`;
+                        } else {
+                            empTag = `<div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;">${prefix}${State.usersMap[ag.nombre].empresas.join(', ')}</div>`;
+                        }
+                    } else {
+                        if(canAssignEmpresa) {
+                            empTag = `<div style="font-size: 10px; color: #ef4444; text-transform: uppercase; margin-top: 2px; cursor: pointer; font-weight: 700;" onclick="Admin.quickAssignEmpresa('${ag.nombre}', '${ag.area}')" title="¡Clic aquí para asignar empresa rápidamente!"><i class="fas fa-exclamation-triangle"></i> Asignar Empresa</div>`;
+                        } else {
+                            empTag = `<div style="font-size: 10px; color: #ef4444; text-transform: uppercase; margin-top: 2px;"><i class="fas fa-exclamation-triangle"></i> Sin empresa mapeada</div>`;
+                        }
+                    }
+
+                    let rowHTML = `<td class="col-area">${ag.area}</td><td><strong style="cursor:pointer; color:var(--primary); transition: color 0.2s;" onmouseover="this.style.color='var(--primary-hover)'" onmouseout="this.style.color='var(--primary)'" onclick="App.viewAgentDashboard('${ag.nombre}')" title="Ver desempeño detallado">${ag.nombre}</strong>${empTag}</td><td>${selectHTML}</td>`;
                     let sumAg = 0, countAg = 0;
                     
                     drawWeeks.forEach(wk => {
@@ -1444,7 +1561,7 @@
                     else if (isInfo) statusElement = `<span style="color:#0284c7; font-weight:700; background: #e0f2fe; padding: 4px 8px; border-radius: 4px;"><i class="fas fa-info-circle"></i> Registro Informativo. No requiere firma.</span>`;
                     else statusElement = `<span style="color:var(--danger-txt); font-size:11px; font-weight:700; background: var(--danger-bg); padding: 4px 8px; border-radius: 4px;">Firma Pendiente Requerida</span>`;
 
-                    return `<li><strong>Semana ${r.semana} (${r.area}):</strong> ${r.feedback_lider || '<em>Evaluación sin observaciones textuales.</em>'} <div style="margin-top: 8px;">${statusElement}</div></li>`;
+                    return `<li><strong>Semana ${r.semana} (${r.area}):</strong> ${r.feedback_lider || '<em>Evaluación sin observaciones.</em>'} <div style="margin-top: 8px;">${statusElement}</div></li>`;
                 }).join('');
                 document.getElementById('agentMainFeedback').innerHTML = fbHTML || "<li>Excelente, no hay observaciones recientes.</li>";
             }
@@ -1468,8 +1585,9 @@
             UI.openModal('settingsModal'); 
             const confTabs = [
                 { id: 'tabUsuarios', btn: 'btnTabUsuarios' }, 
-                { id: 'tabRoles', btn: 'btnTabRoles' }, 
+                { id: 'tabEmpresas', btn: 'btnTabEmpresas' }, 
                 { id: 'tabAreas', btn: 'btnTabAreas' }, 
+                { id: 'tabRoles', btn: 'btnTabRoles' }, 
                 { id: 'tabEstados', btn: 'btnTabEstados' }, 
                 { id: 'tabColores', btn: 'btnTabColores' }, 
                 { id: 'tabNps', btn: 'btnTabNps' }, 
@@ -1613,7 +1731,7 @@
             }
         };
 
-        // --- IMPORTACIÓN EXCEL MASIVA (Con Paginador de 450 y Anti-Congelamiento) ---
+        // --- IMPORTACIÓN EXCEL MASIVA ---
         document.getElementById('btnImportarPopup').addEventListener('click', () => UI.openModal('importModal'));
         document.getElementById('btnSelectFile').addEventListener('click', () => document.getElementById('realFileInput').click());
 
@@ -1686,6 +1804,8 @@
                     let currentBatchIdx = 0;
                     let operationsInCurrentBatch = 0;
 
+                    let myEmpresas = State.user.empresas || State.empresas;
+
                     for (let i = headerRowIdx + 1; i < targetRows.length; i++) {
                         if(!targetRows[i] || targetRows[i].length === 0) continue;
                         let content = String(targetRows[i][idxAgente] || "").trim();
@@ -1698,6 +1818,13 @@
                         if (contentUpper.includes("PROMEDIO") || contentUpper.includes("TOTAL") || contentUpper === "ÁREA" || contentUpper === "AGENTE") continue;
                         if (areaFiltro !== "Todas" && areaTracker.toUpperCase() !== areaFiltro.toUpperCase()) continue;
                         if (!isGlobalData && !validAreas.includes(areaTracker.toUpperCase())) continue;
+
+                        if (State.user.rol !== 'Admin') {
+                            let agData = State.usersMap[content];
+                            let agentEmpresas = (agData && agData.empresas && agData.empresas.length > 0) ? agData.empresas : [];
+                            let hasEmpresaAccess = (agentEmpresas.length === 0) ? true : myEmpresas.some(emp => agentEmpresas.includes(emp));
+                            if (!hasEmpresaAccess) continue; 
+                        }
 
                         for (let wMap of weekColMap) {
                             let notaRaw = targetRows[i][wMap.colIdx];
@@ -1720,7 +1847,7 @@
                         }
                     }
                     
-                    if(countUploads === 0) throw new Error("No se extrajeron datos. Revisa áreas y valores numéricos.");
+                    if(countUploads === 0) throw new Error("No se extrajeron datos válidos para tus áreas o empresas asignadas.");
                     
                     statusNode.innerHTML = `<i class='fas fa-cloud-upload-alt'></i> Guardando ${countUploads} registros...`;
                     await new Promise(r => setTimeout(r, 50));
@@ -1740,43 +1867,136 @@
 
         window.Admin = {
             changeAgentStatus: async (name, newStatus) => { try { await setDoc(doc(db, "configuracion", "estados_agentes"), { [name]: newStatus }, { merge: true }); } catch(e) { alert("Bloqueo de red."); } },
+            
+            // --- NUEVO: ASIGNACIÓN RÁPIDA DE EMPRESA DESDE MATRIZ ---
+            quickAssignEmpresa: (nombre, area) => {
+                State.quickEmpresaTarget = { nombre, area };
+                document.getElementById('qeAgentName').innerText = nombre;
+                
+                let currentEmpresas = [];
+                if(State.usersMap[nombre] && State.usersMap[nombre].empresas) {
+                    currentEmpresas = State.usersMap[nombre].empresas;
+                }
+
+                let html = State.empresas.map(e => {
+                    let checked = currentEmpresas.includes(e) ? 'checked' : '';
+                    return `<label><input type="checkbox" class="chk-qe-empresa" value="${e}" ${checked}> ${e}</label>`;
+                }).join('');
+                document.getElementById('qeEmpresasChecks').innerHTML = html;
+                UI.openModal('quickEmpresaModal');
+            },
+
+            saveQuickEmpresa: async () => {
+                let nombre = State.quickEmpresaTarget.nombre;
+                let area = State.quickEmpresaTarget.area;
+                let selected = [];
+                document.querySelectorAll('.chk-qe-empresa:checked').forEach(cb => selected.push(cb.value));
+                
+                if(selected.length === 0) return alert("Selecciona al menos una empresa de la lista.");
+                
+                let existingData = State.usersMap[nombre] || {};
+                let docId = existingData.id && existingData.id.includes('@') ? existingData.id : nombre; 
+                let currentAreas = existingData.areas || [area];
+                if(!currentAreas.includes(area)) currentAreas.push(area);
+                let rol = existingData.rol || "Agente (Histórico)";
+
+                try {
+                    await setDoc(doc(db, "usuarios", docId), {
+                        nombre: nombre,
+                        empresas: selected,
+                        areas: currentAreas,
+                        rol: rol
+                    }, { merge: true });
+                    UI.closeModal('quickEmpresaModal');
+                    alert("Empresa vinculada correctamente al agente histórico.");
+                } catch (e) {
+                    alert("Error al intentar asignar la empresa.");
+                }
+            },
+
             loadUsers: async () => {
                 const snap = await getDocs(collection(db, "usuarios")); State.admin.userListCache = [];
                 let isGlobalData = State.user.areas.includes("Todas"), myAreas = State.user.areas.map(a => a.toUpperCase()), myRole = State.user.rol;
+                let myEmpresas = State.user.empresas || State.empresas;
+
                 snap.forEach(d => {
                     let uData = d.data(), uAreas = uData.areas || [uData.area || "General"];
+                    let uEmpresas = (uData.empresas && uData.empresas.length > 0) ? uData.empresas : [];
+                    
                     if (myRole !== 'Admin' && uData.rol === 'Admin') return;
-                    let hasAccess = isGlobalData;
-                    if(!hasAccess) hasAccess = uAreas.some(ua => myAreas.includes(String(ua).toUpperCase()));
-                    if (hasAccess) State.admin.userListCache.push({id: d.id, ...uData});
+                    
+                    let hasAreaAccess = isGlobalData || uAreas.some(ua => myAreas.includes(String(ua).toUpperCase()));
+                    let hasEmpresaAccess = myRole === 'Admin' || uEmpresas.length === 0 || myEmpresas.some(emp => uEmpresas.includes(emp));
+
+                    if (hasAreaAccess && hasEmpresaAccess) State.admin.userListCache.push({id: d.id, ...uData});
                 });
                 Admin.drawUsers(State.admin.userListCache);
             },
-            drawUsers: (list) => { document.getElementById('activeUsersList').innerHTML = list.map(u => `<div class="user-row"><div><div style="font-size:13px; font-weight:800; color:var(--text-main);">${u.nombre}</div><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${u.id} | Áreas: ${u.areas ? u.areas.join(', ') : (u.area || "General")}</div></div><button class="btn-action" style="padding: 6px 10px; font-size:11px;" onclick="Admin.prepEditUser('${u.id}', '${u.nombre}', '${u.rol}', '${u.areas ? u.areas.join(', ') : (u.area || "General")}')"><i class="fas fa-edit"></i> ${u.rol}</button></div>`).join(''); },
-            filterUsers: () => { const term = document.getElementById('searchUserEdit').value.toLowerCase(); Admin.drawUsers(State.admin.userListCache.filter(u => u.nombre.toLowerCase().includes(term) || u.id.toLowerCase().includes(term))); },
-            prepEditUser: (email, nombre, rol, areasString) => {
-                document.getElementById('newUserEmail').value = email; document.getElementById('newUserName').value = nombre; document.getElementById('newUserRole').value = rol; document.getElementById('newUserPass').value = ""; 
-                let areaList = areasString.split(',').map(s => s.trim());
-                document.querySelectorAll('.chk-area-user').forEach(cb => { cb.checked = areaList.includes(cb.value); });
+            drawUsers: (list) => { 
+                document.getElementById('activeUsersList').innerHTML = list.map(u => {
+                    let empStr = (u.empresas && u.empresas.length > 0) ? u.empresas.join(', ') : "Sin empresa asignada";
+                    let empColor = (u.empresas && u.empresas.length > 0) ? "color:var(--primary);" : "color:#ef4444;";
+                    
+                    let isHistorico = !u.id.includes('@');
+                    let displayId = isHistorico ? "<span style='color:#8b5cf6; font-weight:700;'><i class='fas fa-archive'></i> [Asesor Histórico - Sin Acceso]</span>" : u.id;
+                    
+                    return `
+                    <div class="user-row">
+                        <div>
+                            <div style="font-size:13px; font-weight:800; color:var(--text-main);">${u.nombre}</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${displayId} | Áreas: ${u.areas ? u.areas.join(', ') : (u.area || "General")}</div>
+                            <div style="font-size:10px; ${empColor} font-weight:700; margin-top:2px;">[ ${empStr} ]</div>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-action" style="padding: 6px 10px; font-size:11px;" onclick="Admin.prepEditUser('${isHistorico ? "" : u.id}', '${u.nombre}', '${u.rol}', '${u.areas ? u.areas.join(', ') : (u.area || "General")}', '${(u.empresas && u.empresas.length > 0) ? u.empresas.join(',') : ""}')" title="Editar Perfil/Empresa"><i class="fas fa-edit"></i></button>
+                            <button class="btn-action" style="padding: 6px 10px; font-size:11px; background: #fee2e2; color: #b91c1c; border:none;" onclick="Admin.deleteUser('${u.id}', '${u.nombre}')" title="Eliminar Permanentemente"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`
+                }).join(''); 
             },
             
-            // NUEVO: Exportar Usuarios
+            deleteUser: async (email, nombre) => {
+                if(!confirm(`¿Estás completamente seguro de ELIMINAR a ${nombre}?\n\nSi tiene acceso al sistema se le revocará, y perderá sus configuraciones de empresa.`)) return;
+                try {
+                    await deleteDoc(doc(db, "usuarios", email));
+                    alert("Registro eliminado de la base de datos.");
+                    Admin.loadUsers(); 
+                } catch(e) {
+                    alert("Ocurrió un error al intentar eliminar el registro. Intenta nuevamente.");
+                }
+            },
+
+            filterUsers: () => { const term = document.getElementById('searchUserEdit').value.toLowerCase(); Admin.drawUsers(State.admin.userListCache.filter(u => u.nombre.toLowerCase().includes(term) || u.id.toLowerCase().includes(term))); },
+            
+            prepEditUser: (email, nombre, rol, areasString, empresasString) => {
+                document.getElementById('newUserEmail').value = email.includes('@') ? email : '';
+                document.getElementById('newUserName').value = nombre; 
+                document.getElementById('newUserRole').value = rol; 
+                document.getElementById('newUserPass').value = ""; 
+                
+                let areaList = areasString.split(',').map(s => s.trim());
+                document.querySelectorAll('.chk-area-user').forEach(cb => { cb.checked = areaList.includes(cb.value); });
+
+                let empList = empresasString.split(',').map(s => s.trim());
+                document.querySelectorAll('.chk-empresa-user').forEach(cb => { cb.checked = empList.includes(cb.value); });
+            },
+            
             exportUsers: () => {
                 if(State.admin.userListCache.length === 0) return alert("No hay usuarios cargados para exportar.");
                 let exportData = State.admin.userListCache.map(u => ({
                     "Nombre": u.nombre,
-                    "Correo": u.id,
-                    "Contraseña": "", // Dejar en blanco por seguridad
+                    "Correo": u.id.includes('@') ? u.id : "Histórico",
+                    "Contraseña": "", 
                     "Rol": u.rol,
+                    "Empresas": (u.empresas && u.empresas.length > 0) ? u.empresas.join(", ") : "Sin empresa asignada",
                     "Áreas": u.areas ? u.areas.join(", ") : (u.area || "General")
                 }));
                 const ws = XLSX.utils.json_to_sheet(exportData); 
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Directorio_Usuarios"); 
-                XLSX.writeFile(wb, `Usuarios_Distelsa_${new Date().getTime()}.xlsx`);
+                XLSX.writeFile(wb, `Usuarios_Directorio_${new Date().getTime()}.xlsx`);
             },
 
-            // NUEVO: Importar Usuarios Masivamente
             importUsers: async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -1799,36 +2019,39 @@
                             let correo = row["Correo"];
                             let pass = row["Contraseña"]; 
                             let rol = row["Rol"] || "Agente";
-                            let areasRaw = row["Áreas"] || "General";
                             
-                            if(!correo || !nombre) continue;
-                            correo = String(correo).trim().toLowerCase();
-                            let areas = String(areasRaw).split(',').map(a => a.trim());
+                            let empresasRaw = row["Empresas"] || State.empresas[0];
+                            let empresasList = String(empresasRaw).split(',').map(e => e.trim());
 
-                            // Crear en Firebase Auth si trae contraseña (ignora si ya existe)
-                            if(pass && String(pass).length >= 6) {
-                                try { await createUserWithEmailAndPassword(adminAuth, correo, String(pass)); } catch(err) {} 
+                            let areasRaw = row["Áreas"] || "General";
+                            let areasList = String(areasRaw).split(',').map(a => a.trim());
+                            
+                            if(!nombre) continue;
+                            
+                            let docId = correo ? String(correo).trim().toLowerCase() : String(nombre).trim();
+
+                            if(correo && pass && String(pass).length >= 6) {
+                                try { await createUserWithEmailAndPassword(adminAuth, docId, String(pass)); } catch(err) {} 
                             }
 
-                            // Actualizar info en Firestore
-                            await setDoc(doc(db, "usuarios", correo), { nombre: nombre, rol: rol, areas: areas }, { merge: true });
+                            await setDoc(doc(db, "usuarios", docId), { nombre: nombre, rol: rol, areas: areasList, empresas: empresasList }, { merge: true });
                             count++;
                         }
-                        alert(`¡Éxito! Se importaron/actualizaron ${count} usuarios en la base de datos.`);
+                        alert(`¡Éxito! Se importaron/actualizaron ${count} perfiles en la base de datos.`);
                         Admin.loadUsers();
                     } catch(error) {
                         alert("Error procesando el Excel de usuarios: " + error.message);
                     }
                     btn.innerHTML = originalHtml;
                     btn.disabled = false;
-                    e.target.value = ""; // Limpiar input para permitir subir el mismo archivo de nuevo si se necesita
+                    e.target.value = ""; 
                 };
                 reader.readAsArrayBuffer(file);
             },
 
             loadRoles: async () => {
                 const snap = await getDocs(collection(db, "roles"));
-                let baseRoles = ['Admin', 'Lider', 'Agente']; snap.forEach(d => { if(!baseRoles.includes(d.id)) baseRoles.push(d.id); });
+                let baseRoles = ['Admin', 'Lider', 'Agente', 'Agente (Histórico)']; snap.forEach(d => { if(!baseRoles.includes(d.id)) baseRoles.push(d.id); });
                 document.getElementById('rolesListDiv').innerHTML = baseRoles.map(r => { let d = snap.docs.find(x => x.id === r); return `<div class="user-row" style="cursor:pointer;" onclick="Admin.editRole('${r}', '${d ? d.data().permisos.join(',') : ""}')"><span style="font-size:13px; font-weight:800; color:var(--primary);"><i class="fas fa-shield-alt"></i> Rol: ${r}</span></div>`; }).join('');
                 const roleSelect = document.getElementById('newUserRole');
                 if (roleSelect) {
@@ -1841,18 +2064,23 @@
             addRole: async () => {
                 const input = document.getElementById('newRoleInput'); const val = input.value.trim(); if(!val) return;
                 const snap = await getDocs(collection(db, "roles")); let exists = false; snap.forEach(d => { if(d.id.toLowerCase() === val.toLowerCase()) exists = true; });
-                if(['admin', 'lider', 'agente'].includes(val.toLowerCase())) exists = true;
+                if(['admin', 'lider', 'agente', 'agente (histórico)'].includes(val.toLowerCase())) exists = true;
                 if(exists) return alert("Este rol ya existe.");
                 try { await setDoc(doc(db, "roles", val), { permisos: [] }, { merge: true }); input.value = ""; Admin.loadRoles(); alert(`Rol "${val}" creado exitosamente.`); } catch(e) { alert("Error."); }
             },
             editRole: (role, permString) => {
                 State.admin.activeRoleEdit = role; document.getElementById('editingRoleName').innerText = role; let activePerms = permString.split(',');
-                // Permisos actualizados con Importar/Exportar
                 ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_subir_excel', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_add_feedback', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks'].forEach(c => { let checkbox = document.getElementById(c); if(checkbox) checkbox.checked = activePerms.includes(c); });
             },
-            renderAreas: () => { document.getElementById('areasContainer').innerHTML = State.areas.map(a => `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);"><span style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fas fa-building" style="color:var(--primary); margin-right:8px;"></i> ${a}</span><button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteArea('${a}')"><i class="fas fa-trash"></i></button></div>`).join(''); },
+
+            renderAreas: () => { document.getElementById('areasContainer').innerHTML = State.areas.map(a => `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);"><span style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fas fa-sitemap" style="color:#10b981; margin-right:8px;"></i> ${a}</span><button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteArea('${a}')"><i class="fas fa-trash"></i></button></div>`).join(''); },
             addArea: async () => { const input = document.getElementById('newAreaInput'); const val = input.value.trim(); if(!val) return; if(State.areas.includes(val)) return alert("El área ya existe."); State.areas.push(val); try { await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas }, { merge: true }); input.value = ""; Admin.renderAreas(); UI.updateSelects(); } catch(e) { alert("Error."); State.areas.pop(); } },
             deleteArea: async (areaName) => { if(!confirm(`¿Seguro que deseas eliminar: ${areaName}?`)) return; State.areas = State.areas.filter(a => a !== areaName); try { await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas }, { merge: true }); Admin.renderAreas(); UI.updateSelects(); } catch(e) { alert("Error."); } },
+
+            renderEmpresas: () => { document.getElementById('empresasContainer').innerHTML = State.empresas.map(e => `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);"><span style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fas fa-building" style="color:var(--primary); margin-right:8px;"></i> ${e}</span><button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteEmpresa('${e}')"><i class="fas fa-trash"></i></button></div>`).join(''); },
+            addEmpresa: async () => { const input = document.getElementById('newEmpresaInput'); const val = input.value.trim(); if(!val) return; if(State.empresas.includes(val)) return alert("La empresa ya existe."); State.empresas.push(val); try { await setDoc(doc(db, "configuracion", "empresas"), { lista: State.empresas }, { merge: true }); input.value = ""; Admin.renderEmpresas(); UI.updateSelects(); } catch(e) { alert("Error."); State.empresas.pop(); } },
+            deleteEmpresa: async (empresaName) => { if(!confirm(`¿Seguro que deseas eliminar la empresa/campaña: ${empresaName}?`)) return; State.empresas = State.empresas.filter(e => e !== empresaName); try { await setDoc(doc(db, "configuracion", "empresas"), { lista: State.empresas }, { merge: true }); Admin.renderEmpresas(); UI.updateSelects(); } catch(e) { alert("Error."); } },
+
             renderEstados: () => { document.getElementById('estadosContainer').innerHTML = State.estadosList.map(e => `<div style="display: grid; grid-template-columns: 1fr 3fr 1fr 1fr; gap: 15px; align-items: center;" class="est-row"><input type="color" value="${e.color}" class="st-col" style="width:100%; height:42px; border:1px solid var(--border); border-radius:6px; cursor:pointer;"><input type="text" value="${e.lbl}" class="form-input st-lbl" style="padding:10px;"><label style="display:flex; align-items:center; justify-content:center; gap:5px; font-size:12px; font-weight:700;"><input type="checkbox" class="st-calc" ${e.calcProm !== false ? 'checked' : ''} style="width:16px; height:16px;"> Suma</label><button class="btn-action" style="color:var(--danger-txt); border:none; justify-content:center; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>`).join(''); },
             addEstadoRow: () => { State.estadosList.push({lbl:'', color:'#000000', calcProm: true}); Admin.renderEstados(); },
             saveEstados: async () => { let freshList = []; document.querySelectorAll('.est-row').forEach(row => { freshList.push({ color: row.querySelector('.st-col').value, lbl: row.querySelector('.st-lbl').value.trim(), calcProm: row.querySelector('.st-calc').checked }); }); try { await setDoc(doc(db, "configuracion", "estados_list"), { lista: freshList }, { merge: true }); State.estadosList = freshList; alert("Estados del menú guardados."); UI.updateSelects(); App.processRecordsForYear(); } catch(e) { alert("Fallo al guardar."); } },
@@ -1866,13 +2094,35 @@
             saveFeedbackRules: async () => { let rules = { autoClose: Number(document.getElementById('cfgAutoClose').value) || 100, allowInformative: document.getElementById('cfgAllowInformativo').checked, metaGlobal: Number(document.getElementById('cfgMetaGlobal').value) || 95, famaThreshold: Number(document.getElementById('cfgFamaThreshold').value) || 100 }; try { await setDoc(doc(db, "configuracion", "feedback_rules"), rules, { merge: true }); State.feedbackRules = rules; alert("Reglas guardadas."); document.getElementById('kpi-meta').innerText = rules.metaGlobal + "%"; App.applyPermissions(); App.processRecordsForYear(); } catch(e) { alert("Error al guardar."); } }
         };
 
+        // --- CREACIÓN / EDICIÓN DESDE EL PANEL DE AJUSTES ---
         document.getElementById('btnSaveUser').addEventListener('click', async () => {
-            const email = document.getElementById('newUserEmail').value.trim().toLowerCase(), pass = document.getElementById('newUserPass').value, nombre = document.getElementById('newUserName').value.trim(), rol = document.getElementById('newUserRole').value;
-            if (State.user.rol !== 'Admin' && rol === 'Admin') return alert("No tienes permisos suficientes.");
+            let emailInput = document.getElementById('newUserEmail').value.trim().toLowerCase();
+            const pass = document.getElementById('newUserPass').value;
+            const nombre = document.getElementById('newUserName').value.trim();
+            const rol = document.getElementById('newUserRole').value;
+            
+            if (State.user.rol !== 'Admin' && rol === 'Admin') return alert("No tienes permisos suficientes para este rol.");
+            
             let selectedAreas = []; document.querySelectorAll('.chk-area-user:checked').forEach(cb => selectedAreas.push(cb.value)); if(selectedAreas.includes("Todas")) selectedAreas = ["Todas"];
-            if(!email || !nombre || selectedAreas.length === 0) return alert("Correo, Nombre y al menos un Área son obligatorios.");
+            let selectedEmpresas = []; document.querySelectorAll('.chk-empresa-user:checked').forEach(cb => selectedEmpresas.push(cb.value));
+            
+            if(!nombre || selectedAreas.length === 0) return alert("El nombre y al menos un Área son obligatorios.");
+            
+            // LÓGICA CLAVE: Si no hay correo, se usa el Nombre exacto como ID para guardar solo los datos de empresa
+            let docId = emailInput ? emailInput : nombre;
+            
             const btn = document.getElementById('btnSaveUser'); btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando...";
-            try { if(pass && pass.length >= 6) await createUserWithEmailAndPassword(adminAuth, email, pass); await setDoc(doc(db, "usuarios", email), { nombre, rol, areas: selectedAreas }, { merge: true }); alert("Actualización exitosa."); Admin.loadUsers(); document.getElementById('newUserEmail').value = ""; document.getElementById('newUserName').value = ""; document.getElementById('newUserPass').value = ""; document.querySelectorAll('.chk-area-user').forEach(cb => cb.checked = false); } catch (e) { alert("Error, revisa la información."); }
+            try { 
+                if(emailInput && pass && pass.length >= 6) {
+                    await createUserWithEmailAndPassword(adminAuth, emailInput, pass); 
+                } 
+                await setDoc(doc(db, "usuarios", docId), { nombre, rol, areas: selectedAreas, empresas: selectedEmpresas }, { merge: true }); 
+                alert("Registro mapeado correctamente en la base de datos."); 
+                Admin.loadUsers(); 
+                document.getElementById('newUserEmail').value = ""; document.getElementById('newUserName').value = ""; document.getElementById('newUserPass').value = ""; 
+                document.querySelectorAll('.chk-area-user').forEach(cb => cb.checked = false); 
+                document.querySelectorAll('.chk-empresa-user').forEach(cb => cb.checked = false); 
+            } catch (e) { alert("Revisa la información proporcionada."); }
             btn.innerHTML = "<i class='fas fa-save'></i> Guardar Perfil"; signOut(adminAuth).catch(()=>{});
         });
 
