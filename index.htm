@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Calidad – Experiencia Al Cliente</title>
     
+    <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -196,6 +197,7 @@
 </head>
 <body>
 
+    <!-- OVERLAY DE INICIO DE SESIÓN -->
     <div id="authOverlay">
         <div class="logo-icon" style="margin-bottom: 25px; width: 70px; height: 70px; font-size: 35px;"><i class="fas fa-headset"></i></div>
         <div class="login-box">
@@ -207,8 +209,10 @@
         </div>
     </div>
 
+    <!-- NOTIFICACIÓN DE BIENVENIDA -->
     <div id="welcomeToast"></div>
 
+    <!-- BARRA LATERAL (SIDEBAR) -->
     <aside class="sidebar">
         <div class="logo-container">
             <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
@@ -257,6 +261,7 @@
         </div>
     </aside>
 
+    <!-- ÁREA PRINCIPAL -->
     <main class="main">
         <header class="topbar">
             <div>
@@ -270,7 +275,7 @@
                 </div>
                 <select class="filter-select" id="yearFilter"></select>
                 <select class="filter-select" id="areaFilter" style="display: none;">
-                    <option value="all">Todas mis Áreas</option>
+                    <option value="all">Todas mi Áreas</option>
                 </select>
                 <select class="filter-select" id="statusFilter">
                     <option value="all">Estatus: Todos</option>
@@ -287,6 +292,7 @@
         </header>
 
         <section class="content">
+            <!-- VISTA 1: MATRIZ DE TABLA -->
             <div id="viewMatriz" class="view-section active">
                 
                 <div id="matrizToolbar" style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: white; padding: 15px 25px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
@@ -314,11 +320,13 @@
                 </div>
             </div>
 
+            <!-- VISTA 2: DASHBOARD GERENCIAL -->
             <div id="viewGerencial" class="view-section">
                 <div id="dashFilterWarning" style="display:none; background: #e0f2fe; color: #0284c7; padding: 12px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #bae6fd;">
                     <i class="fas fa-filter"></i> Estás visualizando datos segmentados.
                 </div>
 
+                <!-- BARRA COMPARADORA -->
                 <div id="comparadorBar" style="background: white; padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: var(--shadow-sm); flex-wrap: wrap;">
                     <strong style="font-size: 13px; color: var(--text-main);"><i class="fas fa-balance-scale"></i> Comparar Semanas:</strong>
                     <select id="compWk1" class="filter-select" style="min-width: 130px; background: #f8fafc;">
@@ -332,6 +340,7 @@
                         <i class="fas fa-info-circle"></i> Al usar esto, los indicadores y gráficas compararán directamente las semanas elegidas.
                     </div>
                 </div>
+
                 <div class="grid-cards">
                     <div class="card-dash">
                         <h3 title="Agentes inactivos/excluidos en Ajustes no afectan este valor.">Calidad Global <i class="fas fa-star" style="color:var(--primary);"></i></h3>
@@ -360,6 +369,7 @@
                 </div>
             </div>
 
+            <!-- VISTA 3: MÓDULO DE SATISFACCIÓN (NPS) -->
             <div id="viewNps" class="view-section">
                 <h2 style="margin-bottom: 20px; font-weight: 800; color: var(--text-main); font-size: 20px; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-smile-beam" style="color: #ec4899;"></i> Satisfacción de Asesores (NPS)
@@ -391,6 +401,7 @@
                 </div>
             </div>
 
+            <!-- VISTA 4: MÓDULO SEGUIMIENTO DE FIRMAS -->
             <div id="viewFirmas" class="view-section">
                 <h2 style="margin-bottom: 20px; font-weight: 800; color: var(--text-main); font-size: 20px; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-file-signature" style="color: #f59e0b;"></i> Auditoría y Seguimiento de Firmas
@@ -420,7 +431,7 @@
                     <div class="table-scroll">
                         <table>
                             <thead>
-                                <tr><th>Asesor Asignado</th><th>Área</th><th>Semana</th><th style="text-align: center;">Nota Operativa</th><th>Retroalimentación del Líder</th><th style="text-align: center;">Acción</th></tr>
+                                <tr><th>Asesor Asignado</th><th>Área</th><th>Semana</th><th style="text-align: center;">Nota Operativa</th><th>Estatus de Firma</th><th style="text-align: center;">Acción</th></tr>
                             </thead>
                             <tbody id="firmasPendingBody"></tbody>
                         </table>
@@ -428,6 +439,7 @@
                 </div>
             </div>
 
+            <!-- VISTA 5: PANEL PERSONAL AGENTE -->
             <div id="viewAgente" class="view-section">
                 <div id="agentDashboard">
                     <div class="card-dash" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
@@ -466,18 +478,20 @@
         </section>
     </main>
 
+    <!-- MODALES Y PANELES -->
     <div class="modal-overlay" id="areaModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Cambiar Vista de Área</h2><button class="close-btn" onclick="UI.closeModal('areaModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Selecciona las áreas que deseas visualizar temporalmente en tu matriz.</p><div class="form-group"><div id="modalAreaChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"></div></div><button class="btn-action" onclick="App.saveMyArea()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Refrescar Matriz</button></div></div></div>
 
     <div class="modal-overlay" id="manualEntryModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Registro Manual de Calidad</h2><button class="close-btn" onclick="UI.closeModal('manualEntryModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Asesor y Área a Evaluar</label><select id="manualAgenteSelect"></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Año (Ej: 2026)</label><input type="number" id="manualAnio"></div><div class="form-group"><label>Semana (Ej: S22)</label><input type="text" id="manualSemana" placeholder="S + Número"></div></div><div class="form-group"><label>Calificación o Estatus</label><input type="text" id="manualNota" placeholder="Número o texto parametrizado en Ajustes"></div><button class="btn-action" onclick="App.saveManualEntry()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Guardar Calificación</button><p id="msgManual" style="font-size: 13px; font-weight: 800; color: var(--success-txt); text-align: center; margin-top: 15px; display: none;"></p></div></div></div>
 
-    <div class="modal-overlay" id="quickEmpresaModal"><div class="modal-box fade-in" style="max-width: 400px; margin: auto;"><div class="modal-header"><h2>Asignar Empresa</h2><button class="close-btn" onclick="UI.closeModal('quickEmpresaModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Selecciona la empresa correspondiente para el registro de: <br><strong id="qeAgentName" style="color:var(--text-main); font-size: 14px;"></strong></p><div id="qeEmpresasChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px; max-height: 200px; overflow-y: auto;"></div><button class="btn-action" onclick="Admin.saveQuickEmpresa()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px; margin-top: 20px;"><i class="fas fa-save"></i> Confirmar Asignación</button></div></div></div>
+    <div class="modal-overlay" id="quickEmpresaModal"><div class="modal-box fade-in" style="max-width: 400px; margin: auto;"><div class="modal-header"><h2>Asignar Empresa</h2><button class="close-btn" onclick="UI.closeModal('quickEmpresaModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Selecciona la empresa correspondiente para el registro de: <br><strong id="qeAgentName" style="color:var(--text-main); font-size: 14px;"></strong></p><div id="qeEmpresasChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; max-height: 200px; overflow-y: auto;"></div><button class="btn-action" onclick="Admin.saveQuickEmpresa()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px; margin-top: 20px;"><i class="fas fa-save"></i> Confirmar Asignación</button></div></div></div>
 
     <div class="modal-overlay" id="feedbackModal"><div class="modal-box fade-in" style="max-width: 900px; margin: auto;"><div class="modal-header" style="flex-direction: column; padding-bottom: 20px;"><div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;"><div><h2 id="fbAgentName">Nombre del Asesor</h2><p id="fbDetails" style="color: var(--primary); font-size: 14px; font-weight: 800; margin-top: 4px;">Semana -- | Área --</p></div><div style="display: flex; align-items: center; gap: 15px;"><div id="editNoteContainer" style="display:none; flex-direction:column; align-items:flex-end;"><div style="display:flex; gap:8px; align-items:center;"><select id="inpEditArea" style="padding:8px; font-size:12px; border-radius:6px; border:1px solid var(--border); font-weight:600;" title="Modificar Área"></select><input type="text" id="inpEditNote" style="width:70px; padding:8px; text-align:center; font-weight:bold; border:1px solid var(--border); border-radius:6px; font-size: 13px;" title="Modificar Nota" placeholder="Nota"><button class="btn-action" style="padding:8px 12px; font-size:12px; background: #facc15; color: #854d0e; border:none;" onclick="Interactions.saveEditedNote()" title="Guardar Cambios"><i class="fas fa-edit"></i> Guardar</button></div></div><div id="fbBadgeZone" style="transform: scale(1.1); margin-right: 20px; margin-left: 10px;"></div><button class="close-btn" onclick="UI.closeModal('feedbackModal')"><i class="fas fa-times"></i></button></div></div><div id="historialBox" style="margin-top: 15px; padding: 12px 15px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; width: 100%; display:none;"><h4 style="font-size:11px; color:#d97706; text-transform:uppercase; margin-bottom:8px;"><i class="fas fa-history"></i> Auditoría de Cambios</h4><div id="historialList" style="font-size:11px; color:var(--text-main); display:flex; flex-direction:column; gap:6px; max-height:80px; overflow-y:auto;"></div></div></div><div class="modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; position: relative;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">1. Feedback del Líder</h3><div class="form-group" style="flex: 1;"><textarea id="txtFeedbackLider" placeholder="Redacta la oportunidad de mejora..." style="height: 100%; min-height: 120px;"></textarea></div><div id="informativoToggleBox" style="display:none; margin-bottom: 15px; background: #e0f2fe; padding: 10px; border-radius: 8px; border: 1px solid #bae6fd;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #0284c7; font-size: 12px; margin-bottom: 0;"><input type="checkbox" id="chkEsInformativo" style="width: 16px; height: 16px; accent-color: #0284c7;"><strong>Métrica Informativa (No exigir firma)</strong></label></div><button class="btn-action" id="btnSaveLider" style="justify-content: center; background: var(--text-main); color: white; border: none; padding: 14px;"><i class="fas fa-save"></i> Guardar Feedback</button><p id="msgLider" style="font-size: 12px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Guardado exitosamente.</p></div><div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">2. Firma del Asesor</h3><div id="zonaFirmaAgente"><div class="form-group" id="divCompromiso"><label>Compromiso Operativo</label><textarea id="txtCompromisoAgente" rows="3" placeholder="Define las acciones concretas..."></textarea></div><div class="form-group" id="divEnterado" style="display: none; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;"><label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #166534; font-size: 13px;"><input type="checkbox" id="chkEnteradoAsesor" style="width: 18px; height: 18px; accent-color: #166534;"><strong>Marcar de enterado (Sin observaciones)</strong></label></div><div class="form-group"><label>Evaluación del Acompañamiento (NPS)</label><select id="selNpsAgente"></select></div><div class="form-group"><label>Comentario Adicional (Opcional)</label><input type="text" id="txtObsAgente" placeholder="¿Algo más que agregar?"></div><button class="btn-action" id="btnSaveAgente" style="justify-content: center; background: var(--success-txt); color: white; border: none; padding: 14px; margin-top: auto; width: 100%;"><i class="fas fa-signature"></i> Firmar de Enterado</button></div><div id="zonaInfoExcepcion" style="display: none; height: 100%; align-items: center; justify-content: center; text-align: center; flex-direction: column; color: var(--text-muted);"><i class="fas fa-info-circle" style="font-size: 32px; margin-bottom: 10px; color: #3b82f6;"></i><p style="font-size: 13px; font-weight: 600;">Registro Informativo.</p><p style="font-size: 11px;">No requiere firma.</p></div><p id="msgAgente" style="font-size: 12px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Compromiso registrado.</p></div></div></div></div>
 
     <div class="modal-overlay" id="importModal"><div class="modal-box fade-in" style="max-width: 500px; margin: auto;"><div class="modal-header"><h2>Subir Evaluaciones Masivas</h2><button class="close-btn" onclick="UI.closeModal('importModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;"><div class="form-group"><label>Año (Base)</label><input type="number" id="impAnio"></div><div class="form-group"><label>Semana(s)</label><input type="text" id="impSemana" placeholder="Ej: S1, S2, 3, 15"></div></div><div class="form-group"><label>Subir para mis Áreas</label><select id="impArea" class="dynamic-area-select"><option value="Todas">Procesar mis áreas permitidas</option></select></div><div class="form-group" style="text-align: center; margin-top: 30px;"><input type="file" id="realFileInput" accept=".xlsx, .xls" style="display: none;"><button class="btn-action" id="btnSelectFile" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; background: var(--primary); color: white; border: none;"><i class="fas fa-file-excel"></i> Cargar Archivo Excel</button><p id="impStatus" style="font-size: 13px; margin-top: 15px; font-weight: 800; color: var(--primary);"></p></div></div></div></div>
 
-    <div class="modal-overlay" id="settingsModal"><div class="modal-box fade-in" style="max-width: 950px; height: 85vh; margin: auto;"><div class="modal-header"><div><h2>Panel de Ajustes Generales</h2><p style="color: var(--text-muted); font-size: 13px; margin-top: 4px; font-weight: 500;">Administración de credenciales, roles y diseño.</p></div><button class="close-btn" onclick="UI.closeModal('settingsModal')"><i class="fas fa-times"></i></button></div><div class="modal-body" style="padding-top: 20px;"><div class="settings-tabs"><button class="tab-btn active" id="btnTabUsuarios" onclick="App.switchSettingsTab('tabUsuarios')">Usuarios</button><button class="tab-btn" id="btnTabEmpresas" onclick="App.switchSettingsTab('tabEmpresas')">Empresas</button><button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas/Campañas</button><button class="tab-btn" id="btnTabRoles" onclick="App.switchSettingsTab('tabRoles')">Permisos</button><button class="tab-btn" id="btnTabEstados" onclick="App.switchSettingsTab('tabEstados')">Estados Asesor</button><button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas</button><button class="tab-btn" id="btnTabNps" onclick="App.switchSettingsTab('tabNps')">Encuesta NPS</button><button class="tab-btn" id="btnTabOperativas" onclick="App.switchSettingsTab('tabOperativas')" style="color: #0284c7;">Reglas Operativas</button></div><div id="tabUsuarios" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">CREAR / EDITAR PERFIL</h3><div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div><div class="form-group"><label>Correo Electrónico (Opcional)</label><input type="email" id="newUserEmail" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Contraseña (Opcional)</label><input type="password" id="newUserPass" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div><div class="form-group"><label style="color: var(--primary);"><i class="fas fa-building"></i> Empresa(s) de Acceso</label><div id="userEmpresaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #eff6ff; border-color: #bfdbfe;"></div></div><div class="form-group"><label style="color: #10b981;"><i class="fas fa-sitemap"></i> Área(s) Asignada(s)</label><div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #f0fdf4; border-color: #bbf7d0;"></div></div><button class="btn-action" id="btnSaveUser" style="background: var(--text-main); color: white; width: 100%; justify-content: center; margin-top: 10px; padding: 14px; border: none;"><i class="fas fa-save"></i> Guardar Perfil</button></div><div style="display: flex; flex-direction: column;"><div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Directorio</h3><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"><button class="btn-action" id="btnExportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #10b981; color: white; border: none;" onclick="Admin.exportUsers()"><i class="fas fa-file-export"></i> Exportar</button><button class="btn-action" id="btnImportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #3b82f6; color: white; border: none;" onclick="document.getElementById('fileImportUsers').click()"><i class="fas fa-file-import"></i> Importar</button><input type="file" id="fileImportUsers" accept=".xlsx, .xls" style="display: none;" onchange="Admin.importUsers(event)"><div class="search-box" style="width: 150px;"><i class="fas fa-search"></i><input type="text" id="searchUserEdit" placeholder="Filtrar..." style="padding: 8px 8px 8px 30px;" onkeyup="Admin.filterUsers()"></div></div></div><div class="users-list" id="activeUsersList" style="flex: 1;"></div></div></div><div id="tabEmpresas" style="display: none;"><div id="empresasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newEmpresaInput" placeholder="Nueva empresa..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="background: #0284c7; color:white; border:none;" onclick="Admin.addEmpresa()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabRoles" style="display: none; grid-template-columns: 1fr 2fr; gap: 40px;"><div style="display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase;">Perfiles</h3><div style="display: flex; gap: 10px; margin-bottom: 15px;"><input type="text" id="newRoleInput" placeholder="Nuevo rol..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="padding: 10px 15px;" onclick="Admin.addRole()"><i class="fas fa-plus"></i></button></div><div class="users-list" id="rolesListDiv" style="padding: 10px; flex: 1;"></div></div><div><h3 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 20px; text-transform: uppercase;">Editando: <span id="editingRoleName" style="color: var(--text-main);">Asesor</span></h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Operación</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_ver_global"> Ver Dashboard Directivo</label><label><input type="checkbox" id="chk_ver_area"> Ver Matriz de Calidad</label><label><input type="checkbox" id="chk_ver_propio"> Ver Desempeño Propio</label><label><input type="checkbox" id="chk_ver_nps"> Módulo Satisfacción</label><label><input type="checkbox" id="chk_ver_firmas"> Seguimiento de Firmas</label><label><input type="checkbox" id="chk_subir_excel"> Ingreso de Notas</label><label><input type="checkbox" id="chk_editar_notas"> Editar Calificaciones</label><label><input type="checkbox" id="chk_cambiar_estado"> Administrar Estados</label><label><input type="checkbox" id="chk_add_feedback"> Evaluar y Feedback</label></div></div><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Ajustes</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_gestionar_sistema"> <strong>Acceso Total</strong></label><label><input type="checkbox" id="chk_cfg_usuarios"> Crear/Editar Usuarios</label><label><input type="checkbox" id="chk_importar_usuarios"> Importar Excel</label><label><input type="checkbox" id="chk_exportar_usuarios"> Exportar</label><label><input type="checkbox" id="chk_cfg_roles"> Módulo: Permisos</label><label><input type="checkbox" id="chk_cfg_areas"> Áreas y Empresas</label><label><input type="checkbox" id="chk_cfg_estados"> Estados Asesor</label><label><input type="checkbox" id="chk_cfg_escalas"> Escalas Numéricas</label><label><input type="checkbox" id="chk_cfg_nps"> Encuesta NPS</label><label><input type="checkbox" id="chk_cfg_feedbacks"> Reglas Operativas</label></div></div></div><div style="text-align: right; margin-top: 25px;"><button class="btn-action" id="btnSaveRolePerms" style="background: var(--primary); color: white; display: inline-flex; padding: 12px 25px; border: none;"><i class="fas fa-shield-alt"></i> Aplicar</button></div></div></div><div id="tabAreas" style="display: none;"><div id="areasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newAreaInput" placeholder="Nueva área..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);"><button class="btn-action" onclick="Admin.addArea()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabEstados" style="display: none;"><div id="estadosContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 650px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addEstadoRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveEstados()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabColores" style="display: none;"><div id="escalasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addScaleRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveScales()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabNps" style="display: none;"><div id="npsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 700px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addNpsRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveNps()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabOperativas" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-bolt"></i> Auto-Cierre</h4><div class="form-group"><label>Umbral Numérico</label><input type="number" id="cfgAutoClose"></div></div><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Excepciones</h4><div class="form-group"><label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="cfgAllowInformativo" style="width:18px; height:18px;"> Habilitar "Solo Informativo"</label></div></div></div><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> Objetivos</h4><div class="form-group"><label>Meta (%)</label><input type="number" id="cfgMetaGlobal"></div><div class="form-group"><label>Umbral Destacado (%)</label><input type="number" id="cfgFamaThreshold"></div></div></div></div><div style="margin-top: 20px;"><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveFeedbackRules()"><i class="fas fa-save"></i> Guardar Reglas</button></div></div></div></div></div>
+    <div class="modal-overlay" id="settingsModal"><div class="modal-box fade-in" style="max-width: 950px; height: 85vh; margin: auto;"><div class="modal-header"><div><h2>Panel de Ajustes Generales</h2><p style="color: var(--text-muted); font-size: 13px; margin-top: 4px; font-weight: 500;">Administración de credenciales, roles y diseño.</p></div><button class="close-btn" onclick="UI.closeModal('settingsModal')"><i class="fas fa-times"></i></button></div><div class="modal-body" style="padding-top: 20px;"><div class="settings-tabs"><button class="tab-btn active" id="btnTabUsuarios" onclick="App.switchSettingsTab('tabUsuarios')">Usuarios</button><button class="tab-btn" id="btnTabEmpresas" onclick="App.switchSettingsTab('tabEmpresas')">Empresas</button><button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas/Campañas</button><button class="tab-btn" id="btnTabRoles" onclick="App.switchSettingsTab('tabRoles')">Permisos</button><button class="tab-btn" id="btnTabEstados" onclick="App.switchSettingsTab('tabEstados')">Estados Asesor</button><button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas</button><button class="tab-btn" id="btnTabNps" onclick="App.switchSettingsTab('tabNps')">Encuesta NPS</button><button class="tab-btn" id="btnTabAlias" onclick="App.switchSettingsTab('tabAlias')">Alias / Homologación</button><button class="tab-btn" id="btnTabOperativas" onclick="App.switchSettingsTab('tabOperativas')" style="color: #0284c7;">Reglas Operativas</button></div><div id="tabUsuarios" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">CREAR / EDITAR PERFIL</h3><div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div><div class="form-group"><label>Correo Electrónico (Opcional)</label><input type="email" id="newUserEmail" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Contraseña (Opcional)</label><input type="password" id="newUserPass" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div><div class="form-group"><label style="color: var(--primary);"><i class="fas fa-building"></i> Empresa(s) de Acceso</label><div id="userEmpresaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #eff6ff; border-color: #bfdbfe;"></div></div><div class="form-group"><label style="color: #10b981;"><i class="fas fa-sitemap"></i> Área(s) Asignada(s)</label><div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #f0fdf4; border-color: #bbf7d0;"></div></div><button class="btn-action" id="btnSaveUser" style="background: var(--text-main); color: white; width: 100%; justify-content: center; margin-top: 10px; padding: 14px; border: none;"><i class="fas fa-save"></i> Guardar Perfil</button></div><div style="display: flex; flex-direction: column;"><div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Directorio</h3><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"><button class="btn-action" id="btnExportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #10b981; color: white; border: none;" onclick="Admin.exportUsers()"><i class="fas fa-file-export"></i> Exportar</button><button class="btn-action" id="btnImportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #3b82f6; color: white; border: none;" onclick="document.getElementById('fileImportUsers').click()"><i class="fas fa-file-import"></i> Importar</button><input type="file" id="fileImportUsers" accept=".xlsx, .xls" style="display: none;" onchange="Admin.importUsers(event)"><div class="search-box" style="width: 150px;"><i class="fas fa-search"></i><input type="text" id="searchUserEdit" placeholder="Filtrar..." style="padding: 8px 8px 8px 30px;" onkeyup="Admin.filterUsers()"></div></div></div><div class="users-list" id="activeUsersList" style="flex: 1;"></div></div></div><div id="tabEmpresas" style="display: none;"><div id="empresasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newEmpresaInput" placeholder="Nueva empresa..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="background: #0284c7; color:white; border:none;" onclick="Admin.addEmpresa()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabRoles" style="display: none; grid-template-columns: 1fr 2fr; gap: 40px;"><div style="display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase;">Perfiles</h3><div style="display: flex; gap: 10px; margin-bottom: 15px;"><input type="text" id="newRoleInput" placeholder="Nuevo rol..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="padding: 10px 15px;" onclick="Admin.addRole()"><i class="fas fa-plus"></i></button></div><div class="users-list" id="rolesListDiv" style="padding: 10px; flex: 1;"></div></div><div><h3 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 20px; text-transform: uppercase;">Editando: <span id="editingRoleName" style="color: var(--text-main);">Asesor</span></h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Operación</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_ver_global"> Ver Dashboard Directivo</label><label><input type="checkbox" id="chk_ver_area"> Ver Matriz de Calidad</label><label><input type="checkbox" id="chk_ver_propio"> Ver Desempeño Propio</label><label><input type="checkbox" id="chk_ver_nps"> Módulo Satisfacción</label><label><input type="checkbox" id="chk_ver_firmas"> Seguimiento de Firmas</label><label><input type="checkbox" id="chk_subir_excel"> Ingreso de Notas</label><label><input type="checkbox" id="chk_editar_notas"> Editar Calificaciones</label><label><input type="checkbox" id="chk_cambiar_estado"> Administrar Estados</label><label><input type="checkbox" id="chk_add_feedback"> Evaluar y Feedback</label></div></div><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Ajustes</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_gestionar_sistema"> <strong>Acceso Total</strong></label><label><input type="checkbox" id="chk_cfg_usuarios"> Crear/Editar Usuarios</label><label><input type="checkbox" id="chk_importar_usuarios"> Importar Excel</label><label><input type="checkbox" id="chk_exportar_usuarios"> Exportar</label><label><input type="checkbox" id="chk_cfg_roles"> Módulo: Permisos</label><label><input type="checkbox" id="chk_cfg_areas"> Áreas y Empresas</label><label><input type="checkbox" id="chk_cfg_estados"> Estados Asesor</label><label><input type="checkbox" id="chk_cfg_escalas"> Escalas Numéricas</label><label><input type="checkbox" id="chk_cfg_nps"> Encuesta NPS</label><label><input type="checkbox" id="chk_cfg_feedbacks"> Reglas Operativas</label></div></div></div><div style="text-align: right; margin-top: 25px;"><button class="btn-action" id="btnSaveRolePerms" style="background: var(--primary); color: white; display: inline-flex; padding: 12px 25px; border: none;"><i class="fas fa-shield-alt"></i> Aplicar</button></div></div></div><div id="tabAreas" style="display: none;"><div id="areasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newAreaInput" placeholder="Nueva área..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);"><button class="btn-action" onclick="Admin.addArea()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabEstados" style="display: none;"><div id="estadosContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 650px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addEstadoRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveEstados()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabColores" style="display: none;"><div id="escalasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addScaleRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveScales()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabNps" style="display: none;"><div id="npsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 700px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addNpsRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveNps()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabAlias" style="display: none;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 10px;"><i class="fas fa-random"></i> Diccionario de Corrección</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Mapea nombres incorrectos o cortos que vienen en el Excel hacia el nombre oficial del asesor. El sistema los corregirá automáticamente al subir la base.</p><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;"><input type="text" id="newAliasBad" placeholder="Nombre en el Excel (Ej: Rolando Argueta)" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><input type="text" id="newAliasGood" placeholder="Nombre Oficial (Ej: Rolando Anibal Argueta Coronado)" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"></div><button class="btn-action" style="background: var(--text-main); color:white; border:none;" onclick="Admin.addAlias()"><i class="fas fa-plus"></i> Guardar Regla</button></div><div id="aliasContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;"></div></div><div id="tabOperativas" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-bolt"></i> Auto-Cierre</h4><div class="form-group"><label>Umbral Numérico</label><input type="number" id="cfgAutoClose"></div></div><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Excepciones</h4><div class="form-group"><label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="cfgAllowInformativo" style="width:18px; height:18px;"> Habilitar "Solo Informativo"</label></div></div></div><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> Objetivos</h4><div class="form-group"><label>Meta (%)</label><input type="number" id="cfgMetaGlobal"></div><div class="form-group"><label>Umbral Destacado (%)</label><input type="number" id="cfgFamaThreshold"></div></div></div></div><div style="margin-top: 20px;"><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveFeedbackRules()"><i class="fas fa-save"></i> Guardar Reglas</button></div></div></div></div></div>
 
+    <!-- MÓDULOS DE FIREBASE Y LÓGICA CORE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -512,6 +526,7 @@
         window.State = {
             user: { email: "", nombre: "", rol: "", areas: [], empresas: [], permisos: [] },
             usersMap: {}, viewingAgentName: null, allRecords: [], records: [], weekKeys: [],
+            aliasMap: {},
             charts: { agent: null, managerTrend: null, managerArea: null, npsTrend: null, npsArea: null },
             unsubscribeSync: null, unsubscribeUsers: null, currentDocId: null, quickEmpresaTarget: { nombre: "", area: "" },
             feedbackRules: { autoClose: 100, allowInformative: true, metaGlobal: 95, famaThreshold: 100 }, 
@@ -583,7 +598,7 @@
                     if(userDoc && userDoc.exists()) {
                         let data = userDoc.data();
                         
-                        const estAgentsDoc = await getDoc(doc(db, "configuracion", "estados_agentes"));
+                        const estAgentsDoc = await getDoc(doc(db, "configuracion", "estados_agents"));
                         let myStatus = (estAgentsDoc.exists() && estAgentsDoc.data()[data.nombre]) ? estAgentsDoc.data()[data.nombre] : 'Operativo';
                         if(myStatus.toLowerCase().includes('inactiv') || myStatus.toLowerCase().includes('baja')) { UI.showError(`Tu perfil se encuentra INACTIVO.`); signOut(auth); return; }
 
@@ -599,6 +614,9 @@
                         const estListDoc = await getDoc(doc(db, "configuracion", "estados_list")); if(estListDoc.exists() && estListDoc.data().lista) State.estadosList = estListDoc.data().lista;
                         const npsDoc = await getDoc(doc(db, "configuracion", "nps")); if(npsDoc.exists() && npsDoc.data().lista) State.npsOptions = npsDoc.data().lista;
                         const fbRulesDoc = await getDoc(doc(db, "configuracion", "feedback_rules")); if(fbRulesDoc.exists()) State.feedbackRules = { ...State.feedbackRules, ...fbRulesDoc.data() };
+                        
+                        // --- CARGA DE ALIAS ---
+                        const aliasDoc = await getDoc(doc(db, "configuracion", "alias_nombres")); if(aliasDoc.exists() && aliasDoc.data().mapa) State.aliasMap = aliasDoc.data().mapa;
                         
                         document.getElementById('kpi-meta').innerText = (State.feedbackRules.metaGlobal || 95) + "%";
 
@@ -619,7 +637,6 @@
                         App.applyPermissions();
                         document.getElementById('authOverlay').style.display = 'none';
                         
-                        // LÓGICA DE BIENVENIDA Y MATRIZ POR DEFECTO
                         let toast = document.getElementById('welcomeToast');
                         if (toast) {
                             toast.innerHTML = `<i class="fas fa-hand-sparkles" style="color: var(--primary); font-size: 24px;"></i> 
@@ -629,7 +646,6 @@
                             setTimeout(() => toast.classList.remove('show'), 4000);
                         }
 
-                        // Forzar la vista principal a la matriz si tiene permisos, o al dashboard personal
                         if(UI.hasPerm('chk_ver_area')) { App.switchView('viewMatriz'); }
                         else { App.switchView('viewAgente'); }
 
@@ -656,7 +672,7 @@
                 document.getElementById('btnExportUsers').style.display = UI.hasPerm('chk_exportar_usuarios') || UI.hasPerm('chk_gestionar_sistema') ? 'inline-flex' : 'none';
                 document.getElementById('btnImportUsers').style.display = UI.hasPerm('chk_importar_usuarios') || UI.hasPerm('chk_gestionar_sistema') ? 'inline-flex' : 'none';
 
-                const confTabs = [{ id: 'tabUsuarios', perm: 'chk_cfg_usuarios', btn: 'btnTabUsuarios' }, { id: 'tabRoles', perm: 'chk_cfg_roles', btn: 'btnTabRoles' }, { id: 'tabAreas', perm: 'chk_cfg_areas', btn: 'btnTabAreas' }, { id: 'tabEmpresas', perm: 'chk_cfg_areas', btn: 'btnTabEmpresas' }, { id: 'tabEstados', perm: 'chk_cfg_estados', btn: 'btnTabEstados' }, { id: 'tabColores', perm: 'chk_cfg_escalas', btn: 'btnTabColores' }, { id: 'tabNps', perm: 'chk_cfg_nps', btn: 'btnTabNps' }, { id: 'tabOperativas', perm: 'chk_cfg_feedbacks', btn: 'btnTabOperativas' }];
+                const confTabs = [{ id: 'tabUsuarios', perm: 'chk_cfg_usuarios', btn: 'btnTabUsuarios' }, { id: 'tabRoles', perm: 'chk_cfg_roles', btn: 'btnTabRoles' }, { id: 'tabAreas', perm: 'chk_cfg_areas', btn: 'btnTabAreas' }, { id: 'tabEmpresas', perm: 'chk_cfg_areas', btn: 'btnTabEmpresas' }, { id: 'tabEstados', perm: 'chk_cfg_estados', btn: 'btnTabEstados' }, { id: 'tabColores', perm: 'chk_cfg_escalas', btn: 'btnTabColores' }, { id: 'tabNps', perm: 'chk_cfg_nps', btn: 'btnTabNps' }, { id: 'tabOperativas', perm: 'chk_cfg_feedbacks', btn: 'btnTabOperativas' }, { id: 'tabAlias', perm: 'chk_cfg_usuarios', btn: 'btnTabAlias' }];
                 let hasAnyConf = false; confTabs.forEach(t => { let hasP = UI.hasPerm(t.perm); document.getElementById(t.btn).style.display = hasP ? 'inline-block' : 'none'; if (hasP) hasAnyConf = true; });
                 document.getElementById('btnSettings').style.display = hasAnyConf ? 'flex' : 'none';
 
@@ -668,7 +684,7 @@
 
                 let isGlobalData = State.user.areas.includes("Todas"); let filterUI = document.getElementById('areaFilter');
                 if(isGlobalData || State.user.areas.length > 1) {
-                    filterUI.style.display = 'block'; let htmlFilter = '<option value="all">Todas mis áreas</option>';
+                    filterUI.style.display = 'block'; let htmlFilter = '<option value="all">Todas mi Áreas</option>';
                     let permittedAreas = isGlobalData ? State.areas : State.areas.filter(a => State.user.areas.includes(a));
                     if (!isGlobalData) State.user.areas.forEach(a => { if(!permittedAreas.includes(a)) permittedAreas.push(a); });
                     permittedAreas.forEach(a => { if(a !== 'Todas') htmlFilter += `<option value="${a}">${a}</option>` });
@@ -703,10 +719,10 @@
 
             viewAgentDashboard: (agentName) => { State.viewingAgentName = agentName; document.getElementById('mainTitle').innerText = `Desempeño: ${agentName}`; App.switchView('viewAgente'); },
             switchSettingsTab: (tabId) => {
-                ['tabUsuarios', 'tabRoles', 'tabColores', 'tabNps', 'tabAreas', 'tabEmpresas', 'tabEstados', 'tabOperativas'].forEach(id => document.getElementById(id).style.display = 'none');
+                ['tabUsuarios', 'tabRoles', 'tabColores', 'tabNps', 'tabAreas', 'tabEmpresas', 'tabEstados', 'tabOperativas', 'tabAlias'].forEach(id => document.getElementById(id).style.display = 'none');
                 document.getElementById(tabId).style.display = (tabId === 'tabRoles' || tabId === 'tabUsuarios') ? 'grid' : 'block';
                 document.querySelectorAll('#settingsModal .tab-btn').forEach(btn => { btn.classList.remove('active'); if(btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active'); });
-                if(tabId === 'tabRoles' || tabId === 'tabUsuarios') Admin.loadRoles(); if(tabId === 'tabColores') Admin.renderScales(); if(tabId === 'tabNps') Admin.renderNps(); if(tabId === 'tabAreas') Admin.renderAreas(); if(tabId === 'tabEmpresas') Admin.renderEmpresas(); if(tabId === 'tabEstados') Admin.renderEstados(); if(tabId === 'tabUsuarios') Admin.loadUsers(); if(tabId === 'tabOperativas') Admin.renderFeedbackRules();
+                if(tabId === 'tabRoles' || tabId === 'tabUsuarios') Admin.loadRoles(); if(tabId === 'tabColores') Admin.renderScales(); if(tabId === 'tabNps') Admin.renderNps(); if(tabId === 'tabAreas') Admin.renderAreas(); if(tabId === 'tabEmpresas') Admin.renderEmpresas(); if(tabId === 'tabEstados') Admin.renderEstados(); if(tabId === 'tabUsuarios') Admin.loadUsers(); if(tabId === 'tabOperativas') Admin.renderFeedbackRules(); if(tabId === 'tabAlias') Admin.renderAlias();
             },
 
             saveMyArea: async () => {
@@ -724,13 +740,43 @@
             startDataSync: () => {
                 if (State.unsubscribeSync) State.unsubscribeSync();
                 let isGlobalData = State.user.areas.includes("Todas"); let q;
-                if (isGlobalData) { q = query(collection(db, "notas_calidad")); } 
+                
+                if (isGlobalData) { 
+                    q = query(collection(db, "notas_calidad")); 
+                } 
                 else if (UI.hasPerm('chk_ver_area') || UI.hasPerm('chk_ver_global') || UI.hasPerm('chk_ver_nps') || UI.hasPerm('chk_ver_firmas') || State.user.rol === 'Lider') {
                     let areasQuery = State.user.areas.slice(0, 30); if(areasQuery.length === 0) areasQuery = ["AreaNoAsignada"];
                     q = query(collection(db, "notas_calidad"), where("area", "in", areasQuery));
-                } else { q = query(collection(db, "notas_calidad"), where("id_asesor", "==", State.user.nombre)); }
+                } 
+                else { 
+                    // --- NUEVO: Buscar por nombre oficial Y también por sus alias registrados ---
+                    let myNames = [State.user.nombre];
+                    if (State.aliasMap) {
+                        for (let badName in State.aliasMap) {
+                            if (State.aliasMap[badName] === State.user.nombre) {
+                                myNames.push(badName);
+                            }
+                        }
+                    }
+                    // Usamos 'in' para traer los registros de cualquiera de esos nombres (límite de 10 por Firebase)
+                    q = query(collection(db, "notas_calidad"), where("id_asesor", "in", myNames.slice(0, 10))); 
+                }
 
-                State.unsubscribeSync = onSnapshot(q, async (snap) => { State.allRecords = []; snap.forEach(d => { State.allRecords.push({ idDoc: d.id, ...d.data() }); }); App.processRecordsForYear(); });
+                State.unsubscribeSync = onSnapshot(q, async (snap) => { 
+                    State.allRecords = []; 
+                    snap.forEach(d => { 
+                        let recordData = d.data();
+                        
+                        // --- MAGIA: CORRECCIÓN DE HISTORIAL EN TIEMPO REAL ---
+                        if (State.aliasMap && State.aliasMap[recordData.id_asesor]) {
+                            recordData.id_asesor = State.aliasMap[recordData.id_asesor];
+                        }
+                        // -----------------------------------------------------
+
+                        State.allRecords.push({ idDoc: d.id, ...recordData }); 
+                    }); 
+                    App.processRecordsForYear(); 
+                });
             },
 
             processRecordsForYear: async () => {
@@ -778,29 +824,65 @@
             },
 
             exportToExcel: () => {
-                const search = document.getElementById('searchInput').value.toLowerCase(); const fArea = document.getElementById('areaFilter') && document.getElementById('areaFilter').style.display !== 'none' ? document.getElementById('areaFilter').value : "all";
-                const fStatus = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : "all"; const fWeek = document.getElementById('weekFilter').value; const fYear = document.getElementById('yearFilter').value;
-                let isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase()), isNpsView = document.getElementById('viewNps').classList.contains('active');
+                const search = document.getElementById('searchInput').value.toLowerCase(); 
+                const filterUI = document.getElementById('areaFilter');
+                const fArea = filterUI && filterUI.style.display !== 'none' ? filterUI.value : "all";
+                const fStatus = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : "all"; 
+                const fWeek = document.getElementById('weekFilter').value; 
+                const fYear = document.getElementById('yearFilter').value;
+                
+                let isGlobalData = State.user.areas.includes("Todas");
+                let validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
+                let activeView = document.querySelector('.view-section.active')?.id;
 
                 let baseRecords = State.records.filter(r => {
-                    let matchSearch = r.id_asesor.toLowerCase().includes(search); let matchDropdown = (fArea === "all" || fArea === "Todas" || String(r.area).trim().toUpperCase() === String(fArea).trim().toUpperCase());
-                    let matchStatus = (fStatus === "all" || r.estado === fStatus); let matchSecurity = isGlobalData || validAreas.includes(String(r.area).trim().toUpperCase()); let matchWeek = (fWeek === "all" || fWeek === "year" || r.semana === fWeek);
-                    if (isNpsView && !r.nps_agente) return false; return matchSearch && matchDropdown && matchStatus && matchSecurity && matchWeek;
+                    let matchSearch = r.id_asesor.toLowerCase().includes(search); 
+                    let matchDropdown = (fArea === "all" || fArea === "Todas" || String(r.area).trim().toUpperCase() === String(fArea).trim().toUpperCase());
+                    let matchStatus = (fStatus === "all" || r.estado === fStatus); 
+                    let matchSecurity = isGlobalData || validAreas.includes(String(r.area).trim().toUpperCase()); 
+                    let matchWeek = (fWeek === "all" || fWeek === "year" || r.semana === fWeek);
+                    return matchSearch && matchDropdown && matchStatus && matchSecurity && matchWeek;
                 });
 
                 if (baseRecords.length === 0) return alert("No hay datos en pantalla para exportar bajo los filtros actuales.");
 
                 let exportData = [];
-                if (isNpsView) {
-                    exportData = baseRecords.map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Calificación Operativa": r.nota, "Nivel de Satisfacción (NPS)": r.nps_agente, "Comentario del Asesor": r.observacion_agente || "-", "Plan de Acción Firmado": r.compromiso_agente || "-", "Retroalimentación del Líder": r.feedback_lider || "-" }));
-                } else {
-                    let agMap = {}; baseRecords.forEach(r => { let key = r.id_asesor + "_" + r.area; if(!agMap[key]) agMap[key] = { nombre: r.id_asesor, area: r.area, estado: r.estado, notas: {} }; agMap[key].notas[r.semana] = r; });
+                let sheetName = "Reporte";
+
+                if (activeView === 'viewNps') {
+                    sheetName = "Satisfaccion_NPS";
+                    let npsRecords = baseRecords.filter(r => r.nps_agente);
+                    if(npsRecords.length === 0) return alert("No hay encuestas NPS para exportar.");
+                    exportData = npsRecords.map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Calificación Operativa": r.nota, "NPS (1-10)": r.nps_agente, "Comentario del Asesor": r.observacion_agente || "-", "Plan de Acción Firmado": r.compromiso_agente || "-", "Feedback Líder": r.feedback_lider || "-" }));
+                } 
+                else if (activeView === 'viewFirmas') {
+                    sheetName = "Auditoria_Firmas";
+                    let firmasRecords = baseRecords.filter(r => r.feedback_lider && !r.es_informativo);
+                    if(firmasRecords.length === 0) return alert("No hay firmas para exportar.");
+                    exportData = firmasRecords.map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Nota": r.nota, "Estatus Firma": r.compromiso_agente ? "Firmado" : "Pendiente", "Feedback del Líder": r.feedback_lider, "Compromiso del Asesor": r.compromiso_agente || "Pendiente de firma", "Observación Extra": r.observacion_agente || "-" }));
+                } 
+                else {
+                    sheetName = "Matriz_Calidad";
+                    let agMap = {}; 
+                    baseRecords.forEach(r => { let key = r.id_asesor + "_" + r.area; if(!agMap[key]) agMap[key] = { nombre: r.id_asesor, area: r.area, estado: r.estado, notas: {} }; agMap[key].notas[r.semana] = r; });
                     let drawWeeks = (fWeek === "all" || fWeek === "year") ? State.weekKeys : [fWeek];
-                    exportData = Object.values(agMap).map(ag => { let row = { "Área": ag.area, "Asesor": ag.nombre, "Estado": ag.estado }; let sum = 0, count = 0; drawWeeks.forEach(wk => { let n = ag.notas[wk] ? ag.notas[wk].nota : ""; row[wk] = n; if(n !== "" && !isNaN(n)) { sum += Number(n); count++; } }); row["Promedio General"] = count > 0 ? Math.round(sum/count) : ""; return row; });
+                    exportData = Object.values(agMap).map(ag => { 
+                        let row = { "Área": ag.area, "Asesor": ag.nombre, "Estado": ag.estado }; 
+                        let sum = 0, count = 0; 
+                        drawWeeks.forEach(wk => { 
+                            let n = ag.notas[wk] ? ag.notas[wk].nota : ""; 
+                            row[wk] = n; 
+                            if(n !== "" && !isNaN(n)) { sum += Number(n); count++; } 
+                        }); 
+                        row["Promedio General"] = count > 0 ? Math.round(sum/count) : ""; 
+                        return row; 
+                    });
                 }
 
-                const ws = XLSX.utils.json_to_sheet(exportData); const wb = XLSX.utils.book_new(); let sheetName = isNpsView ? "Satisfaccion_Asesores" : "Matriz_Calidad";
-                XLSX.utils.book_append_sheet(wb, ws, sheetName); XLSX.writeFile(wb, `${sheetName}_${fYear}_${new Date().getTime()}.xlsx`);
+                const ws = XLSX.utils.json_to_sheet(exportData); 
+                const wb = XLSX.utils.book_new(); 
+                XLSX.utils.book_append_sheet(wb, ws, sheetName); 
+                XLSX.writeFile(wb, `${sheetName}_${fYear}_${new Date().getTime()}.xlsx`);
             },
 
             openManualEntry: async () => {
@@ -969,10 +1051,10 @@
                 let wkData = {}; trendWeeks.forEach(wk => wkData[wk] = { s:0, c:0 });
                 let areaStats = {}, agentStats = {};
                 let agentCalcProm = {};
-                State.records.forEach(d => { let currStateObj = State.estadosList.find(x => x.lbl === d.estado) || {calcProm: true}; agentCalcProm[d.id_asesor] = currStateObj.calcProm !== false; });
+                State.records.forEach(d => { let currStateObj = State.estadosList.find(x => x.lbl === d.estado) || {calcProm: true}; areaCalcProm[d.id_asesor] = currStateObj.calcProm !== false; });
 
                 dashboardRecords.forEach(d => {
-                    let includeInAvg = agentCalcProm[d.id_asesor];
+                    let includeInAvg = areaCalcProm[d.id_asesor];
                     if(includeInAvg) {
                         if (trendWeeks.includes(d.semana)) {
                             if(!isNaN(d.nota)) { sumGlobal += Number(d.nota); cGlobal++; wkData[d.semana].s += Number(d.nota); wkData[d.semana].c++; }
@@ -1032,7 +1114,6 @@
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} } }
                 });
 
-                // Nueva lógica para barras dobles en el gráfico de Áreas
                 let areaList = [];
                 for(let a in areaStats) {
                     let info = areaStats[a];
@@ -1044,7 +1125,6 @@
                         });
                     }
                 }
-                
                 areaList.sort((a,b) => b.currAvg - a.currAvg);
 
                 if(State.charts.managerArea) State.charts.managerArea.destroy();
@@ -1057,12 +1137,7 @@
                             { label: prevWk || 'Anterior', data: areaList.map(x => x.prevAvg), backgroundColor: '#cbd5e1', borderRadius: 4 }
                         ] 
                     },
-                    options: { 
-                        indexAxis: 'y', 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: true, position: 'top' } } 
-                    }
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } } }
                 });
 
                 let htmlAreas = areaList.map((a, i) => {
@@ -1083,7 +1158,8 @@
 
             drawFirmas: () => {
                 const search = document.getElementById('searchInput').value.toLowerCase();
-                const fArea = document.getElementById('areaFilter') ? document.getElementById('areaFilter').value : "all";
+                const filterUI = document.getElementById('areaFilter');
+                const fArea = filterUI && filterUI.style.display !== 'none' ? filterUI.value : "all";
                 const fWeek = document.getElementById('weekFilter').value;
 
                 let isGlobalData = State.user.areas.includes("Todas");
@@ -1100,6 +1176,12 @@
                     return matchSearch && matchDropdown && matchSecurity && matchWeek && needsSig && !r.es_informativo && !!r.feedback_lider;
                 });
 
+                reqSignatures.sort((a, b) => {
+                    if (a.compromiso_agente && !b.compromiso_agente) return 1;
+                    if (!a.compromiso_agente && b.compromiso_agente) return -1;
+                    return 0;
+                });
+
                 let signed = reqSignatures.filter(r => !!r.compromiso_agente);
                 let pending = reqSignatures.filter(r => !r.compromiso_agente);
 
@@ -1108,8 +1190,42 @@
                 document.getElementById('firmasPend').innerText = pending.length;
                 document.getElementById('firmasPct').innerText = reqSignatures.length > 0 ? Math.round((signed.length / reqSignatures.length) * 100) + "%" : "0%";
 
-                let tbody = pending.map(r => `<tr><td><strong style="color:var(--text-main);">${r.id_asesor}</strong></td><td class="col-area">${r.area}</td><td><span style="font-size:12px; font-weight:800; background:#f1f5f9; padding:4px 8px; border-radius:6px; border:1px solid var(--border);">${r.semana}</span></td><td style="text-align: center;">${UI.getBadgeHTML(r.nota)}</td><td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:var(--text-muted);" title="${r.feedback_lider}">${r.feedback_lider}</td><td style="text-align: center;"><button class="btn-action" style="padding: 6px 12px; font-size:11px;" onclick="Interactions.openFeedback('${r.idDoc}')"><i class="fas fa-eye"></i> Revisar</button></td></tr>`).join('');
-                document.getElementById('firmasPendingBody').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center; padding: 40px; color:var(--text-muted); font-size:14px; font-weight:600;"><i class="fas fa-check-circle" style="color:var(--success-txt); font-size:24px; display:block; margin-bottom:10px;"></i>No hay firmas pendientes con los filtros actuales.</td></tr>';
+                const tableHead = document.querySelector('#viewFirmas table thead');
+                if(tableHead) {
+                    tableHead.innerHTML = `<tr><th>Asesor Asignado</th><th>Área</th><th>Semana</th><th style="text-align: center;">Calificación</th><th style="text-align: center;">Estatus de Firma</th><th style="text-align: center;">Acción</th></tr>`;
+                }
+
+                let tbody = reqSignatures.map(r => {
+                    let isSigned = !!r.compromiso_agente;
+                    let statusBadge = isSigned ? `<span style="color:#10b981; font-weight:800; background:#dcfce7; padding:4px 8px; border-radius:6px;"><i class="fas fa-check-double"></i> Firmado</span>` : `<span style="color:#ef4444; font-weight:800; background:#fee2e2; padding:4px 8px; border-radius:6px;"><i class="fas fa-clock"></i> Pendiente</span>`;
+                    
+                    return `
+                    <tr style="cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'" onclick="const el = document.getElementById('det_${r.idDoc}'); el.style.display = el.style.display === 'none' ? 'table-row' : 'none';">
+                        <td><strong style="color:var(--text-main);">${r.id_asesor}</strong></td>
+                        <td class="col-area">${r.area}</td>
+                        <td><span style="font-size:12px; font-weight:800; background:#f1f5f9; padding:4px 8px; border-radius:6px; border:1px solid var(--border);">${r.semana}</span></td>
+                        <td style="text-align: center;">${UI.getBadgeHTML(r.nota)}</td>
+                        <td style="text-align: center;">${statusBadge}</td>
+                        <td style="text-align: center;"><button class="btn-action" style="padding: 6px 12px; font-size:11px; margin:auto;" onclick="event.stopPropagation(); Interactions.openFeedback('${r.idDoc}')"><i class="fas fa-edit"></i> Editar</button></td>
+                    </tr>
+                    <tr id="det_${r.idDoc}" style="display:none; background:#f8fafc; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                        <td colspan="6" style="padding: 15px 25px; border-bottom: 2px solid var(--border);">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:13px;">
+                                <div style="background:white; padding:15px; border-radius:8px; border:1px solid var(--border);">
+                                    <strong style="color:var(--primary); font-size:12px; text-transform:uppercase;"><i class="fas fa-user-tie"></i> Oportunidad (Líder):</strong>
+                                    <p style="margin-top:8px; color:var(--text-main); line-height:1.5;">${r.feedback_lider}</p>
+                                </div>
+                                <div style="background:white; padding:15px; border-radius:8px; border:1px solid ${isSigned ? '#bbf7d0' : '#fecaca'};">
+                                    <strong style="color:${isSigned ? '#166534' : '#991b1b'}; font-size:12px; text-transform:uppercase;"><i class="fas fa-headset"></i> Respuesta (Asesor):</strong>
+                                    <p style="margin-top:8px; color:var(--text-main); line-height:1.5;">${r.compromiso_agente || '<em>Aún no ha ingresado al sistema para firmar su compromiso.</em>'}</p>
+                                    ${r.observacion_agente ? `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1;"><strong style="color:var(--text-muted); font-size:11px;">OBSERVACIÓN ADICIONAL:</strong> <span style="color:var(--text-main);">${r.observacion_agente}</span></div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+                
+                document.getElementById('firmasPendingBody').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center; padding: 40px; color:var(--text-muted); font-size:14px; font-weight:600;"><i class="fas fa-check-circle" style="color:var(--success-txt); font-size:24px; display:block; margin-bottom:10px;"></i>No hay registros que coincidan con los filtros.</td></tr>';
             },
 
             drawNps: () => {
@@ -1157,37 +1273,101 @@
                 let targetAgent = State.viewingAgentName || State.user.nombre;
                 document.getElementById('agentDashboardTitle').innerText = (targetAgent === State.user.nombre) ? "Mis Resultados Semanales" : `Desempeño: ${targetAgent}`;
 
-                let myRecords = State.records.filter(d => d.id_asesor === targetAgent);
-                let notesHTML = "", chartData = [], sum = 0, count = 0, autoCloseThresh = Number(State.feedbackRules.autoClose) || 999, famaThresh = Number(State.feedbackRules.famaThreshold) || 100;
+                const filterUI = document.getElementById('areaFilter');
+                const fArea = filterUI && filterUI.style.display !== 'none' ? filterUI.value : "all";
+
+                let myRecords = State.records.filter(d => {
+                    let matchAgent = d.id_asesor === targetAgent;
+                    let matchArea = (fArea === "all" || fArea === "Todas" || String(d.area).trim().toUpperCase() === String(fArea).trim().toUpperCase());
+                    return matchAgent && matchArea;
+                });
+
+                let notesHTML = "", chartData = [], sum = 0, count = 0;
+                let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999;
+                let famaThresh = Number(State.feedbackRules.famaThreshold) || 100;
+                
                 document.getElementById('famaSubtitle').innerText = `Semanas con Excelencia (${famaThresh}%)`;
 
                 State.weekKeys.forEach(wk => {
                     let notesForWeek = myRecords.filter(x => x.semana === wk);
-                    if(notesForWeek.length > 0) { notesForWeek.forEach(note => { notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl" title="${note.area}">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`; chartData.push(note.nota); if(!isNaN(note.nota)){ sum+=Number(note.nota); count++;} }); } 
-                    else { notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl">-</span>${UI.getBadgeHTML("-")}</div>`; chartData.push(null); }
+                    if(notesForWeek.length > 0) { 
+                        let sumWk = 0, countWk = 0;
+                        notesForWeek.forEach(note => { 
+                            notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl" title="${note.area}">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`; 
+                            if(!isNaN(note.nota)) { 
+                                sumWk += Number(note.nota); countWk++;
+                                sum += Number(note.nota); count++; 
+                            } 
+                        }); 
+                        chartData.push(countWk > 0 ? Math.round(sumWk/countWk) : null);
+                    } else { 
+                        notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl">-</span>${UI.getBadgeHTML("-")}</div>`; 
+                        chartData.push(null); 
+                    }
                 });
                 
                 document.getElementById('agentNotesGrid').innerHTML = notesHTML;
-                let finalPromAgente = count > 0 ? Math.round(sum/count) : 0, targetMeta = State.feedbackRules.metaGlobal || 95, kpiAvgEl = document.getElementById('kpi-avg');
-                kpiAvgEl.innerText = count > 0 ? finalPromAgente + "%" : "N/A"; kpiAvgEl.style.color = finalPromAgente >= targetMeta ? "var(--success-txt)" : "white";
+                let finalPromAgente = count > 0 ? Math.round(sum/count) : 0;
+                let targetMeta = State.feedbackRules.metaGlobal || 95;
+                let kpiAvgEl = document.getElementById('kpi-avg');
+                kpiAvgEl.innerText = count > 0 ? finalPromAgente + "%" : "N/A"; 
+                kpiAvgEl.style.color = finalPromAgente >= targetMeta ? "var(--success-txt)" : "white";
                 document.getElementById('agentPersonalAvg').innerText = count > 0 ? finalPromAgente + "%" : "-";
                 
-                let agentAreas = [...new Set(myRecords.map(r => r.area))], areaRecords = State.records.filter(d => agentAreas.includes(d.area)), areaSum = 0, areaCount = 0, areaCalcProm = {};
-                State.records.forEach(d => { let currStateObj = State.estadosList.find(x => x.lbl === d.estado) || {calcProm: true}; areaCalcProm[d.id_asesor] = currStateObj.calcProm !== false; });
-                areaRecords.forEach(d => { if (areaCalcProm[d.id_asesor] && !isNaN(d.nota)) { areaSum += Number(d.nota); areaCount++; } });
+                let agentAreas = [...new Set(myRecords.map(r => r.area))];
+                let areaRecords = State.records.filter(d => agentAreas.includes(d.area));
+                let areaSum = 0, areaCount = 0, areaCalcProm = {};
                 
-                let areaAvg = areaCount > 0 ? Math.round(areaSum/areaCount) : 0; document.getElementById('agentAreaAvg').innerText = areaCount > 0 ? areaAvg + "%" : "-";
+                State.records.forEach(d => { 
+                    let currStateObj = State.estadosList.find(x => x.lbl === d.estado) || {calcProm: true}; 
+                    areaCalcProm[d.id_asesor] = currStateObj.calcProm !== false; 
+                });
+                
+                areaRecords.forEach(d => { 
+                    if (areaCalcProm[d.id_asesor] && !isNaN(d.nota)) { 
+                        areaSum += Number(d.nota); areaCount++; 
+                    } 
+                });
+                
+                let areaAvg = areaCount > 0 ? Math.round(areaSum/areaCount) : 0; 
+                document.getElementById('agentAreaAvg').innerText = areaCount > 0 ? areaAvg + "%" : "-";
+                
                 let diffBox = document.getElementById('agentAreaDiff');
-                if (count > 0 && areaCount > 0) { let diff = finalPromAgente - areaAvg; if (diff > 0) { diffBox.style.backgroundColor = "#dcfce7"; diffBox.style.color = "#166534"; diffBox.innerHTML = `<i class="fas fa-arrow-up"></i> +${diff}% por encima de la media`; } else if (diff < 0) { diffBox.style.backgroundColor = "#fee2e2"; diffBox.style.color = "#991b1b"; diffBox.innerHTML = `<i class="fas fa-arrow-down"></i> ${Math.abs(diff)}% por debajo de la media`; } else { diffBox.style.backgroundColor = "#f1f5f9"; diffBox.style.color = "#475569"; diffBox.innerHTML = `<i class="fas fa-equals"></i> Igual a la media`; } } 
-                else { diffBox.style.backgroundColor = "transparent"; diffBox.innerHTML = ""; }
+                if (count > 0 && areaCount > 0) { 
+                    let diff = finalPromAgente - areaAvg; 
+                    if (diff > 0) { 
+                        diffBox.style.backgroundColor = "#dcfce7"; diffBox.style.color = "#166534"; diffBox.innerHTML = `<i class="fas fa-arrow-up"></i> +${diff}% por encima de la media`; 
+                    } else if (diff < 0) { 
+                        diffBox.style.backgroundColor = "#fee2e2"; diffBox.style.color = "#991b1b"; diffBox.innerHTML = `<i class="fas fa-arrow-down"></i> ${Math.abs(diff)}% por debajo de la media`; 
+                    } else { 
+                        diffBox.style.backgroundColor = "#f1f5f9"; diffBox.style.color = "#475569"; diffBox.innerHTML = `<i class="fas fa-equals"></i> Igual a la media`; 
+                    } 
+                } else { 
+                    diffBox.style.backgroundColor = "transparent"; diffBox.innerHTML = ""; 
+                }
 
-                let perfectRecords = myRecords.filter(x => !isNaN(x.nota) && Number(x.nota) >= famaThresh), bestHTML = "";
-                if (perfectRecords.length > 0) { perfectRecords.forEach(note => { bestHTML += `<div class="agent-note-item" style="background: white; border-color: #86efac; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);"><span class="week" style="color:#059669;">${note.semana}</span><span class="area-lbl">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`; }); } 
-                else { bestHTML = `<div style="grid-column: 1/-1; text-align: center; font-size: 11px; color: #15803d; padding: 15px 0;"><i class="fas fa-seedling" style="font-size: 16px; display:block; margin-bottom:6px; opacity:0.7;"></i>Aún no hay registros en la meta.<br>¡Se puede lograr!</div>`; }
+                let perfectRecords = myRecords.filter(x => !isNaN(x.nota) && Number(x.nota) >= famaThresh);
+                let bestHTML = "";
+                if (perfectRecords.length > 0) { 
+                    perfectRecords.forEach(note => { 
+                        bestHTML += `<div class="agent-note-item" style="background: white; border-color: #86efac; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);"><span class="week" style="color:#059669;">${note.semana}</span><span class="area-lbl">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`; 
+                    }); 
+                } else { 
+                    bestHTML = `<div style="grid-column: 1/-1; text-align: center; font-size: 11px; color: #15803d; padding: 15px 0;"><i class="fas fa-seedling" style="font-size: 16px; display:block; margin-bottom:6px; opacity:0.7;"></i>Aún no hay registros en la meta.<br>¡Se puede lograr!</div>`; 
+                }
                 document.getElementById('agentBestPracticesGrid').innerHTML = bestHTML;
 
                 if(State.charts.agent) State.charts.agent.destroy();
-                State.charts.agent = new Chart(document.getElementById('agentMainChart'), { type: 'line', data: { labels: State.weekKeys, datasets: [{ data: chartData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { suggestedMin: 50, suggestedMax: 100 } } } });
+                State.charts.agent = new Chart(document.getElementById('agentMainChart'), { 
+                    type: 'line', 
+                    data: { 
+                        labels: State.weekKeys, 
+                        datasets: [{ 
+                            data: chartData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 
+                        }] 
+                    }, 
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { suggestedMin: 50, suggestedMax: 100 } } } 
+                });
 
                 let fbList = myRecords.filter(x => x.feedback_lider || x.es_informativo).reverse().slice(0, 6);
                 let fbHTML = fbList.map(r => {
@@ -1199,8 +1379,14 @@
             }
         };
 
-        // --- ASIGNACIÓN DE EVENTOS DE INTERFAZ Y REFRESH DINÁMICO ---
-        const refreshActiveView = () => { const active = document.querySelector('.view-section.active')?.id; if(active === 'viewMatriz') Renders.drawMatrix(); if(active === 'viewGerencial') Renders.drawManager(); if(active === 'viewNps') Renders.drawNps(); if(active === 'viewFirmas') Renders.drawFirmas(); };
+        const refreshActiveView = () => { 
+            const active = document.querySelector('.view-section.active')?.id; 
+            if(active === 'viewMatriz') Renders.drawMatrix(); 
+            if(active === 'viewGerencial') Renders.drawManager(); 
+            if(active === 'viewNps') Renders.drawNps(); 
+            if(active === 'viewFirmas') Renders.drawFirmas(); 
+            if(active === 'viewAgente') Renders.drawAgent(); 
+        };
         
         document.getElementById('searchInput').addEventListener('keyup', refreshActiveView); 
         if(document.getElementById('areaFilter')) document.getElementById('areaFilter').addEventListener('change', refreshActiveView); 
@@ -1209,7 +1395,7 @@
         if(document.getElementById('compWk1')) document.getElementById('compWk1').addEventListener('change', refreshActiveView);
         if(document.getElementById('compWk2')) document.getElementById('compWk2').addEventListener('change', refreshActiveView);
 
-        document.getElementById('btnSettings').addEventListener('click', () => { UI.openModal('settingsModal'); const confTabs = [ { id: 'tabUsuarios', btn: 'btnTabUsuarios' }, { id: 'tabEmpresas', btn: 'btnTabEmpresas' }, { id: 'tabAreas', btn: 'btnTabAreas' }, { id: 'tabRoles', btn: 'btnTabRoles' }, { id: 'tabEstados', btn: 'btnTabEstados' }, { id: 'tabColores', btn: 'btnTabColores' }, { id: 'tabNps', btn: 'btnTabNps' }, { id: 'tabOperativas', btn: 'btnTabOperativas' } ]; for(let t of confTabs) { if(document.getElementById(t.btn).style.display !== 'none') { document.getElementById(t.btn).click(); break; } } });
+        document.getElementById('btnSettings').addEventListener('click', () => { UI.openModal('settingsModal'); const confTabs = [ { id: 'tabUsuarios', btn: 'btnTabUsuarios' }, { id: 'tabEmpresas', btn: 'btnTabEmpresas' }, { id: 'tabAreas', btn: 'btnTabAreas' }, { id: 'tabRoles', btn: 'btnTabRoles' }, { id: 'tabEstados', btn: 'btnTabEstados' }, { id: 'tabColores', btn: 'btnTabColores' }, { id: 'tabNps', btn: 'btnTabNps' }, { id: 'tabOperativas', btn: 'btnTabOperativas' }, { id: 'tabAlias', btn: 'btnTabAlias' } ]; for(let t of confTabs) { if(document.getElementById(t.btn).style.display !== 'none') { document.getElementById(t.btn).click(); break; } } });
 
         window.Interactions = {
             openFeedback: (idDoc) => {
@@ -1267,8 +1453,17 @@
                     let areaTracker = "General", countUploads = 0, isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
                     let batches = [writeBatch(db)], currentBatchIdx = 0, operationsInCurrentBatch = 0, myEmpresas = State.user.empresas || State.empresas;
                     for (let i = headerRowIdx + 1; i < targetRows.length; i++) {
-                        if(!targetRows[i] || targetRows[i].length === 0) continue; let content = String(targetRows[i][idxAgente] || "").trim(); if (!content) continue;
-                        let contentUpper = content.toUpperCase(); let matchedArea = State.areas.find(a => String(a).trim().toUpperCase() === contentUpper); if (matchedArea) { areaTracker = matchedArea; continue; }
+                        if(!targetRows[i] || targetRows[i].length === 0) continue; 
+                        let content = String(targetRows[i][idxAgente] || "").trim(); 
+                        if (!content) continue;
+
+                        // --- HOMOLOGACIÓN DINÁMICA DESDE LOS AJUSTES ---
+                        if (State.aliasMap[content]) {
+                            content = State.aliasMap[content];
+                        }
+
+                        let contentUpper = content.toUpperCase(); 
+                        let matchedArea = State.areas.find(a => String(a).trim().toUpperCase() === contentUpper); if (matchedArea) { areaTracker = matchedArea; continue; }
                         if (contentUpper.includes("PROMEDIO") || contentUpper.includes("TOTAL") || contentUpper === "ÁREA" || contentUpper === "AGENTE") continue; if (areaFiltro !== "Todas" && areaTracker.toUpperCase() !== areaFiltro.toUpperCase()) continue; if (!isGlobalData && !validAreas.includes(areaTracker.toUpperCase())) continue;
                         if (State.user.rol !== 'Admin') { let agData = State.usersMap[content]; let agentEmpresas = (agData && agData.empresas && agData.empresas.length > 0) ? agData.empresas : []; let hasEmpresaAccess = (agentEmpresas.length === 0) ? true : myEmpresas.some(emp => agentEmpresas.includes(emp)); if (!hasEmpresaAccess) continue; }
                         for (let wMap of weekColMap) {
@@ -1317,8 +1512,36 @@
             renderNps: () => { document.getElementById('npsContainer').innerHTML = State.npsOptions.map(n => `<div style="display: grid; grid-template-columns: 1fr 3fr 1fr; gap: 15px; align-items: center;" class="nps-row"><input type="number" value="${n.val}" class="form-input n-val" style="padding:10px;"><input type="text" value="${n.lbl}" class="form-input n-lbl" style="padding:10px;"><button class="btn-action" style="color:var(--danger-txt); border:none; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>`).join(''); },
             addNpsRow: () => { State.npsOptions.push({val: "", lbl: ""}); Admin.renderNps(); },
             saveNps: async () => { let freshNps = []; document.querySelectorAll('.nps-row').forEach(row => { freshNps.push({ val: row.querySelector('.n-val').value, lbl: row.querySelector('.n-lbl').value.trim() }); }); try { await setDoc(doc(db, "configuracion", "nps"), { lista: freshNps }, { merge: true }); State.npsOptions = freshNps; alert("Guardado."); } catch(e) { alert("Error."); } },
-            renderFeedbackRules: () => { document.getElementById('cfgAutoClose').value = State.feedbackRules.autoClose || ""; document.getElementById('cfgAllowInformativo').checked = !!State.feedbackRules.allowInformative; document.getElementById('cfgMetaGlobal').value = State.feedbackRules.metaGlobal || 95; document.getElementById('cfgFamaThreshold').value = State.feedbackRules.famaThreshold || 100; },
-            saveFeedbackRules: async () => { let rules = { autoClose: Number(document.getElementById('cfgAutoClose').value) || 100, allowInformative: document.getElementById('cfgAllowInformativo').checked, metaGlobal: Number(document.getElementById('cfgMetaGlobal').value) || 95, famaThreshold: Number(document.getElementById('cfgFamaThreshold').value) || 100 }; try { await setDoc(doc(db, "configuracion", "feedback_rules"), rules, { merge: true }); State.feedbackRules = rules; alert("Reglas guardadas."); document.getElementById('kpi-meta').innerText = rules.metaGlobal + "%"; App.applyPermissions(); App.processRecordsForYear(); } catch(e) { alert("Error al guardar."); } }
+            saveFeedbackRules: async () => { let rules = { autoClose: Number(document.getElementById('cfgAutoClose').value) || 100, allowInformative: document.getElementById('cfgAllowInformativo').checked, metaGlobal: Number(document.getElementById('cfgMetaGlobal').value) || 95, famaThreshold: Number(document.getElementById('cfgFamaThreshold').value) || 100 }; try { await setDoc(doc(db, "configuracion", "feedback_rules"), rules, { merge: true }); State.feedbackRules = rules; alert("Reglas guardadas."); document.getElementById('kpi-meta').innerText = rules.metaGlobal + "%"; App.applyPermissions(); App.processRecordsForYear(); } catch(e) { alert("Error al guardar."); } },
+            renderAlias: () => {
+                let html = "";
+                for (let [bad, good] of Object.entries(State.aliasMap)) {
+                    html += `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);">
+                                <span style="font-size: 13px; font-weight: 600; color: var(--text-main);"><span style="color:var(--danger-txt); text-decoration:line-through;">${bad}</span> <i class="fas fa-arrow-right" style="color:var(--text-muted); margin:0 10px;"></i> <span style="color:var(--success-txt);">${good}</span></span>
+                                <button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteAlias('${bad}')"><i class="fas fa-trash"></i></button>
+                             </div>`;
+                }
+                document.getElementById('aliasContainer').innerHTML = html || "<div style='font-size:12px; color:var(--text-muted); text-align:center; padding: 20px;'>No hay reglas de alias creadas.</div>";
+            },
+            addAlias: async () => {
+                const bad = document.getElementById('newAliasBad').value.trim();
+                const good = document.getElementById('newAliasGood').value.trim();
+                if(!bad || !good) return alert("Por favor llena ambos nombres.");
+                State.aliasMap[bad] = good;
+                try {
+                    await setDoc(doc(db, "configuracion", "alias_nombres"), { mapa: State.aliasMap }, { merge: true });
+                    document.getElementById('newAliasBad').value = ""; document.getElementById('newAliasGood').value = "";
+                    Admin.renderAlias(); alert("Regla de homologación activada.");
+                } catch(e) { alert("Error al guardar."); delete State.aliasMap[bad]; }
+            },
+            deleteAlias: async (badName) => {
+                if(!confirm(`¿Eliminar la regla para: ${badName}?`)) return;
+                let temp = State.aliasMap[badName]; delete State.aliasMap[badName];
+                try {
+                    await setDoc(doc(db, "configuracion", "alias_nombres"), { mapa: State.aliasMap }, { merge: true });
+                    Admin.renderAlias();
+                } catch(e) { alert("Error al eliminar."); State.aliasMap[badName] = temp; }
+            }
         };
 
         document.getElementById('btnSaveUser').addEventListener('click', async () => {
