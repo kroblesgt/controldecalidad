@@ -38,6 +38,13 @@
         /* Animaciones */
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        @keyframes alertPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .needs-sig-pulse { animation: alertPulse 2s infinite; border-radius: 8px; cursor: pointer; }
 
         /* --- OVERLAY DE LOGIN --- */
         #authOverlay { position: fixed; inset: 0; background: var(--bg-sidebar); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
@@ -49,9 +56,9 @@
         .login-box button:hover { background: var(--primary-hover); }
         #loginError { color: var(--danger-txt); font-size: 13px; margin-top: 15px; display: none; font-weight: 600; padding: 12px; background: var(--danger-bg); border-radius: 8px; }
 
-        /* --- NOTIFICACIÓN TOAST (BIENVENIDA) --- */
-        #welcomeToast { position: fixed; top: 25px; right: -400px; background: white; border-left: 5px solid var(--primary); padding: 18px 25px; border-radius: 12px; box-shadow: var(--shadow-xl); display: flex; align-items: center; gap: 15px; z-index: 10000; transition: right 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        #welcomeToast.show { right: 25px; }
+        /* --- NOTIFICACIÓN TOAST (FLOTANTE UNIVERSAL) --- */
+        #appToast { position: fixed; top: 25px; right: -400px; background: white; border-left: 5px solid var(--primary); padding: 18px 25px; border-radius: 12px; box-shadow: var(--shadow-xl); display: flex; align-items: center; gap: 15px; z-index: 10000; transition: right 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #appToast.show { right: 25px; }
 
         /* --- BARRA LATERAL (SIDEBAR) --- */
         .sidebar { width: 280px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; z-index: 20; box-shadow: 4px 0 15px rgba(0,0,0,0.15); flex-shrink: 0; }
@@ -209,8 +216,8 @@
         </div>
     </div>
 
-    <!-- NOTIFICACIÓN DE BIENVENIDA -->
-    <div id="welcomeToast"></div>
+    <!-- NOTIFICACIÓN TOAST UNIVERSAL -->
+    <div id="appToast"></div>
 
     <!-- BARRA LATERAL (SIDEBAR) -->
     <aside class="sidebar">
@@ -400,7 +407,6 @@
                     <div class="dash-panel"><h3><i class="fas fa-chart-bar"></i> Satisfacción por Área</h3><div style="flex: 1; min-height: 250px;"><canvas id="npsAreaChart"></canvas></div></div>
                 </div>
                 
-                <!-- NUEVA TABLA DE DETALLES NPS -->
                 <div class="table-card" style="margin-top: 25px; margin-bottom: 20px;">
                     <div style="padding: 15px 25px; border-bottom: 1px solid var(--border); background: #f8fafc; border-radius: 16px 16px 0 0;">
                         <h3 style="font-size: 14px; font-weight: 800; color: var(--text-main); margin: 0;"><i class="fas fa-comments" style="color:#3b82f6;"></i> Detalle de Respuestas y Comentarios</h3>
@@ -459,6 +465,19 @@
             <!-- VISTA 5: PANEL PERSONAL AGENTE -->
             <div id="viewAgente" class="view-section">
                 <div id="agentDashboard">
+                    
+                    <!-- NUEVO: BANNER DE ALERTA DE FIRMAS PENDIENTES -->
+                    <div id="agentPendingBanner" style="display:none; grid-column: 1 / -1; background: #fef2f2; border: 1px solid #fecaca; padding: 15px 20px; border-radius: 12px; align-items: center; justify-content: space-between; margin-bottom: -5px; box-shadow: var(--shadow-sm);">
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 26px;"></i>
+                            <div>
+                                <h4 style="color: #991b1b; font-size: 15px; margin:0 0 4px 0; font-weight:800;">¡Acción Operativa Requerida!</h4>
+                                <p style="color: #b91c1c; font-size: 13px; margin:0; font-weight:500;" id="agentPendingText">Tienes evaluaciones pendientes de firma.</p>
+                            </div>
+                        </div>
+                        <button class="btn-action" style="background:#ef4444; color:white; border:none; padding: 10px 20px; font-size: 13px; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.25);" onclick="document.getElementById('agentNotesGrid').scrollIntoView({behavior: 'smooth'})"><i class="fas fa-signature"></i> Firmar Ahora</button>
+                    </div>
+
                     <div class="card-dash" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
                         <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px;">
                             <div>
@@ -498,37 +517,47 @@
     <!-- MODALES Y PANELES -->
     <div class="modal-overlay" id="areaModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Cambiar Vista de Área</h2><button class="close-btn" onclick="UI.closeModal('areaModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Selecciona las áreas que deseas visualizar temporalmente en tu matriz.</p><div class="form-group"><div id="modalAreaChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"></div></div><button class="btn-action" onclick="App.saveMyArea()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Refrescar Matriz</button></div></div></div>
 
-    <div class="modal-overlay" id="manualEntryModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Registro Manual de Calidad</h2><button class="close-btn" onclick="UI.closeModal('manualEntryModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Asesor y Área a Evaluar</label><select id="manualAgenteSelect"></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Año (Ej: 2026)</label><input type="number" id="manualAnio"></div><div class="form-group"><label>Semana (Ej: S22)</label><input type="text" id="manualSemana" placeholder="S + Número"></div></div><div class="form-group"><label>Calificación o Estatus</label><input type="text" id="manualNota" placeholder="Número o texto parametrizado en Ajustes"></div><button class="btn-action" onclick="App.saveManualEntry()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Guardar Calificación</button><p id="msgManual" style="font-size: 13px; font-weight: 800; color: var(--success-txt); text-align: center; margin-top: 15px; display: none;"></p></div></div></div>
+    <div class="modal-overlay" id="manualEntryModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Registro Manual de Calidad</h2><button class="close-btn" onclick="UI.closeModal('manualEntryModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Asesor y Área a Evaluar</label><select id="manualAgenteSelect"></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Año (Ej: 2026)</label><input type="number" id="manualAnio"></div><div class="form-group"><label>Semana (Ej: S22)</label><input type="text" id="manualSemana" placeholder="S + Número"></div></div><div class="form-group"><label>Calificación o Estatus</label><input type="text" id="manualNota" placeholder="Número o texto parametrizado en Ajustes"></div><button class="btn-action" onclick="App.saveManualEntry()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Guardar Calificación</button></div></div></div>
 
     <div class="modal-overlay" id="quickEmpresaModal"><div class="modal-box fade-in" style="max-width: 400px; margin: auto;"><div class="modal-header"><h2>Asignar Empresa</h2><button class="close-btn" onclick="UI.closeModal('quickEmpresaModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Selecciona la empresa correspondiente para el registro de: <br><strong id="qeAgentName" style="color:var(--text-main); font-size: 14px;"></strong></p><div id="qeEmpresasChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; max-height: 200px; overflow-y: auto;"></div><button class="btn-action" onclick="Admin.saveQuickEmpresa()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px; margin-top: 20px;"><i class="fas fa-save"></i> Confirmar Asignación</button></div></div></div>
 
-    <!-- NUEVO FEEDBACK MODAL AÑADIDO EXACTAMENTE COMO LO ENVIASTE -->
-    <div class="modal-overlay" id="feedbackModal"><div class="modal-box fade-in" style="max-width: 900px; margin: auto;"><div class="modal-header" style="flex-direction: column; padding-bottom: 20px;"><div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;"><div><h2 id="fbAgentName">Nombre del Asesor</h2><p id="fbDetails" style="color: var(--primary); font-size: 14px; font-weight: 800; margin-top: 4px;">Semana -- | Área --</p></div><div style="display: flex; align-items: center; gap: 15px;"><div id="editNoteContainer" style="display:none; flex-direction:column; align-items:flex-end;"><div style="display:flex; gap:8px; align-items:center;"><select id="inpEditArea" style="padding:8px; font-size:12px; border-radius:6px; border:1px solid var(--border); font-weight:600;" title="Modificar Área"></select><input type="text" id="inpEditNote" style="width:70px; padding:8px; text-align:center; font-weight:bold; border:1px solid var(--border); border-radius:6px; font-size: 13px;" title="Modificar Nota" placeholder="Nota"><button class="btn-action" style="padding:8px 12px; font-size:12px; background: #facc15; color: #854d0e; border:none;" onclick="Interactions.saveEditedNote()" title="Guardar Cambios"><i class="fas fa-edit"></i> Guardar</button></div></div><div id="fbBadgeZone" style="transform: scale(1.1); margin-right: 20px; margin-left: 10px;"></div><button class="close-btn" onclick="UI.closeModal('feedbackModal')"><i class="fas fa-times"></i></button></div></div><div id="historialBox" style="margin-top: 15px; padding: 12px 15px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; width: 100%; display:none;"><h4 style="font-size:11px; color:#d97706; text-transform:uppercase; margin-bottom:8px;"><i class="fas fa-history"></i> Auditoría de Cambios</h4><div id="historialList" style="font-size:11px; color:var(--text-main); display:flex; flex-direction:column; gap:6px; max-height:80px; overflow-y:auto;"></div></div></div><div class="modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; position: relative;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">1. Feedback del Líder</h3><div class="form-group" style="flex: 1;"><textarea id="txtFeedbackLider" placeholder="Redacta la oportunidad de mejora..." style="height: 100%; min-height: 120px;"></textarea></div><div id="informativoToggleBox" style="display:none; margin-bottom: 15px; background: #e0f2fe; padding: 10px; border-radius: 8px; border: 1px solid #bae6fd;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #0284c7; font-size: 12px; margin-bottom: 0;"><input type="checkbox" id="chkEsInformativo" style="width: 16px; height: 16px; accent-color: #0284c7;"><strong>Métrica Informativa (No exigir firma)</strong></label></div><button class="btn-action" id="btnSaveLider" style="justify-content: center; background: var(--text-main); color: white; border: none; padding: 14px;"><i class="fas fa-save"></i> Guardar Feedback</button><p id="msgLider" style="font-size: 12px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Guardado exitosamente.</p></div><div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">2. Firma del Asesor</h3><div id="zonaFirmaAgente"><div class="form-group" id="divCompromiso"><label>Compromiso Operativo</label><textarea id="txtCompromisoAgente" rows="3" placeholder="Define las acciones concretas..."></textarea></div><div class="form-group" id="divEnterado" style="display: none; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;"><label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #166534; font-size: 13px;"><input type="checkbox" id="chkEnteradoAsesor" style="width: 18px; height: 18px; accent-color: #166534;"><strong>Marcar de enterado (Sin observaciones)</strong></label></div><div class="form-group"><label>Aceptación de la nota obtenida.</label><select id="selNpsAgente"></select></div><div class="form-group"><label>Comentario Adicional (Opcional)</label><input type="text" id="txtObsAgente" placeholder="¿Algo más que agregar?"></div><button class="btn-action" id="btnSaveAgente" style="justify-content: center; background: var(--success-txt); color: white; border: none; padding: 14px; margin-top: auto; width: 100%;"><i class="fas fa-signature"></i> Firmar de Enterado</button></div><div id="zonaInfoExcepcion" style="display: none; height: 100%; align-items: center; justify-content: center; text-align: center; flex-direction: column; color: var(--text-muted);"><i class="fas fa-info-circle" style="font-size: 32px; margin-bottom: 10px; color: #3b82f6;"></i><p style="font-size: 13px; font-weight: 600;">Registro Informativo.</p><p style="font-size: 11px;">No requiere firma.</p></div><p id="msgAgente" style="font-size: 12px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Compromiso registrado.</p></div></div></div></div>
+    <div class="modal-overlay" id="feedbackModal"><div class="modal-box fade-in" style="max-width: 900px; margin: auto;"><div class="modal-header" style="flex-direction: column; padding-bottom: 20px;"><div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;"><div><h2 id="fbAgentName">Nombre del Asesor</h2><p id="fbDetails" style="color: var(--primary); font-size: 14px; font-weight: 800; margin-top: 4px;">Semana -- | Área --</p></div><div style="display: flex; align-items: center; gap: 15px;"><div id="editNoteContainer" style="display:none; flex-direction:column; align-items:flex-end;"><div style="display:flex; gap:8px; align-items:center;"><select id="inpEditArea" style="padding:8px; font-size:12px; border-radius:6px; border:1px solid var(--border); font-weight:600;" title="Modificar Área"></select><input type="text" id="inpEditNote" style="width:70px; padding:8px; text-align:center; font-weight:bold; border:1px solid var(--border); border-radius:6px; font-size: 13px;" title="Modificar Nota" placeholder="Nota"><button class="btn-action" style="padding:8px 12px; font-size:12px; background: #facc15; color: #854d0e; border:none;" onclick="Interactions.saveEditedNote()" title="Guardar Cambios"><i class="fas fa-edit"></i> Guardar</button></div></div><div id="fbBadgeZone" style="transform: scale(1.1); margin-right: 20px; margin-left: 10px;"></div><button class="close-btn" onclick="UI.closeModal('feedbackModal')"><i class="fas fa-times"></i></button></div></div><div id="historialBox" style="margin-top: 15px; padding: 12px 15px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; width: 100%; display:none;"><h4 style="font-size:11px; color:#d97706; text-transform:uppercase; margin-bottom:8px;"><i class="fas fa-history"></i> Auditoría de Cambios</h4><div id="historialList" style="font-size:11px; color:var(--text-main); display:flex; flex-direction:column; gap:6px; max-height:80px; overflow-y:auto;"></div></div></div><div class="modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; position: relative;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">1. Feedback del Líder</h3><div class="form-group" style="flex: 1;"><textarea id="txtFeedbackLider" placeholder="Redacta la oportunidad de mejora..." style="height: 100%; min-height: 120px;"></textarea></div><div id="informativoToggleBox" style="display:none; margin-bottom: 15px; background: #e0f2fe; padding: 10px; border-radius: 8px; border: 1px solid #bae6fd;"><label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #0284c7; font-size: 12px; margin-bottom: 0;"><input type="checkbox" id="chkEsInformativo" style="width: 16px; height: 16px; accent-color: #0284c7;"><strong>Métrica Informativa (No exigir firma)</strong></label></div><button class="btn-action" id="btnSaveLider" style="justify-content: center; background: var(--text-main); color: white; border: none; padding: 14px;"><i class="fas fa-save"></i> Guardar Feedback</button></div><div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--border); padding-bottom: 8px;">2. Firma del Asesor</h3><div id="zonaFirmaAgente"><div class="form-group" id="divCompromiso"><label>Compromiso Operativo</label><textarea id="txtCompromisoAgente" rows="3" placeholder="Define las acciones concretas..."></textarea></div><div class="form-group" id="divEnterado" style="display: none; background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;"><label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; color: #166534; font-size: 13px;"><input type="checkbox" id="chkEnteradoAsesor" style="width: 18px; height: 18px; accent-color: #166534;"><strong>Marcar de enterado (Sin observaciones)</strong></label></div><div class="form-group"><label>Aceptación de la nota obtenida.</label><select id="selNpsAgente"></select></div><div class="form-group"><label>Comentario Adicional (Opcional)</label><input type="text" id="txtObsAgente" placeholder="¿Algo más que agregar?"></div><button class="btn-action" id="btnSaveAgente" style="justify-content: center; background: var(--success-txt); color: white; border: none; padding: 14px; margin-top: auto; width: 100%;"><i class="fas fa-signature"></i> Firmar de Enterado</button></div><div id="zonaInfoExcepcion" style="display: none; height: 100%; align-items: center; justify-content: center; text-align: center; flex-direction: column; color: var(--text-muted);"><i class="fas fa-info-circle" style="font-size: 32px; margin-bottom: 10px; color: #3b82f6;"></i><p style="font-size: 13px; font-weight: 600;">Registro Informativo.</p><p style="font-size: 11px;">No requiere firma.</p></div><p id="msgAgente" style="font-size: 13px; color: var(--success-txt); margin-top: 15px; display: none; text-align: center; font-weight: 800;"><i class="fas fa-check-circle"></i> Compromiso guardado y cerrado.</p></div></div></div></div>
 
-    <div class="modal-overlay" id="importModal"><div class="modal-box fade-in" style="max-width: 500px; margin: auto;"><div class="modal-header"><h2>Subir Evaluaciones Masivas</h2><button class="close-btn" onclick="UI.closeModal('importModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;"><div class="form-group"><label>Año (Base)</label><input type="number" id="impAnio"></div><div class="form-group"><label>Semana(s)</label><input type="text" id="impSemana" placeholder="Ej: S1, S2, 3, 15"></div></div><div class="form-group"><label>Subir para mis Áreas</label><select id="impArea" class="dynamic-area-select"><option value="Todas">Procesar mis áreas permitidas</option></select></div><div class="form-group" style="text-align: center; margin-top: 30px;"><input type="file" id="realFileInput" accept=".xlsx, .xls" style="display: none;"><button class="btn-action" id="btnSelectFile" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; background: var(--primary); color: white; border: none;"><i class="fas fa-file-excel"></i> Cargar Archivo Excel</button><p id="impStatus" style="font-size: 13px; margin-top: 15px; font-weight: 800; color: var(--primary);"></p></div></div></div></div>
-
-    <div class="modal-overlay" id="settingsModal"><div class="modal-box fade-in" style="max-width: 950px; height: 85vh; margin: auto;"><div class="modal-header"><div><h2>Panel de Ajustes Generales</h2><p style="color: var(--text-muted); font-size: 13px; margin-top: 4px; font-weight: 500;">Administración de credenciales, roles y diseño.</p></div><button class="close-btn" onclick="UI.closeModal('settingsModal')"><i class="fas fa-times"></i></button></div><div class="modal-body" style="padding-top: 20px;"><div class="settings-tabs"><button class="tab-btn active" id="btnTabUsuarios" onclick="App.switchSettingsTab('tabUsuarios')">Usuarios</button><button class="tab-btn" id="btnTabEmpresas" onclick="App.switchSettingsTab('tabEmpresas')">Empresas</button><button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas/Campañas</button><button class="tab-btn" id="btnTabRoles" onclick="App.switchSettingsTab('tabRoles')">Permisos</button><button class="tab-btn" id="btnTabEstados" onclick="App.switchSettingsTab('tabEstados')">Estados Asesor</button><button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas</button><button class="tab-btn" id="btnTabNps" onclick="App.switchSettingsTab('tabNps')">Encuesta NPS</button><button class="tab-btn" id="btnTabAlias" onclick="App.switchSettingsTab('tabAlias')">Alias / Homologación</button><button class="tab-btn" id="btnTabOperativas" onclick="App.switchSettingsTab('tabOperativas')" style="color: #0284c7;">Reglas Operativas</button></div><div id="tabUsuarios" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">CREAR / EDITAR PERFIL</h3><div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div><div class="form-group"><label>Correo Electrónico (Opcional)</label><input type="email" id="newUserEmail" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Contraseña (Opcional)</label><input type="password" id="newUserPass" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div><div class="form-group"><label style="color: var(--primary);"><i class="fas fa-building"></i> Empresa(s) de Acceso</label><div id="userEmpresaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #eff6ff; border-color: #bfdbfe;"></div></div><div class="form-group"><label style="color: #10b981;"><i class="fas fa-sitemap"></i> Área(s) Asignada(s)</label><div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #f0fdf4; border-color: #bbf7d0;"></div></div><button class="btn-action" id="btnSaveUser" style="background: var(--text-main); color: white; width: 100%; justify-content: center; margin-top: 10px; padding: 14px; border: none;"><i class="fas fa-save"></i> Guardar Perfil</button></div><div style="display: flex; flex-direction: column;"><div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Directorio</h3><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"><button class="btn-action" id="btnExportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #10b981; color: white; border: none;" onclick="Admin.exportUsers()"><i class="fas fa-file-export"></i> Exportar</button><button class="btn-action" id="btnImportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #3b82f6; color: white; border: none;" onclick="document.getElementById('fileImportUsers').click()"><i class="fas fa-file-import"></i> Importar</button><input type="file" id="fileImportUsers" accept=".xlsx, .xls" style="display: none;" onchange="Admin.importUsers(event)"><div class="search-box" style="width: 150px;"><i class="fas fa-search"></i><input type="text" id="searchUserEdit" placeholder="Filtrar..." style="padding: 8px 8px 8px 30px;" onkeyup="Admin.filterUsers()"></div></div></div><div class="users-list" id="activeUsersList" style="flex: 1;"></div></div></div><div id="tabEmpresas" style="display: none;"><div id="empresasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newEmpresaInput" placeholder="Nueva empresa..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="background: #0284c7; color:white; border:none;" onclick="Admin.addEmpresa()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabRoles" style="display: none; grid-template-columns: 1fr 2fr; gap: 40px;"><div style="display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase;">Perfiles</h3><div style="display: flex; gap: 10px; margin-bottom: 15px;"><input type="text" id="newRoleInput" placeholder="Nuevo rol..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="padding: 10px 15px;" onclick="Admin.addRole()"><i class="fas fa-plus"></i></button></div><div class="users-list" id="rolesListDiv" style="padding: 10px; flex: 1;"></div></div><div><h3 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 20px; text-transform: uppercase;">Editando: <span id="editingRoleName" style="color: var(--text-main);">Asesor</span></h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Operación</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_ver_global"> Ver Dashboard Directivo</label><label><input type="checkbox" id="chk_ver_area"> Ver Matriz de Calidad</label><label><input type="checkbox" id="chk_ver_propio"> Ver Desempeño Propio</label><label><input type="checkbox" id="chk_ver_nps"> Módulo Satisfacción</label><label><input type="checkbox" id="chk_ver_firmas"> Seguimiento de Firmas</label><label><input type="checkbox" id="chk_subir_excel"> Ingreso de Notas</label><label><input type="checkbox" id="chk_editar_notas"> Editar Calificaciones</label><label><input type="checkbox" id="chk_cambiar_estado"> Administrar Estados</label><label><input type="checkbox" id="chk_add_feedback"> Evaluar y Feedback</label></div></div><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Ajustes</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_gestionar_sistema"> <strong>Acceso Total</strong></label><label><input type="checkbox" id="chk_cfg_usuarios"> Crear/Editar Usuarios</label><label><input type="checkbox" id="chk_importar_usuarios"> Importar Excel</label><label><input type="checkbox" id="chk_exportar_usuarios"> Exportar</label><label><input type="checkbox" id="chk_cfg_roles"> Módulo: Permisos</label><label><input type="checkbox" id="chk_cfg_areas"> Áreas y Empresas</label><label><input type="checkbox" id="chk_cfg_estados"> Estados Asesor</label><label><input type="checkbox" id="chk_cfg_escalas"> Escalas Numéricas</label><label><input type="checkbox" id="chk_cfg_nps"> Encuesta NPS</label><label><input type="checkbox" id="chk_cfg_feedbacks"> Reglas Operativas</label></div></div></div><div style="text-align: right; margin-top: 25px;"><button class="btn-action" id="btnSaveRolePerms" style="background: var(--primary); color: white; display: inline-flex; padding: 12px 25px; border: none;"><i class="fas fa-shield-alt"></i> Aplicar</button></div></div></div><div id="tabAreas" style="display: none;"><div id="areasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newAreaInput" placeholder="Nueva área..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);"><button class="btn-action" onclick="Admin.addArea()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabEstados" style="display: none;"><div id="estadosContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 650px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addEstadoRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveEstados()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabColores" style="display: none;"><div id="escalasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addScaleRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveScales()"><i class="fas fa-save"></i> Guardar</button></div></div>
-        
-        <!-- PESTAÑA NPS ACTUALIZADA CON EXPLICACIÓN DE FÓRMULA -->
-        <div id="tabNps" style="display: none;">
-            <div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Fórmula y Criterios NPS</h4>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">El <strong>Net Promoter Score (NPS)</strong> mide la lealtad restando el porcentaje de detractores al de promotores: <strong>% Promotores - % Detractores</strong>.</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 11px;">
-                    <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; border: 1px solid #bbf7d0;"><strong>Promotores (9 a 10)</strong><br>Satisfechos y leales.</div>
-                    <div style="background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;"><strong>Neutros (7 a 8)</strong><br>Satisfechos pero pasivos (se excluyen de la resta).</div>
-                    <div style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; border: 1px solid #fecaca;"><strong>Detractores (1 a 6)</strong><br>Insatisfechos.</div>
-                </div>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 12px; font-style: italic;">* Si deseas cambiar esta métrica en el futuro, los valores de estas opciones se pueden modificar aquí abajo.</p>
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-box fade-in" style="max-width: 500px; margin: auto;">
+            <div class="modal-header">
+                <h2>Subir Evaluaciones Masivas</h2>
+                <button class="close-btn" onclick="UI.closeModal('importModal')"><i class="fas fa-times"></i></button>
             </div>
-            <div id="npsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 700px;"></div>
-            <div style="display: flex; gap: 15px;">
-                <button class="btn-action" onclick="Admin.addNpsRow()"><i class="fas fa-plus"></i> Añadir</button>
-                <button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveNps()"><i class="fas fa-save"></i> Guardar</button>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+                    <div class="form-group"><label>Año (Base)</label><input type="number" id="impAnio"></div>
+                    <div class="form-group"><label>Semana(s)</label><input type="text" id="impSemana" placeholder="Ej: S1, S2, 3, 15"></div>
+                </div>
+                <div class="form-group">
+                    <label>Subir para mis Áreas</label>
+                    <select id="impArea" class="dynamic-area-select"><option value="Todas">Procesar mis áreas permitidas</option></select>
+                </div>
+                <div class="form-group" style="text-align: center; margin-top: 30px;">
+                    <input type="file" id="realFileInput" accept=".xlsx, .xls" style="display: none;">
+                    <button class="btn-action" id="btnSelectFile" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; background: var(--primary); color: white; border: none;"><i class="fas fa-file-excel"></i> Cargar Archivo Excel</button>
+                    <p id="impStatus" style="font-size: 13px; margin-top: 15px; font-weight: 800; color: var(--primary);"></p>
+                </div>
+
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed var(--danger-txt);">
+                    <h4 style="color: var(--danger-txt); font-size: 12px; margin-bottom: 10px;"><i class="fas fa-undo"></i> Revertir Importación (Limpiar Semana)</h4>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Si subiste datos erróneos, ingresa la semana aquí y bórralos para limpiar la base de datos (Ej: S29).</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="delSemana" placeholder="Semana (Ej: S29)" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); flex: 1; outline:none; font-size: 13px;">
+                        <button class="btn-action" style="background: var(--danger-bg); color: var(--danger-txt); border: 1px solid var(--danger-txt);" onclick="App.deleteWeekData()"><i class="fas fa-trash"></i> Borrar</button>
+                    </div>
+                    <p id="delStatus" style="font-size: 12px; font-weight: 800; margin-top: 10px;"></p>
+                </div>
             </div>
         </div>
+    </div>
 
-        <div id="tabAlias" style="display: none;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 10px;"><i class="fas fa-random"></i> Diccionario de Corrección</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Mapea nombres incorrectos o cortos que vienen en el Excel hacia el nombre oficial del asesor. El sistema los corregirá automáticamente al subir la base.</p><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;"><input type="text" id="newAliasBad" placeholder="Nombre en el Excel (Ej: Rolando Argueta)" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><input type="text" id="newAliasGood" placeholder="Nombre Oficial (Ej: Rolando Anibal Argueta Coronado)" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"></div><button class="btn-action" style="background: var(--text-main); color:white; border:none;" onclick="Admin.addAlias()"><i class="fas fa-plus"></i> Guardar Regla</button></div><div id="aliasContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;"></div></div><div id="tabOperativas" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-bolt"></i> Auto-Cierre</h4><div class="form-group"><label>Umbral Numérico</label><input type="number" id="cfgAutoClose"></div></div><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Excepciones</h4><div class="form-group"><label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="cfgAllowInformativo" style="width:18px; height:18px;"> Habilitar "Solo Informativo"</label></div></div></div><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> Objetivos</h4><div class="form-group"><label>Meta (%)</label><input type="number" id="cfgMetaGlobal"></div><div class="form-group"><label>Umbral Destacado (%)</label><input type="number" id="cfgFamaThreshold"></div></div></div></div><div style="margin-top: 20px;"><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveFeedbackRules()"><i class="fas fa-save"></i> Guardar Reglas</button></div></div></div></div></div>
+    <div class="modal-overlay" id="settingsModal"><div class="modal-box fade-in" style="max-width: 950px; height: 85vh; margin: auto;"><div class="modal-header"><div><h2>Panel de Ajustes Generales</h2><p style="color: var(--text-muted); font-size: 13px; margin-top: 4px; font-weight: 500;">Administración de credenciales, roles y diseño.</p></div><button class="close-btn" onclick="UI.closeModal('settingsModal')"><i class="fas fa-times"></i></button></div><div class="modal-body" style="padding-top: 20px;"><div class="settings-tabs"><button class="tab-btn active" id="btnTabUsuarios" onclick="App.switchSettingsTab('tabUsuarios')">Usuarios</button><button class="tab-btn" id="btnTabEmpresas" onclick="App.switchSettingsTab('tabEmpresas')">Empresas</button><button class="tab-btn" id="btnTabAreas" onclick="App.switchSettingsTab('tabAreas')">Áreas/Campañas</button><button class="tab-btn" id="btnTabRoles" onclick="App.switchSettingsTab('tabRoles')">Permisos</button><button class="tab-btn" id="btnTabEstados" onclick="App.switchSettingsTab('tabEstados')">Estados Asesor</button><button class="tab-btn" id="btnTabColores" onclick="App.switchSettingsTab('tabColores')">Escalas</button><button class="tab-btn" id="btnTabNps" onclick="App.switchSettingsTab('tabNps')">Encuesta NPS</button><button class="tab-btn" id="btnTabAlias" onclick="App.switchSettingsTab('tabAlias')">Alias / Homologación</button><button class="tab-btn" id="btnTabOperativas" onclick="App.switchSettingsTab('tabOperativas')" style="color: #0284c7;">Reglas Operativas</button></div><div id="tabUsuarios" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px;"><div style="background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">CREAR / EDITAR PERFIL</h3><div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div><div class="form-group"><label>Correo Electrónico (Opcional)</label><input type="email" id="newUserEmail" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Contraseña (Opcional)</label><input type="password" id="newUserPass" placeholder="Dejar en blanco si ya no labora"></div><div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div><div class="form-group"><label style="color: var(--primary);"><i class="fas fa-building"></i> Empresa(s) de Acceso</label><div id="userEmpresaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #eff6ff; border-color: #bfdbfe;"></div></div><div class="form-group"><label style="color: #10b981;"><i class="fas fa-sitemap"></i> Área(s) Asignada(s)</label><div id="userAreaChecks" class="perm-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; max-height: 120px; overflow-y: auto; background: #f0fdf4; border-color: #bbf7d0;"></div></div><button class="btn-action" id="btnSaveUser" style="background: var(--text-main); color: white; width: 100%; justify-content: center; margin-top: 10px; padding: 14px; border: none;"><i class="fas fa-save"></i> Guardar Perfil</button></div><div style="display: flex; flex-direction: column;"><div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Directorio</h3><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"><button class="btn-action" id="btnExportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #10b981; color: white; border: none;" onclick="Admin.exportUsers()"><i class="fas fa-file-export"></i> Exportar</button><button class="btn-action" id="btnImportUsers" style="display:none; padding: 8px 12px; font-size: 11px; background: #3b82f6; color: white; border: none;" onclick="document.getElementById('fileImportUsers').click()"><i class="fas fa-file-import"></i> Importar</button><input type="file" id="fileImportUsers" accept=".xlsx, .xls" style="display: none;" onchange="Admin.importUsers(event)"><div class="search-box" style="width: 150px;"><i class="fas fa-search"></i><input type="text" id="searchUserEdit" placeholder="Filtrar..." style="padding: 8px 8px 8px 30px;" onkeyup="Admin.filterUsers()"></div></div></div><div class="users-list" id="activeUsersList" style="flex: 1;"></div></div></div><div id="tabEmpresas" style="display: none;"><div id="empresasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newEmpresaInput" placeholder="Nueva empresa..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="background: #0284c7; color:white; border:none;" onclick="Admin.addEmpresa()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabRoles" style="display: none; grid-template-columns: 1fr 2fr; gap: 40px;"><div style="display: flex; flex-direction: column;"><h3 style="font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase;">Perfiles</h3><div style="display: flex; gap: 10px; margin-bottom: 15px;"><input type="text" id="newRoleInput" placeholder="Nuevo rol..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><button class="btn-action" style="padding: 10px 15px;" onclick="Admin.addRole()"><i class="fas fa-plus"></i></button></div><div class="users-list" id="rolesListDiv" style="padding: 10px; flex: 1;"></div></div><div><h3 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 20px; text-transform: uppercase;">Editando: <span id="editingRoleName" style="color: var(--text-main);">Asesor</span></h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Operación</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_ver_global"> Ver Dashboard Directivo</label><label><input type="checkbox" id="chk_ver_area"> Ver Matriz de Calidad</label><label><input type="checkbox" id="chk_ver_propio"> Ver Desempeño Propio</label><label><input type="checkbox" id="chk_ver_nps"> Módulo Satisfacción</label><label><input type="checkbox" id="chk_ver_firmas"> Seguimiento de Firmas</label><label><input type="checkbox" id="chk_subir_excel"> Ingreso de Notas</label><label><input type="checkbox" id="chk_editar_notas"> Editar Calificaciones</label><label><input type="checkbox" id="chk_cambiar_estado"> Administrar Estados</label><label><input type="checkbox" id="chk_add_feedback"> Evaluar y Feedback</label></div></div><div><h4 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">Ajustes</h4><div class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"><label><input type="checkbox" id="chk_gestionar_sistema"> <strong>Acceso Total</strong></label><label><input type="checkbox" id="chk_cfg_usuarios"> Crear/Editar Usuarios</label><label><input type="checkbox" id="chk_importar_usuarios"> Importar Excel</label><label><input type="checkbox" id="chk_exportar_usuarios"> Exportar</label><label><input type="checkbox" id="chk_cfg_roles"> Módulo: Permisos</label><label><input type="checkbox" id="chk_cfg_areas"> Áreas y Empresas</label><label><input type="checkbox" id="chk_cfg_estados"> Estados Asesor</label><label><input type="checkbox" id="chk_cfg_escalas"> Escalas Numéricas</label><label><input type="checkbox" id="chk_cfg_nps"> Encuesta NPS</label><label><input type="checkbox" id="chk_cfg_feedbacks"> Reglas Operativas</label></div></div></div><div style="text-align: right; margin-top: 25px;"><button class="btn-action" id="btnSaveRolePerms" style="background: var(--primary); color: white; display: inline-flex; padding: 12px 25px; border: none;"><i class="fas fa-shield-alt"></i> Aplicar</button></div></div></div><div id="tabAreas" style="display: none;"><div id="areasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 500px;"></div><div style="display: flex; gap: 15px; max-width: 500px;"><input type="text" id="newAreaInput" placeholder="Nueva área..." style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);"><button class="btn-action" onclick="Admin.addArea()"><i class="fas fa-plus"></i> Añadir</button></div></div><div id="tabEstados" style="display: none;"><div id="estadosContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 650px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addEstadoRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveEstados()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabColores" style="display: none;"><div id="escalasContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addScaleRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveScales()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabNps" style="display: none;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Fórmula y Criterios NPS</h4><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">El <strong>Net Promoter Score (NPS)</strong> mide la lealtad restando el porcentaje de detractores al de promotores: <strong>% Promotores - % Detractores</strong>.</p><div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 11px;"><div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; border: 1px solid #bbf7d0;"><strong>Promotores (9 a 10)</strong><br>Satisfechos y leales.</div><div style="background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;"><strong>Neutros (7 a 8)</strong><br>Satisfechos pero pasivos.</div><div style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; border: 1px solid #fecaca;"><strong>Detractores (1 a 6)</strong><br>Insatisfechos.</div></div></div><div id="npsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-width: 700px;"></div><div style="display: flex; gap: 15px;"><button class="btn-action" onclick="Admin.addNpsRow()"><i class="fas fa-plus"></i> Añadir</button><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveNps()"><i class="fas fa-save"></i> Guardar</button></div></div><div id="tabAlias" style="display: none;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 20px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 10px;"><i class="fas fa-random"></i> Diccionario de Corrección</h4><p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Mapea nombres incorrectos o cortos que vienen en el Excel hacia el nombre oficial del asesor. El sistema los corregirá automáticamente al subir la base.</p><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;"><input type="text" id="newAliasBad" placeholder="Nombre en el Excel (Ej: Rolando Argueta)" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"><input type="text" id="newAliasGood" placeholder="Nombre Oficial (Ej: Rolando Anibal Argueta Coronado)" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); outline: none;"></div><button class="btn-action" style="background: var(--text-main); color:white; border:none;" onclick="Admin.addAlias()"><i class="fas fa-plus"></i> Guardar Regla</button></div><div id="aliasContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;"></div></div><div id="tabOperativas" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-bolt"></i> Auto-Cierre</h4><div class="form-group"><label>Umbral Numérico</label><input type="number" id="cfgAutoClose"></div></div><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Excepciones</h4><div class="form-group"><label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="cfgAllowInformativo" style="width:18px; height:18px;"> Habilitar "Solo Informativo"</label></div></div></div><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> Objetivos</h4><div class="form-group"><label>Meta (%)</label><input type="number" id="cfgMetaGlobal"></div><div class="form-group"><label>Umbral Destacado (%)</label><input type="number" id="cfgFamaThreshold"></div></div></div></div><div style="margin-top: 20px;"><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveFeedbackRules()"><i class="fas fa-save"></i> Guardar Reglas</button></div></div></div></div></div>
 
     <!-- MÓDULOS DE FIREBASE Y LÓGICA CORE -->
     <script type="module">
@@ -565,7 +594,7 @@
         window.State = {
             user: { email: "", nombre: "", rol: "", areas: [], empresas: [], permisos: [] },
             usersMap: {}, viewingAgentName: null, allRecords: [], records: [], weekKeys: [],
-            aliasMap: {},
+            aliasMap: {}, notifiedPending: false, // <-- NUEVA VARIABLE PARA CONTROLAR LA ALERTA
             charts: { agent: null, managerTrend: null, managerArea: null, npsTrend: null, npsArea: null },
             unsubscribeSync: null, unsubscribeUsers: null, currentDocId: null, quickEmpresaTarget: { nombre: "", area: "" },
             feedbackRules: { autoClose: 100, allowInformative: true, metaGlobal: 95, famaThreshold: 100 }, 
@@ -580,6 +609,23 @@
             openModal: (id) => document.getElementById(id).style.display = 'flex',
             closeModal: (id) => document.getElementById(id).style.display = 'none',
             hasPerm: (p) => State.user.permisos.includes(p) || State.user.permisos.includes('chk_gestionar_sistema'),
+            
+            // --- NUEVA FUNCIÓN GENÉRICA PARA TOASTS ---
+            showToast: (msg, type = 'success', duration = 4500) => {
+                let toast = document.getElementById('appToast');
+                if(!toast) return;
+                let icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : (type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'));
+                let color = type === 'success' ? 'var(--success-txt)' : (type === 'error' ? 'var(--danger-txt)' : (type === 'warning' ? '#ea580c' : 'var(--primary)'));
+                
+                toast.style.borderLeft = `5px solid ${color}`;
+                toast.innerHTML = `<i class="fas ${icon}" style="color: ${color}; font-size: 24px;"></i> 
+                                   <div><strong style="color: var(--text-main); font-size: 14px;">Notificación</strong><br>
+                                   <span style="font-size: 12px; color: var(--text-muted);">${msg}</span></div>`;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), duration);
+            },
+            // ------------------------------------------
+
             getBadgeStyle: (val) => {
                 if(val === "-" || val === "") return "background: transparent; color: var(--text-muted); border: 1px dashed var(--border); box-shadow: none; text-shadow: none;";
                 if(isNaN(val)) { let scale = State.scales.find(x => x.lbl.toUpperCase() === String(val).toUpperCase()); return scale ? `background: ${scale.color};` : "background: var(--text-muted);"; }
@@ -675,14 +721,8 @@
                         App.applyPermissions();
                         document.getElementById('authOverlay').style.display = 'none';
                         
-                        let toast = document.getElementById('welcomeToast');
-                        if (toast) {
-                            toast.innerHTML = `<i class="fas fa-hand-sparkles" style="color: var(--primary); font-size: 24px;"></i> 
-                                               <div><strong style="color: var(--text-main); font-size: 14px;">¡Hola, ${State.user.nombre}!</strong><br>
-                                               <span style="font-size: 12px; color: var(--text-muted);">Bienvenido a la gestión operativa.</span></div>`;
-                            setTimeout(() => toast.classList.add('show'), 100);
-                            setTimeout(() => toast.classList.remove('show'), 4000);
-                        }
+                        // --- LANZAMOS EL TOAST GENÉRICO DE BIENVENIDA ---
+                        UI.showToast(`¡Hola, ${State.user.nombre}! Bienvenido a la plataforma.`, 'info');
 
                         if(UI.hasPerm('chk_ver_area')) { App.switchView('viewMatriz'); }
                         else { App.switchView('viewAgente'); }
@@ -932,7 +972,7 @@
                 });
                 
                 agentesValidos.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(ag => { html += `<option value="${ag.nombre}" data-area="${ag.area}">${ag.nombre} (${ag.area})</option>`; });
-                document.getElementById('manualAgenteSelect').innerHTML = html; document.getElementById('manualSemana').value = ""; document.getElementById('manualNota').value = ""; document.getElementById('manualAnio').value = document.getElementById('yearFilter').value; document.getElementById('msgManual').style.display = 'none'; UI.openModal('manualEntryModal');
+                document.getElementById('manualAgenteSelect').innerHTML = html; document.getElementById('manualSemana').value = ""; document.getElementById('manualNota').value = ""; document.getElementById('manualAnio').value = document.getElementById('yearFilter').value; UI.openModal('manualEntryModal');
             },
 
             openSpecificManualEntry: async (agente, area, semana) => {
@@ -953,8 +993,52 @@
                 
                 try {
                     await setDoc(doc(db, "notas_calidad", docId), { id_asesor: agenteNombre, area: agenteArea, semana: semana, nota: notaFinal, anio: anio }, { merge: true });
-                    const msg = document.getElementById('msgManual'); msg.innerHTML = "<i class='fas fa-check'></i> Registro exitoso."; msg.style.display = 'block'; setTimeout(() => UI.closeModal('manualEntryModal'), 2000);
-                } catch(e) { alert("Error al guardar la nota manualmente."); }
+                    UI.closeModal('manualEntryModal');
+                    UI.showToast(`Calificación de ${agenteNombre} guardada con éxito.`, 'success'); // TOAST AÑADIDO
+                } catch(e) { UI.showToast("Error al guardar la nota manualmente.", "error"); }
+            },
+            
+            deleteWeekData: async () => {
+                let anio = Number(document.getElementById('impAnio').value);
+                let semRaw = document.getElementById('delSemana').value.toUpperCase().trim();
+                
+                if(!semRaw || !anio) return alert("Por favor ingresa el Año (en el campo de arriba) y la Semana que deseas limpiar (ej. S29).");
+                let officialSem = semRaw.startsWith('S') ? semRaw : (!isNaN(semRaw) ? 'S'+semRaw : semRaw);
+                
+                if(!confirm(`⚠️ ¿ESTÁS COMPLETAMENTE SEGURO?\n\nEsto borrará TODAS las calificaciones registradas de la semana ${officialSem} del año ${anio}.\nEsta acción es irreversible.`)) return;
+                
+                const statusNode = document.getElementById('delStatus');
+                statusNode.style.color = "var(--danger-txt)";
+                statusNode.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Eliminando registros de la base de datos...";
+                
+                try {
+                    let q = query(collection(db, "notas_calidad"), where("semana", "==", officialSem), where("anio", "==", anio));
+                    let snap = await getDocs(q);
+                    
+                    if(snap.empty) { 
+                        statusNode.innerHTML = "No se encontraron registros importados para esa semana en ese año."; 
+                        return; 
+                    }
+                    
+                    let batches = [writeBatch(db)], currentBatchIdx = 0, operationsInCurrentBatch = 0;
+                    
+                    snap.forEach(d => {
+                        batches[currentBatchIdx].delete(d.ref);
+                        operationsInCurrentBatch++;
+                        if (operationsInCurrentBatch >= 450) { batches.push(writeBatch(db)); currentBatchIdx++; operationsInCurrentBatch = 0; }
+                    });
+                    
+                    for(let b of batches) { await b.commit(); }
+                    
+                    statusNode.style.color = "var(--success-txt)";
+                    statusNode.innerHTML = `<i class='fas fa-check-circle'></i> ¡Listo! ${snap.size} registros fueron eliminados. Ya puedes volver a importar.`;
+                    UI.showToast(`Se eliminaron ${snap.size} registros de la ${officialSem}.`, 'success'); // TOAST AÑADIDO
+                    setTimeout(() => { statusNode.innerHTML = ""; document.getElementById('delSemana').value = ""; }, 5000);
+                    
+                } catch(e) {
+                    statusNode.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Fallo al intentar borrar: ${e.message}`;
+                    UI.showToast("Error al eliminar los registros.", "error"); // TOAST AÑADIDO
+                }
             }
         };
 
@@ -1300,7 +1384,6 @@
                 if(State.charts.npsArea) State.charts.npsArea.destroy();
                 State.charts.npsArea = new Chart(document.getElementById('npsAreaChart'), { type: 'bar', data: { labels: areaList.map(x => x.name), datasets: [{ data: areaList.map(x => x.score), backgroundColor: areaList.map(x => x.score >= 0 ? '#10b981' : '#ef4444'), borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { x: { suggestedMin: -100, suggestedMax: 100 } } } });
 
-                // --- NUEVO CÓDIGO PARA LA TABLA DE COMENTARIOS NPS ---
                 let npsRowsHtml = npsRecords.sort((a, b) => b.semana.localeCompare(a.semana)).map(r => {
                     let val = Number(r.nps_agente);
                     let badge = "";
@@ -1336,7 +1419,7 @@
                     return matchAgent && matchArea;
                 });
 
-                let notesHTML = "", chartData = [], sum = 0, count = 0;
+                let notesHTML = "", chartData = [], sum = 0, count = 0, pendingSignaturesCount = 0;
                 let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999;
                 let famaThresh = Number(State.feedbackRules.famaThreshold) || 100;
                 
@@ -1347,7 +1430,24 @@
                     if(notesForWeek.length > 0) { 
                         let sumWk = 0, countWk = 0;
                         notesForWeek.forEach(note => { 
-                            notesHTML += `<div class="agent-note-item"><span class="week">${wk}</span><span class="area-lbl" title="${note.area}">${note.area}</span>${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>`; 
+                            
+                            // --- LOGICA DE RECORDATORIO DE FIRMA ---
+                            let isAutoClosed = !isNaN(note.nota) && Number(note.nota) >= autoCloseThresh;
+                            let isInfo = note.es_informativo || isAutoClosed || isNaN(note.nota);
+                            let needsSignature = (note.feedback_lider && !note.compromiso_agente && !isInfo);
+                            
+                            if(needsSignature) pendingSignaturesCount++;
+                            
+                            let pulseClass = needsSignature ? 'needs-sig-pulse' : '';
+                            let wrapperStyle = needsSignature ? 'border-color: #fca5a5; background: #fef2f2;' : '';
+                            
+                            notesHTML += `<div class="agent-note-item" style="${wrapperStyle}">
+                                            <span class="week">${wk}</span>
+                                            <span class="area-lbl" title="${note.area}">${note.area}</span>
+                                            <div class="${pulseClass}">${UI.getBadgeHTML(note.nota, true, `Interactions.openFeedback('${note.idDoc}')`)}</div>
+                                          </div>`; 
+                            // ---------------------------------------
+
                             if(!isNaN(note.nota)) { 
                                 sumWk += Number(note.nota); countWk++;
                                 sum += Number(note.nota); count++; 
@@ -1360,6 +1460,24 @@
                     }
                 });
                 
+                // --- ACTIVAR ALERTA DE BANNER Y TOAST ---
+                let banner = document.getElementById('agentPendingBanner');
+                if(banner) {
+                    if(pendingSignaturesCount > 0) {
+                        banner.style.display = 'flex';
+                        document.getElementById('agentPendingText').innerText = `Tienes ${pendingSignaturesCount} evaluación(es) pendiente(s) de firma. Recuerda que es un requisito operativo.`;
+                        
+                        // Si es el usuario mismo viendo su propio panel y no le hemos notificado aún
+                        if(!State.notifiedPending && targetAgent === State.user.nombre) {
+                            UI.showToast(`Tienes ${pendingSignaturesCount} firma(s) pendiente(s). Por favor revisa tu panel.`, "warning", 6000);
+                            State.notifiedPending = true;
+                        }
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                }
+                // ----------------------------------------
+
                 document.getElementById('agentNotesGrid').innerHTML = notesHTML;
                 let finalPromAgente = count > 0 ? Math.round(sum/count) : 0;
                 let targetMeta = State.feedbackRules.metaGlobal || 95;
@@ -1459,7 +1577,7 @@
                 if(data.historial_cambios && data.historial_cambios.length > 0) { document.getElementById('historialBox').style.display = 'block'; document.getElementById('historialList').innerHTML = data.historial_cambios.map(h => { let dateObj = new Date(h.fecha), formDate = `${dateObj.getDate()}/${dateObj.getMonth()+1} ${dateObj.getHours()}:${dateObj.getMinutes() < 10 ? '0' : ''}${dateObj.getMinutes()}`; return `<div style="border-bottom: 1px dashed #fcd34d; padding-bottom: 4px;"><strong>${h.usuario}</strong> modificó el registro: ${h.detalle} el ${formDate}.</div>`; }).reverse().join(''); } else { document.getElementById('historialBox').style.display = 'none'; }
                 document.getElementById('txtFeedbackLider').value = data.feedback_lider || ""; document.getElementById('txtObsAgente').value = data.observacion_agente || "";
                 const selNps = document.getElementById('selNpsAgente'); selNps.innerHTML = State.npsOptions.map(opt => `<option value="${opt.val}">${opt.lbl}</option>`).join(''); if(data.nps_agente) selNps.value = data.nps_agente;
-                let isLider = UI.hasPerm('chk_add_feedback') || UI.hasPerm('chk_gestionar_sistema'); document.getElementById('txtFeedbackLider').disabled = !isLider; document.getElementById('btnSaveLider').style.display = isLider ? 'flex' : 'none'; document.getElementById('msgLider').style.display = 'none';
+                let isLider = UI.hasPerm('chk_add_feedback') || UI.hasPerm('chk_gestionar_sistema'); document.getElementById('txtFeedbackLider').disabled = !isLider; document.getElementById('btnSaveLider').style.display = isLider ? 'flex' : 'none';
                 let chkInfoToggle = document.getElementById('informativoToggleBox'); if (State.feedbackRules.allowInformative && isLider) { chkInfoToggle.style.display = 'block'; document.getElementById('chkEsInformativo').checked = !!data.es_informativo; } else { chkInfoToggle.style.display = 'none'; }
                 
                 let autoCloseThresh = Number(State.feedbackRules.autoClose) || 999; let isTextExcepcion = isNaN(data.nota); let isInfo = data.es_informativo || isTextExcepcion; let isMe = (State.user.nombre === data.id_asesor); let canSign = isMe && !isInfo; 
@@ -1471,11 +1589,36 @@
                 if (isInfo) { zonaFirma.style.display = 'none'; zonaInfo.style.display = 'flex'; btnAgent.style.display = 'none'; msgAgent.style.display = 'none'; } else { zonaFirma.style.display = 'block'; zonaInfo.style.display = 'none'; if(data.compromiso_agente) { btnAgent.style.display = 'none'; msgAgent.style.display = 'block'; msgAgent.innerHTML = "<i class='fas fa-lock'></i> Compromiso cerrado y archivado."; } else if(canSign) { btnAgent.style.display = 'flex'; msgAgent.style.display = 'none'; } else { btnAgent.style.display = 'none'; msgAgent.style.display = 'none'; } }
                 UI.openModal('feedbackModal');
                 
-                document.getElementById('btnSaveLider').onclick = async () => { const txt = document.getElementById('txtFeedbackLider').value.trim(), infoChecked = document.getElementById('chkEsInformativo').checked; if(!txt && !infoChecked) return alert("Redacta la oportunidad de mejora."); try { await setDoc(doc(db, "notas_calidad", idDoc), { feedback_lider: txt, es_informativo: infoChecked }, { merge: true }); document.getElementById('msgLider').style.display = 'block'; setTimeout(() => document.getElementById('msgLider').style.display = 'none', 3000); setTimeout(() => Interactions.openFeedback(idDoc), 500); } catch(e) { alert("Error de red."); } };
-                document.getElementById('btnSaveAgente').onclick = async () => { let comp = ""; if (data.feedback_lider) { comp = document.getElementById('txtCompromisoAgente').value.trim(); if(!comp) return alert("Documenta tu plan de acción."); } else { if(!document.getElementById('chkEnteradoAsesor').checked) return alert("Marca la casilla de enterado."); comp = "Enterado (Sin observaciones)"; } try { await setDoc(doc(db, "notas_calidad", idDoc), { compromiso_agente: comp, nps_agente: document.getElementById('selNpsAgente').value, observacion_agente: document.getElementById('txtObsAgente').value }, { merge: true }); btnAgent.style.display = 'none'; msgAgent.style.display = 'block'; msgAgent.innerHTML = "<i class='fas fa-check-circle'></i> Documento firmado."; } catch(e) { alert("Error guardando firma."); } };
+                document.getElementById('btnSaveLider').onclick = async () => { 
+                    const txt = document.getElementById('txtFeedbackLider').value.trim(), infoChecked = document.getElementById('chkEsInformativo').checked; 
+                    if(!txt && !infoChecked) return alert("Redacta la oportunidad de mejora."); 
+                    try { 
+                        await setDoc(doc(db, "notas_calidad", idDoc), { feedback_lider: txt, es_informativo: infoChecked }, { merge: true }); 
+                        UI.showToast("Feedback del líder guardado exitosamente.", "success"); // TOAST AÑADIDO
+                        setTimeout(() => Interactions.openFeedback(idDoc), 500); 
+                    } catch(e) { UI.showToast("Error de red al guardar.", "error"); } 
+                };
+                
+                document.getElementById('btnSaveAgente').onclick = async () => { 
+                    let comp = ""; 
+                    if (data.feedback_lider) { 
+                        comp = document.getElementById('txtCompromisoAgente').value.trim(); 
+                        if(!comp) return alert("Documenta tu plan de acción."); 
+                    } else { 
+                        if(!document.getElementById('chkEnteradoAsesor').checked) return alert("Marca la casilla de enterado."); 
+                        comp = "Enterado (Sin observaciones)"; 
+                    } 
+                    try { 
+                        await setDoc(doc(db, "notas_calidad", idDoc), { compromiso_agente: comp, nps_agente: document.getElementById('selNpsAgente').value, observacion_agente: document.getElementById('txtObsAgente').value }, { merge: true }); 
+                        btnAgent.style.display = 'none'; 
+                        msgAgent.style.display = 'block'; 
+                        msgAgent.innerHTML = "<i class='fas fa-check-circle'></i> Documento firmado."; 
+                        UI.showToast("Firma y compromiso registrados con éxito.", "success"); // TOAST AÑADIDO
+                    } catch(e) { UI.showToast("Error guardando firma.", "error"); } 
+                };
             },
 
-            saveEditedNote: async () => { if(!State.currentDocId) return; let data = State.records.find(d => d.idDoc === State.currentDocId), valInput = document.getElementById('inpEditNote').value.trim().toUpperCase(), areaInput = document.getElementById('inpEditArea').value; let noteChanged = valInput !== String(data.nota).toUpperCase(), areaChanged = areaInput !== data.area; if(!noteChanged && !areaChanged) return alert("Sin cambios."); if(!valInput) return alert("Nota vacía."); let isNum = !isNaN(valInput), nuevaNotaFinal = isNum ? Math.round(Number(valInput)) : valInput, oldNota = data.nota || "Ninguna", auditText = ""; if (noteChanged && areaChanged) auditText = `De ${oldNota} a ${nuevaNotaFinal} y se trasladó a ${areaInput}`; else if (noteChanged) auditText = `De ${oldNota} a ${nuevaNotaFinal}`; else if (areaChanged) auditText = `Se movió de ${data.area} a ${areaInput}`; let auditEntry = { fecha: new Date().toISOString(), usuario: State.user.nombre, detalle: auditText }, historyArr = data.historial_cambios || []; historyArr.push(auditEntry); try { await setDoc(doc(db, "notas_calidad", State.currentDocId), { nota: nuevaNotaFinal, area: areaInput, historial_cambios: historyArr }, { merge: true }); document.getElementById('fbBadgeZone').innerHTML = UI.getBadgeHTML(nuevaNotaFinal); alert("Guardado."); setTimeout(() => Interactions.openFeedback(State.currentDocId), 500); } catch(e) { alert("Fallo."); } }
+            saveEditedNote: async () => { if(!State.currentDocId) return; let data = State.records.find(d => d.idDoc === State.currentDocId), valInput = document.getElementById('inpEditNote').value.trim().toUpperCase(), areaInput = document.getElementById('inpEditArea').value; let noteChanged = valInput !== String(data.nota).toUpperCase(), areaChanged = areaInput !== data.area; if(!noteChanged && !areaChanged) return alert("Sin cambios."); if(!valInput) return alert("Nota vacía."); let isNum = !isNaN(valInput), nuevaNotaFinal = isNum ? Math.round(Number(valInput)) : valInput, oldNota = data.nota || "Ninguna", auditText = ""; if (noteChanged && areaChanged) auditText = `De ${oldNota} a ${nuevaNotaFinal} y se trasladó a ${areaInput}`; else if (noteChanged) auditText = `De ${oldNota} a ${nuevaNotaFinal}`; else if (areaChanged) auditText = `Se movió de ${data.area} a ${areaInput}`; let auditEntry = { fecha: new Date().toISOString(), usuario: State.user.nombre, detalle: auditText }, historyArr = data.historial_cambios || []; historyArr.push(auditEntry); try { await setDoc(doc(db, "notas_calidad", State.currentDocId), { nota: nuevaNotaFinal, area: areaInput, historial_cambios: historyArr }, { merge: true }); document.getElementById('fbBadgeZone').innerHTML = UI.getBadgeHTML(nuevaNotaFinal); UI.showToast("Nota editada correctamente.", "success"); setTimeout(() => Interactions.openFeedback(State.currentDocId), 500); } catch(e) { UI.showToast("Fallo al editar la nota.", "error"); } }
         };
 
         // --- IMPORTACIÓN EXCEL MASIVA ---
@@ -1491,47 +1634,97 @@
             reader.onload = async function(evt) {
                 try {
                     statusNode.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Leyendo estructura..."; await new Promise(r => setTimeout(r, 50)); 
-                    const workbook = XLSX.read(new Uint8Array(evt.target.result), {type: 'array'}); let targetSheet = null, targetRows = null, headerRowIdx = -1, weekColMap = [], idxAgente = -1;
+                    const workbook = XLSX.read(new Uint8Array(evt.target.result), {type: 'array'}); 
+                    
+                    let targetSheet = null, targetRows = null, headerRowIdx = -1, weekColMap = [], idxAgente = -1, idxArea = -1;
+                    
                     for (let sheetName of workbook.SheetNames) {
-                        let sheet = workbook.Sheets[sheetName]; let rows = XLSX.utils.sheet_to_json(sheet, {header: 1}); let searchLimit = Math.min(rows.length, 100);
+                        let sheet = workbook.Sheets[sheetName]; 
+                        let rows = XLSX.utils.sheet_to_json(sheet, {header: 1}); 
+                        let searchLimit = Math.min(rows.length, 100);
+                        
                         for (let r = 0; r < searchLimit; r++) {
-                            if(!rows[r] || rows[r].length === 0) continue; let rowHeaders = rows[r].map(h => String(h || "").trim().toUpperCase()); let tempIdxAgente = rowHeaders.findIndex(h => h.includes("ÁREA") || h.includes("AGENTE") || h.includes("ASESOR") || h.includes("NOMBRE"));
-                            if (tempIdxAgente === -1) continue; let tempMap = [];
-                            for (let reqSem of semanasRequested) { let semOptions = [reqSem]; if (reqSem.startsWith('S')) semOptions.push(reqSem.substring(1)); if (!isNaN(reqSem)) semOptions.push('S' + reqSem); for (let opt of semOptions) { let foundIdx = rowHeaders.indexOf(opt); if (foundIdx !== -1) { tempMap.push({ requested: reqSem, colIdx: foundIdx, officialName: reqSem.startsWith('S') ? reqSem : (!isNaN(reqSem) ? 'S'+reqSem : reqSem) }); break; } } }
-                            if (tempMap.length > 0) { targetSheet = sheetName; targetRows = rows; headerRowIdx = r; idxAgente = tempIdxAgente; weekColMap = tempMap; break; }
+                            if(!rows[r] || rows[r].length === 0) continue; 
+                            
+                            let rowHeaders = Array.from(rows[r]).map(h => String(h || "").trim().toUpperCase()); 
+                            let tempIdxArea = rowHeaders.findIndex(h => h && (h === "ÁREA" || h === "AREA" || h.includes("ÁREA") || h.includes("AREA")));
+                            let tempIdxAgente = rowHeaders.findIndex(h => h && !h.includes("ÁREA") && !h.includes("AREA") && (h.includes("AGENTE") || h.includes("ASESOR") || h.includes("NOMBRE")));
+                            
+                            if (tempIdxAgente === -1) continue; 
+                            
+                            let tempMap = [];
+                            for (let reqSem of semanasRequested) { 
+                                let semOptions = [reqSem]; if (reqSem.startsWith('S')) semOptions.push(reqSem.substring(1)); if (!isNaN(reqSem)) semOptions.push('S' + reqSem); 
+                                for (let opt of semOptions) { 
+                                    let foundIdx = rowHeaders.indexOf(opt); 
+                                    if (foundIdx !== -1) { tempMap.push({ requested: reqSem, colIdx: foundIdx, officialName: reqSem.startsWith('S') ? reqSem : (!isNaN(reqSem) ? 'S'+reqSem : reqSem) }); break; } 
+                                } 
+                            }
+                            if (tempMap.length > 0) { targetSheet = sheetName; targetRows = rows; headerRowIdx = r; idxAgente = tempIdxAgente; idxArea = tempIdxArea; weekColMap = tempMap; break; }
                         }
                         if (targetSheet) break;
                     }
+                    
                     if (!targetSheet) throw new Error(`Semanas no encontradas en el Excel.`);
                     statusNode.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Filtrando..."; await new Promise(r => setTimeout(r, 50));
+                    
                     let areaTracker = "General", countUploads = 0, isGlobalData = State.user.areas.includes("Todas"), validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
                     let batches = [writeBatch(db)], currentBatchIdx = 0, operationsInCurrentBatch = 0, myEmpresas = State.user.empresas || State.empresas;
+                    
                     for (let i = headerRowIdx + 1; i < targetRows.length; i++) {
                         if(!targetRows[i] || targetRows[i].length === 0) continue; 
                         let content = String(targetRows[i][idxAgente] || "").trim(); 
                         if (!content) continue;
 
                         if (State.aliasMap[content]) { content = State.aliasMap[content]; }
-
                         let contentUpper = content.toUpperCase(); 
-                        let matchedArea = State.areas.find(a => String(a).trim().toUpperCase() === contentUpper); if (matchedArea) { areaTracker = matchedArea; continue; }
-                        if (contentUpper.includes("PROMEDIO") || contentUpper.includes("TOTAL") || contentUpper === "ÁREA" || contentUpper === "AGENTE") continue; if (areaFiltro !== "Todas" && areaTracker.toUpperCase() !== areaFiltro.toUpperCase()) continue; if (!isGlobalData && !validAreas.includes(areaTracker.toUpperCase())) continue;
-                        if (State.user.rol !== 'Admin') { let agData = State.usersMap[content]; let agentEmpresas = (agData && agData.empresas && agData.empresas.length > 0) ? agData.empresas : []; let hasEmpresaAccess = (agentEmpresas.length === 0) ? true : myEmpresas.some(emp => agentEmpresas.includes(emp)); if (!hasEmpresaAccess) continue; }
+
+                        if (idxArea !== -1) {
+                            let areaColValue = String(targetRows[i][idxArea] || "").trim();
+                            if (areaColValue) {
+                                let matchedArea = State.areas.find(a => String(a).trim().toUpperCase() === areaColValue.toUpperCase());
+                                areaTracker = matchedArea ? matchedArea : areaColValue;
+                            }
+                        } else {
+                            let matchedArea = State.areas.find(a => String(a).trim().toUpperCase() === contentUpper); 
+                            if (matchedArea) { areaTracker = matchedArea; continue; }
+                        }
+
+                        if (contentUpper.includes("PROMEDIO") || contentUpper.includes("TOTAL") || contentUpper === "AGENTE" || contentUpper === "ASESOR") continue; 
+                        if (areaFiltro !== "Todas" && areaTracker.toUpperCase() !== areaFiltro.toUpperCase()) continue; 
+                        if (!isGlobalData && !validAreas.includes(areaTracker.toUpperCase())) continue;
+                        
+                        if (State.user.rol !== 'Admin') { 
+                            let agData = State.usersMap[content]; let agentEmpresas = (agData && agData.empresas && agData.empresas.length > 0) ? agData.empresas : []; 
+                            let hasEmpresaAccess = (agentEmpresas.length === 0) ? true : myEmpresas.some(emp => agentEmpresas.includes(emp)); 
+                            if (!hasEmpresaAccess) continue; 
+                        }
+                        
                         for (let wMap of weekColMap) {
                             let notaRaw = targetRows[i][wMap.colIdx];
                             if(notaRaw !== "" && notaRaw !== null && notaRaw !== undefined) {
                                 let docId = `${content.replace(/[^a-zA-Z0-9]/g, '')}_${areaTracker.replace(/[^a-zA-Z0-9]/g, '')}_${anio}_${wMap.officialName}`;
                                 batches[currentBatchIdx].set(doc(db, "notas_calidad", docId), { id_asesor: content, area: areaTracker, semana: wMap.officialName, nota: isNaN(notaRaw) ? String(notaRaw).toUpperCase() : Math.round(Number(notaRaw)), anio: anio }, { merge: true });
-                                countUploads++; operationsInCurrentBatch++; if (operationsInCurrentBatch >= 450) { batches.push(writeBatch(db)); currentBatchIdx++; operationsInCurrentBatch = 0; }
+                                countUploads++; operationsInCurrentBatch++; 
+                                if (operationsInCurrentBatch >= 450) { batches.push(writeBatch(db)); currentBatchIdx++; operationsInCurrentBatch = 0; }
                             }
                         }
                     }
-                    if(countUploads === 0) throw new Error("Sin datos válidos para tus áreas.");
+                    
+                    if(countUploads === 0) throw new Error("Sin datos válidos para tus áreas o semanas.");
                     statusNode.innerHTML = `<i class='fas fa-cloud-upload-alt'></i> Guardando ${countUploads} registros...`; await new Promise(r => setTimeout(r, 50));
+                    
                     for(let b of batches) { await b.commit(); }
-                    statusNode.innerHTML = `<i class='fas fa-check-circle'></i> Importación exitosa.`; setTimeout(() => { UI.closeModal('importModal'); statusNode.innerHTML=""; document.getElementById('impSemana').value=""; document.getElementById('realFileInput').value=""; }, 3000);
-                } catch(error) { statusNode.innerHTML = `<span style="color:var(--danger-txt)"><i class="fas fa-exclamation-triangle"></i> Fallo: ${error.message}</span>`; }
-            }; reader.readAsArrayBuffer(file);
+                    statusNode.innerHTML = `<i class='fas fa-check-circle'></i> Importación exitosa.`; 
+                    UI.showToast(`Importación masiva completada: ${countUploads} registros subidos.`, 'success'); // TOAST AÑADIDO
+                    
+                    setTimeout(() => { UI.closeModal('importModal'); statusNode.innerHTML=""; document.getElementById('impSemana').value=""; document.getElementById('realFileInput').value=""; }, 3000);
+                } catch(error) { 
+                    statusNode.innerHTML = `<span style="color:var(--danger-txt)"><i class="fas fa-exclamation-triangle"></i> Fallo: ${error.message}</span>`; 
+                    UI.showToast("Ocurrió un error al importar los datos.", 'error');
+                }
+            }; 
+            reader.readAsArrayBuffer(file);
         });
 
         window.Admin = {
