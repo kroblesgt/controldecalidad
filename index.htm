@@ -570,7 +570,7 @@
         </section>
     </main>
 
-    <!-- MODALES Y PANELES -->
+   <!-- MODALES Y PANELES -->
     <div class="modal-overlay" id="areaModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Cambiar Vista de Área</h2><button class="close-btn" onclick="UI.closeModal('areaModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Selecciona las áreas que deseas visualizar temporalmente en tu matriz.</p><div class="form-group"><div id="modalAreaChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"></div></div><button class="btn-action" onclick="App.saveMyArea()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Refrescar Matriz</button></div></div></div>
 
     <div class="modal-overlay" id="manualEntryModal"><div class="modal-box fade-in" style="max-width: 450px; margin: auto;"><div class="modal-header"><h2>Registro Manual de Calidad</h2><button class="close-btn" onclick="UI.closeModal('manualEntryModal')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Asesor y Área a Evaluar</label><select id="manualAgenteSelect"></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Año (Ej: 2026)</label><input type="number" id="manualAnio"></div><div class="form-group"><label>Semana (Ej: S22)</label><input type="text" id="manualSemana" placeholder="S + Número"></div></div><div class="form-group"><label>Calificación o Estatus</label><input type="text" id="manualNota" placeholder="Número o texto parametrizado en Ajustes"></div><button class="btn-action" onclick="App.saveManualEntry()" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-save"></i> Guardar Calificación</button></div></div></div>
@@ -623,7 +623,6 @@
             <div class="modal-body">
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Selecciona el archivo Excel exportado desde Neotel. El sistema guardará el registro bruto en la base de datos y aplicará tus columnas visibles desde Ajustes.</p>
                 
-                <!-- NUEVO PANEL DE VISIBILIDAD DE FECHAS -->
                 <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; font-size: 12px; max-height: 150px; overflow-y: auto;">
                     <strong style="color: var(--primary); display: block; margin-bottom: 8px; font-size: 13px;"><i class="fas fa-calendar-check"></i> Días actualmente almacenados:</strong>
                     <ul id="neotelImportedDatesList" style="padding-left: 20px; margin: 0; color: var(--text-muted); font-weight: 600;">
@@ -666,8 +665,7 @@
             </div>
 
             <div id="tabOperativas" style="display: none;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--primary); margin-bottom: 15px;"><i class="fas fa-bolt"></i> Auto-Cierre</h4><div class="form-group"><label>Umbral Numérico</label><input type="number" id="cfgAutoClose"></div></div><div style="background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Excepciones</h4><div class="form-group"><label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="cfgAllowInformativo" style="width:18px; height:18px;"> Habilitar "Solo Informativo"</label></div></div></div><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 12px;"><h4 style="font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> Objetivos</h4><div class="form-group"><label>Meta (%)</label><input type="number" id="cfgMetaGlobal"></div><div class="form-group"><label>Umbral Destacado (%)</label><input type="number" id="cfgFamaThreshold"></div></div></div></div><div style="margin-top: 20px;"><button class="btn-action" style="background: var(--text-main); color: white; border: none;" onclick="Admin.saveFeedbackRules()"><i class="fas fa-save"></i> Guardar Reglas</button></div></div></div></div></div>
-
-    <!-- MÓDULOS DE FIREBASE Y LÓGICA CORE -->
+            <!-- MÓDULOS DE FIREBASE Y LÓGICA CORE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -726,7 +724,6 @@
         window.UI = {
             openModal: (id) => { 
                 document.getElementById(id).style.display = 'flex';
-                // Si abres el modal de Neotel, calculamos qué fechas ya subiste
                 if(id === 'importNeotelModal') {
                     let listEl = document.getElementById('neotelImportedDatesList');
                     if(listEl) {
@@ -734,7 +731,6 @@
                         if(uniqueDates.length === 0) {
                             listEl.innerHTML = "<li>No hay ningún dato de productividad almacenado.</li>";
                         } else {
-                            // Las ordenamos alfabéticamente/por fecha
                             uniqueDates.sort((a,b) => a.localeCompare(b));
                             listEl.innerHTML = uniqueDates.map(d => `<li style="margin-bottom: 4px;">Información de: <strong style="color:var(--text-main);">${d}</strong></li>`).join('');
                         }
@@ -1084,7 +1080,6 @@
                         let neoUser = r["Usuario"] || "";
                         let sysName = r.sysName_index || neoUser;
                         
-                        // REGLA RETROACTIVA PARA EXPORTAR EXCEL
                         if (State.neotelAliasMap[neoUser]) {
                             sysName = State.neotelAliasMap[neoUser];
                         } else {
@@ -1110,7 +1105,16 @@
                     if(matchRecs.length === 0) return alert("No hay datos de productividad en pantalla.");
                     
                     exportData = matchRecs.map(r => {
-                        let obj = { "Asesor": r.sysName_index || r["Usuario"], "Fecha": r["Fecha"], "Horario": r["Rango Horario"] };
+                        let neoUser = r["Usuario"] || "";
+                        let finalName = r.sysName_index || neoUser;
+                        if (State.neotelAliasMap[neoUser]) {
+                            finalName = State.neotelAliasMap[neoUser];
+                        } else {
+                            let foundKey = Object.keys(State.neotelAliasMap).find(k => neoUser.toLowerCase().includes(k.toLowerCase()));
+                            if (foundKey) finalName = State.neotelAliasMap[foundKey];
+                        }
+
+                        let obj = { "Asesor": finalName, "Fecha": r["Fecha"], "Horario": r["Rango Horario"] };
                         State.neotelVisibleCols.forEach(col => { obj[col] = r[col] || "0"; });
                         return obj;
                     });
@@ -1248,7 +1252,6 @@
                 const fltFini = document.getElementById('fltProdFini').value; 
                 const fltFfin = document.getElementById('fltProdFfin').value; 
                 
-                // REGLA: Si no tiene permiso de usar el filtro de horas, LO FORZAMOS a ver el "Total" internamente
                 let canFilterTime = UI.hasPerm('chk_flt_horario') || UI.hasPerm('chk_gestionar_sistema');
                 const fltRango = canFilterTime ? document.getElementById('fltProdRango').value : "Total";
                 
@@ -1258,14 +1261,12 @@
                 let isGlobalData = State.user.areas.includes("Todas");
                 let validAreas = State.user.areas.map(a => String(a).trim().toUpperCase());
                 
-                // REGLA DE SEGURIDAD: Verifica si el usuario tiene permiso para ver a todo el equipo o solo a sí mismo
                 let canViewTeam = UI.hasPerm('chk_ver_area') || UI.hasPerm('chk_ver_global');
 
                 let viewRecords = State.prodRecords.filter(r => {
                     let neoUser = r["Usuario"] || "";
                     let sysName = r.sysName_index || neoUser;
                     
-                    // REGLA RETROACTIVA: Busca el alias dinámicamente en tiempo real
                     if (State.neotelAliasMap[neoUser]) {
                         sysName = State.neotelAliasMap[neoUser];
                     } else {
@@ -1279,13 +1280,10 @@
                     let matchSearch = sysName.toLowerCase().includes(search);
                     let matchArea = (fArea === "all" || fArea === "Todas" || aName.toUpperCase() === String(fArea).trim().toUpperCase());
                     
-                    // APLICACIÓN DE SEGURIDAD
                     let matchSecurity = false;
                     if (canViewTeam) {
-                        // Líderes y Admins ven a todos los de sus áreas permitidas
                         matchSecurity = isGlobalData || validAreas.includes(aName.toUpperCase());
                     } else {
-                        // Los Asesores básicos SOLO se ven a sí mismos
                         matchSecurity = (sysName === State.user.nombre);
                     }
 
@@ -1310,7 +1308,6 @@
                     let neoName = r["Usuario"] || "-"; 
                     let sysName = r.sysName_index || neoName;
                     
-                    // REGLA RETROACTIVA PARA AGRUPACIÓN
                     if (State.neotelAliasMap[neoName]) {
                         sysName = State.neotelAliasMap[neoName];
                     } else {
@@ -2037,7 +2034,7 @@
                     const rows = XLSX.utils.sheet_to_json(sheet);
                     if(rows.length === 0) throw new Error("Archivo vacío.");
 
-                    // EXTRAER TODAS LAS COLUMNAS DINÁMICAMENTE (Tus 56 columnas)
+                    // EXTRAER TODAS LAS COLUMNAS DINÁMICAMENTE
                     let allHeaders = Object.keys(rows[0]);
                     let metricHeaders = allHeaders.filter(h => !["Usuario", "Fecha", "Rango Horario"].includes(h));
                     State.neotelAvailableCols = metricHeaders;
@@ -2049,13 +2046,12 @@
                         let neoUser = row["Usuario"];
                         if(!neoUser) continue;
                         
-                        // Buscamos coincidencia exacta o parcial (por si el nombre tiene comas, espacios o códigos extra)
                         let sysName = State.neotelAliasMap[neoUser] || neoUser;
                         if (!State.neotelAliasMap[neoUser]) {
-                            // Intento de auto-match buscando si alguna llave de alias está contenida en el usuario de Neotel
                             let foundKey = Object.keys(State.neotelAliasMap).find(k => neoUser.toLowerCase().includes(k.toLowerCase()));
                             if (foundKey) sysName = State.neotelAliasMap[foundKey];
                         }
+                        
                         let fechaFormato = String(row["Fecha"] || "").replace(/\//g,'-');
                         let rangoFormato = String(row["Rango Horario"] || "").replace(/:/g,'');
                         let docId = `${sysName.replace(/[^a-zA-Z0-9]/g, '')}_${fechaFormato}_${rangoFormato}`;
@@ -2115,198 +2111,391 @@
             saveQuickEmpresa: async () => { let nombre = State.quickEmpresaTarget.nombre; let area = State.quickEmpresaTarget.area; let selected = []; document.querySelectorAll('.chk-qe-empresa:checked').forEach(cb => selected.push(cb.value)); if(selected.length === 0) return alert("Selecciona una empresa."); let existingData = State.usersMap[nombre] || {}; let docId = existingData.id && existingData.id.includes('@') ? existingData.id : nombre; let currentAreas = existingData.areas || [area]; if(!currentAreas.includes(area)) currentAreas.push(area); let rol = existingData.rol || "Agente (Histórico)"; try { await setDoc(doc(db, "usuarios", docId), { nombre: nombre, empresas: selected, areas: currentAreas, rol: rol }, { merge: true }); UI.closeModal('quickEmpresaModal'); alert("Empresa vinculada."); } catch (e) { alert("Error al asignar empresa."); } },
             loadUsers: async () => { const snap = await getDocs(collection(db, "usuarios")); State.admin.userListCache = []; let isGlobalData = State.user.areas.includes("Todas"), myAreas = State.user.areas.map(a => a.toUpperCase()), myRole = State.user.rol; let myEmpresas = State.user.empresas || State.empresas; snap.forEach(d => { let uData = d.data(), uAreas = uData.areas || [uData.area || "General"]; let uEmpresas = (uData.empresas && uData.empresas.length > 0) ? uData.empresas : []; if (myRole !== 'Admin' && uData.rol === 'Admin') return; let hasAreaAccess = isGlobalData || uAreas.some(ua => myAreas.includes(String(ua).toUpperCase())); let hasEmpresaAccess = myRole === 'Admin' || uEmpresas.length === 0 || myEmpresas.some(emp => uEmpresas.includes(emp)); if (hasAreaAccess && hasEmpresaAccess) State.admin.userListCache.push({id: d.id, ...uData}); }); Admin.drawUsers(State.admin.userListCache); },
             drawUsers: (list) => { document.getElementById('activeUsersList').innerHTML = list.map(u => { let empStr = (u.empresas && u.empresas.length > 0) ? u.empresas.join(', ') : "Sin empresa"; let empColor = (u.empresas && u.empresas.length > 0) ? "color:var(--primary);" : "color:#ef4444;"; let isHistorico = !u.id.includes('@'); let displayId = isHistorico ? "<span style='color:#8b5cf6; font-weight:700;'><i class='fas fa-archive'></i> [Asesor Histórico]</span>" : u.id; return `<div class="user-row"><div><div style="font-size:13px; font-weight:800; color:var(--text-main);">${u.nombre}</div><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${displayId} | Áreas: ${u.areas ? u.areas.join(', ') : (u.area || "General")}</div><div style="font-size:10px; ${empColor} font-weight:700; margin-top:2px;">[ ${empStr} ]</div></div><div style="display: flex; gap: 5px;"><button class="btn-action" style="padding: 6px 10px; font-size:11px;" onclick="Admin.prepEditUser('${isHistorico ? "" : u.id}', '${u.nombre}', '${u.rol}', '${u.areas ? u.areas.join(', ') : (u.area || "General")}', '${(u.empresas && u.empresas.length > 0) ? u.empresas.join(',') : ""}')"><i class="fas fa-edit"></i></button><button class="btn-action" style="padding: 6px 10px; font-size:11px; background: #fee2e2; color: #b91c1c; border:none;" onclick="Admin.deleteUser('${u.id}', '${u.nombre}')"><i class="fas fa-trash"></i></button></div></div>` }).join(''); },
-            deleteUser: async (email, nombre) => { if(!confirm(`¿Eliminar a ${nombre}?`)) return; try { await deleteDoc(doc(db, "usuarios", email)); alert("Registro eliminado."); Admin.loadUsers(); } catch(e) { alert("Error."); } },
-            filterUsers: () => { const term = document.getElementById('searchUserEdit').value.toLowerCase(); Admin.drawUsers(State.admin.userListCache.filter(u => u.nombre.toLowerCase().includes(term) || u.id.toLowerCase().includes(term))); },
-            prepEditUser: (email, nombre, rol, areasString, empresasString) => { document.getElementById('newUserEmail').value = email.includes('@') ? email : ''; document.getElementById('newUserName').value = nombre; document.getElementById('newUserRole').value = rol; document.getElementById('newUserPass').value = ""; let areaList = areasString.split(',').map(s => s.trim()); document.querySelectorAll('.chk-area-user').forEach(cb => { cb.checked = areaList.includes(cb.value); }); let empList = empresasString.split(',').map(s => s.trim()); document.querySelectorAll('.chk-empresa-user').forEach(cb => { cb.checked = empList.includes(cb.value); }); },
-            exportUsers: () => { if(State.admin.userListCache.length === 0) return alert("Sin usuarios."); let exportData = State.admin.userListCache.map(u => ({ "Nombre": u.nombre, "Correo": u.id.includes('@') ? u.id : "Histórico", "Contraseña": "", "Rol": u.rol, "Empresas": (u.empresas && u.empresas.length > 0) ? u.empresas.join(", ") : "Sin empresa", "Áreas": u.areas ? u.areas.join(", ") : (u.area || "General") })); const ws = XLSX.utils.json_to_sheet(exportData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Directorio"); XLSX.writeFile(wb, `Usuarios_${new Date().getTime()}.xlsx`); },
-            importUsers: async (e) => { const file = e.target.files[0]; if(!file) return; const btn = document.getElementById('btnImportUsers'); const originalHtml = btn.innerHTML; btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Subiendo..."; btn.disabled = true; const reader = new FileReader(); reader.onload = async (evt) => { try { const workbook = XLSX.read(new Uint8Array(evt.target.result), {type: 'array'}); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json(sheet); let count = 0; for(let row of rows) { let nombre = row["Nombre"], correo = row["Correo"], pass = row["Contraseña"], rol = row["Rol"] || "Agente", empresasList = String(row["Empresas"] || State.empresas[0]).split(',').map(e => e.trim()), areasList = String(row["Áreas"] || "General").split(',').map(a => a.trim()); if(!nombre) continue; let docId = correo ? String(correo).trim().toLowerCase() : String(nombre).trim(); if(correo && pass && String(pass).length >= 6) { try { await createUserWithEmailAndPassword(adminAuth, docId, String(pass)); } catch(err) {} } await setDoc(doc(db, "usuarios", docId), { nombre: nombre, rol: rol, areas: areasList, empresas: empresasList }, { merge: true }); count++; } alert(`Importados/Actualizados ${count} perfiles.`); Admin.loadUsers(); } catch(error) { alert("Error: " + error.message); } btn.innerHTML = originalHtml; btn.disabled = false; e.target.value = ""; }; reader.readAsArrayBuffer(file); },
-            loadRoles: async () => { const snap = await getDocs(collection(db, "roles")); let baseRoles = ['Admin', 'Lider', 'Agente', 'Agente (Histórico)']; snap.forEach(d => { if(!baseRoles.includes(d.id)) baseRoles.push(d.id); }); document.getElementById('rolesListDiv').innerHTML = baseRoles.map(r => { let d = snap.docs.find(x => x.id === r); return `<div class="user-row" style="cursor:pointer;" onclick="Admin.editRole('${r}', '${d ? d.data().permisos.join(',') : ""}')"><span style="font-size:13px; font-weight:800; color:var(--primary);"><i class="fas fa-shield-alt"></i> Rol: ${r}</span></div>`; }).join(''); const roleSelect = document.getElementById('newUserRole'); if (roleSelect) { let currentVal = roleSelect.value, allowedRoles = baseRoles; if(State.user.rol !== 'Admin') allowedRoles = allowedRoles.filter(r => r !== 'Admin' && r !== 'Lider'); roleSelect.innerHTML = allowedRoles.map(r => `<option value="${r}">${r}</option>`).join(''); if (allowedRoles.includes(currentVal)) roleSelect.value = currentVal; } },
-            addRole: async () => { const input = document.getElementById('newRoleInput'); const val = input.value.trim(); if(!val) return; const snap = await getDocs(collection(db, "roles")); let exists = false; snap.forEach(d => { if(d.id.toLowerCase() === val.toLowerCase()) exists = true; }); if(['admin', 'lider', 'agente', 'agente (histórico)'].includes(val.toLowerCase())) exists = true; if(exists) return alert("Existe."); try { await setDoc(doc(db, "roles", val), { permisos: [] }, { merge: true }); input.value = ""; Admin.loadRoles(); alert(`Rol creado.`); } catch(e) { alert("Error."); } },
-            editRole: (role, permString) => { State.admin.activeRoleEdit = role; document.getElementById('editingRoleName').innerText = role; let activePerms = permString.split(','); ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_ver_productividad', 'chk_subir_excel', 'chk_subir_productividad', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_add_feedback', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks', 'chk_flt_dia', 'chk_flt_mes', 'chk_flt_horario'].forEach(c => { let checkbox = document.getElementById(c); if(checkbox) checkbox.checked = activePerms.includes(c); }); },
-            renderAreas: () => { document.getElementById('areasContainer').innerHTML = State.areas.map(a => `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);"><span style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fas fa-sitemap" style="color:#10b981; margin-right:8px;"></i> ${a}</span><button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteArea('${a}')"><i class="fas fa-trash"></i></button></div>`).join(''); },
-            addArea: async () => { const input = document.getElementById('newAreaInput'); const val = input.value.trim(); if(!val) return; if(State.areas.includes(val)) return alert("Existe."); State.areas.push(val); try { await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas }, { merge: true }); input.value = ""; Admin.renderAreas(); UI.updateSelects(); } catch(e) { alert("Error."); State.areas.pop(); } },
-            deleteArea: async (areaName) => { if(!confirm(`¿Eliminar: ${areaName}?`)) return; State.areas = State.areas.filter(a => a !== areaName); try { await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas }, { merge: true }); Admin.renderAreas(); UI.updateSelects(); } catch(e) { alert("Error."); } },
-            renderEmpresas: () => { document.getElementById('empresasContainer').innerHTML = State.empresas.map(e => `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);"><span style="font-size: 13px; font-weight: 700; color: var(--text-main);"><i class="fas fa-building" style="color:var(--primary); margin-right:8px;"></i> ${e}</span><button class="btn-action" style="color:var(--danger-txt); border:none; padding:8px;" onclick="Admin.deleteEmpresa('${e}')"><i class="fas fa-trash"></i></button></div>`).join(''); },
-            addEmpresa: async () => { const input = document.getElementById('newEmpresaInput'); const val = input.value.trim(); if(!val) return; if(State.empresas.includes(val)) return alert("Existe."); State.empresas.push(val); try { await setDoc(doc(db, "configuracion", "empresas"), { lista: State.empresas }, { merge: true }); input.value = ""; Admin.renderEmpresas(); UI.updateSelects(); } catch(e) { alert("Error."); State.empresas.pop(); } },
-            deleteEmpresa: async (empresaName) => { if(!confirm(`¿Eliminar: ${empresaName}?`)) return; State.empresas = State.empresas.filter(e => e !== empresaName); try { await setDoc(doc(db, "configuracion", "empresas"), { lista: State.empresas }, { merge: true }); Admin.renderEmpresas(); UI.updateSelects(); } catch(e) { alert("Error."); } },
-            renderEstados: () => { document.getElementById('estadosContainer').innerHTML = State.estadosList.map(e => `<div style="display: grid; grid-template-columns: 1fr 3fr 1fr 1fr; gap: 15px; align-items: center;" class="est-row"><input type="color" value="${e.color}" class="st-col" style="width:100%; height:42px; border:1px solid var(--border); border-radius:6px; cursor:pointer;"><input type="text" value="${e.lbl}" class="form-input st-lbl" style="padding:10px;"><label style="display:flex; align-items:center; gap:5px; font-size:12px;"><input type="checkbox" class="st-calc" ${e.calcProm !== false ? 'checked' : ''} style="width:16px; height:16px;"> Suma</label><button class="btn-action" style="color:var(--danger-txt); border:none; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button></div>`).join(''); },
-            addEstadoRow: () => { State.estadosList.push({lbl:'', color:'#000000', calcProm: true}); Admin.renderEstados(); },
-            saveEstados: async () => { let freshList = []; document.querySelectorAll('.est-row').forEach(row => { freshList.push({ color: row.querySelector('.st-col').value, lbl: row.querySelector('.st-lbl').value.trim(), calcProm: row.querySelector('.st-calc').checked }); }); try { await setDoc(doc(db, "configuracion", "estados_list"), { lista: freshList }, { merge: true }); State.estadosList = freshList; alert("Guardado."); UI.updateSelects(); App.processRecordsForYear(); } catch(e) { alert("Fallo."); } },
-            renderScales: () => { 
-                document.getElementById('escalasContainer').innerHTML = State.scales.map(e => 
-                    `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr 2fr 1fr; gap: 15px; align-items: center;" class="esc-row">
-                        <input type="color" value="${e.color}" class="e-col" style="width:100%; height:42px; border:1px solid var(--border); border-radius:6px;">
-                        <input type="number" value="${e.min}" class="form-input e-min" style="padding:10px;">
-                        <input type="number" value="${e.max}" class="form-input e-max" style="padding:10px;">
-                        <input type="text" value="${e.lbl}" class="form-input e-lbl" style="padding:10px;">
-                        <button class="btn-action" style="color:var(--danger-txt); border:none; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
-                    </div>`
-                ).join(''); 
+            deleteUser: async (id, nombre) => { 
+                if(!confirm(`¿Estás seguro de eliminar el acceso de ${nombre}?`)) return;
+                try {
+                    await deleteDoc(doc(db, "usuarios", id));
+                    UI.showToast("Usuario eliminado correctamente.", "success");
+                } catch(e) {
+                    UI.showToast("Error al eliminar usuario.", "error");
+                }
             },
-            addScaleRow: () => { State.scales.push({min: 0, max: 0, color: '#000000', lbl: ''}); Admin.renderScales(); },
-            saveScales: async () => { 
-                let freshList = []; 
-                document.querySelectorAll('.esc-row').forEach(row => { 
-                    freshList.push({ 
-                        color: row.querySelector('.e-col').value, 
-                        min: Number(row.querySelector('.e-min').value), 
-                        max: Number(row.querySelector('.e-max').value), 
-                        lbl: row.querySelector('.e-lbl').value.trim() 
-                    }); 
-                }); 
-                try { 
-                    await setDoc(doc(db, "configuracion", "escalas"), { lista: freshList }, { merge: true }); 
-                    State.scales = freshList; 
-                    alert("Escalas guardadas."); 
-                    UI.updateSelects(); 
-                    App.processRecordsForYear(); 
-                } catch(e) { alert("Fallo al guardar escalas."); } 
+            prepEditUser: (id, nombre, rol, areas, empresas) => {
+                document.getElementById('newUserName').value = nombre;
+                document.getElementById('newUserEmail').value = id.includes('@') ? id : "";
+                document.getElementById('newUserRole').value = rol;
+                
+                let arrAreas = areas ? areas.split(',').map(a => a.trim()) : [];
+                document.querySelectorAll('.chk-area-user').forEach(cb => cb.checked = arrAreas.includes(cb.value));
+                
+                let arrEmp = empresas ? empresas.split(',').map(e => e.trim()) : [];
+                document.querySelectorAll('.chk-empresa-user').forEach(cb => cb.checked = arrEmp.includes(cb.value));
+                
+                State.admin.editingUserId = id;
+                document.getElementById('btnSaveUser').innerHTML = '<i class="fas fa-save"></i> Actualizar Perfil';
+            },
+            filterUsers: () => {
+                let term = document.getElementById('searchUserEdit').value.toLowerCase();
+                let filtered = State.admin.userListCache.filter(u => u.nombre.toLowerCase().includes(term) || u.id.toLowerCase().includes(term));
+                Admin.drawUsers(filtered);
             },
             
-            renderNps: () => { 
-                document.getElementById('npsContainer').innerHTML = State.npsOptions.map(opt => 
-                    `<div style="display: grid; grid-template-columns: 1fr 3fr 1fr; gap: 15px; align-items: center;" class="nps-row">
-                        <input type="text" value="${opt.val}" class="form-input n-val" style="padding:10px;" placeholder="Valor Numérico">
-                        <input type="text" value="${opt.lbl}" class="form-input n-lbl" style="padding:10px;" placeholder="Etiqueta (Ej: 10 - Excelente)">
-                        <button class="btn-action" style="color:var(--danger-txt); border:none; padding:10px;" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
-                    </div>`
-                ).join(''); 
+            // --- GESTIÓN DE ROLES ---
+            loadRoles: async () => {
+                const snap = await getDocs(collection(db, "roles"));
+                let htmlRoles = "";
+                let htmlSelect = "";
+                snap.forEach(d => {
+                    let perms = d.data().permisos || [];
+                    htmlRoles += `<div class="user-row" style="cursor:pointer;" onclick="Admin.editRole('${d.id}', '${perms.join(',')}')">
+                        <strong style="color:var(--text-main);">${d.id}</strong> <span style="font-size:10px; color:var(--text-muted);">(${perms.length} permisos)</span>
+                    </div>`;
+                    htmlSelect += `<option value="${d.id}">${d.id}</option>`;
+                });
+                document.getElementById('rolesListDiv').innerHTML = htmlRoles;
+                document.getElementById('newUserRole').innerHTML = htmlSelect;
             },
-            addNpsRow: () => { State.npsOptions.push({val: '', lbl: ''}); Admin.renderNps(); },
-            saveNps: async () => { 
-                let freshList = []; 
-                document.querySelectorAll('.nps-row').forEach(row => { 
-                    freshList.push({ val: row.querySelector('.n-val').value.trim(), lbl: row.querySelector('.n-lbl').value.trim() }); 
-                }); 
-                try { 
-                    await setDoc(doc(db, "configuracion", "nps"), { lista: freshList }, { merge: true }); 
-                    State.npsOptions = freshList; 
-                    alert("Opciones NPS guardadas."); 
-                } catch(e) { alert("Fallo al guardar configuraciones de NPS."); } 
+            editRole: (roleName, permsStr) => {
+                State.admin.activeRoleEdit = roleName;
+                document.getElementById('editingRoleName').innerText = roleName;
+                let perms = permsStr ? permsStr.split(',') : [];
+                document.querySelectorAll('#tabRoles input[type="checkbox"]').forEach(cb => {
+                    cb.checked = perms.includes(cb.id);
+                });
+            },
+            addRole: async () => {
+                let val = document.getElementById('newRoleInput').value.trim();
+                if(!val) return;
+                try {
+                    await setDoc(doc(db, "roles", val), { permisos: [] });
+                    document.getElementById('newRoleInput').value = "";
+                    Admin.loadRoles();
+                    UI.showToast("Nuevo rol creado.", "success");
+                } catch(e) { UI.showToast("Error al crear rol.", "error"); }
+            },
+
+            // --- FUNCIONES DE GUARDADO EN AJUSTES ---
+            renderScales: () => {
+                let container = document.getElementById('escalasContainer');
+                container.innerHTML = State.scales.map((s, idx) => `
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="s_lbl_${idx}" value="${s.lbl}" placeholder="Etiqueta" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <input type="number" id="s_min_${idx}" value="${s.min}" placeholder="Min" style="width:80px; padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <input type="number" id="s_max_${idx}" value="${s.max}" placeholder="Max" style="width:80px; padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <input type="color" id="s_col_${idx}" value="${s.color}" style="width:50px; height:40px; padding:0; border:none; border-radius:6px; cursor:pointer;">
+                        <button class="btn-action" style="background:#fee2e2; color:#b91c1c; border:none; padding:10px 14px;" onclick="Admin.removeScale(${idx})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            },
+            addScaleRow: () => { State.scales.push({lbl: "Nueva", min: 0, max: 0, color: "#000000"}); Admin.renderScales(); },
+            removeScale: (idx) => { State.scales.splice(idx, 1); Admin.renderScales(); },
+            saveScales: async () => {
+                let newScales = [];
+                for(let i=0; i<State.scales.length; i++) {
+                    newScales.push({
+                        lbl: document.getElementById(`s_lbl_${i}`).value,
+                        min: parseInt(document.getElementById(`s_min_${i}`).value),
+                        max: parseInt(document.getElementById(`s_max_${i}`).value),
+                        color: document.getElementById(`s_col_${i}`).value
+                    });
+                }
+                try {
+                    await setDoc(doc(db, "configuracion", "escalas"), { lista: newScales });
+                    State.scales = newScales;
+                    UI.showToast("Escalas guardadas correctamente.", "success");
+                } catch(e) { UI.showToast("Error al guardar escalas.", "error"); }
+            },
+
+            renderEstados: () => {
+                let container = document.getElementById('estadosContainer');
+                container.innerHTML = State.estadosList.map((e, idx) => `
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="e_lbl_${idx}" value="${e.lbl}" placeholder="Nombre del estado" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <input type="color" id="e_col_${idx}" value="${e.color}" style="width:50px; height:40px; padding:0; border:none; cursor:pointer;">
+                        <label style="font-size:13px; cursor:pointer; color:var(--text-main); font-weight:600;"><input type="checkbox" id="e_prom_${idx}" ${e.calcProm !== false ? 'checked' : ''} style="accent-color:var(--primary);"> Afecta KPI</label>
+                        <button class="btn-action" style="background:#fee2e2; color:#b91c1c; border:none; padding:10px 14px;" onclick="Admin.removeEstado(${idx})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            },
+            addEstadoRow: () => { State.estadosList.push({lbl: "Nuevo Estado", color: "#cccccc", calcProm: true}); Admin.renderEstados(); },
+            removeEstado: (idx) => { State.estadosList.splice(idx, 1); Admin.renderEstados(); },
+            saveEstados: async () => {
+                let newList = [];
+                for(let i=0; i<State.estadosList.length; i++) {
+                    newList.push({
+                        lbl: document.getElementById(`e_lbl_${i}`).value,
+                        color: document.getElementById(`e_col_${i}`).value,
+                        calcProm: document.getElementById(`e_prom_${i}`).checked
+                    });
+                }
+                try {
+                    await setDoc(doc(db, "configuracion", "estados_list"), { lista: newList });
+                    State.estadosList = newList;
+                    UI.showToast("Estados actualizados.", "success");
+                    UI.updateSelects();
+                } catch(e) { UI.showToast("Error al guardar estados.", "error"); }
+            },
+
+            renderAreas: () => {
+                document.getElementById('areasContainer').innerHTML = State.areas.map((a) => `
+                    <div style="display:flex; justify-content:space-between; padding:12px 15px; background:#f8fafc; border:1px solid var(--border); border-radius:8px; align-items:center;">
+                        <strong style="color:var(--text-main); font-size:13px;">${a}</strong>
+                        <button class="btn-action" style="background:#fee2e2; color:#b91c1c; border:none; padding:6px 12px;" onclick="Admin.removeArea('${a}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            },
+            addArea: async () => {
+                let val = document.getElementById('newAreaInput').value.trim();
+                if(!val || State.areas.includes(val)) return;
+                State.areas.push(val);
+                try {
+                    await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas });
+                    document.getElementById('newAreaInput').value = "";
+                    Admin.renderAreas();
+                    UI.updateSelects();
+                    UI.showToast("Área agregada exitosamente.", "success");
+                } catch(e) { UI.showToast("Error de conexión.", "error"); }
+            },
+            removeArea: async (val) => {
+                State.areas = State.areas.filter(a => a !== val);
+                try {
+                    await setDoc(doc(db, "configuracion", "areas"), { lista: State.areas });
+                    Admin.renderAreas();
+                    UI.updateSelects();
+                    UI.showToast("Área eliminada.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
+            },
+
+            renderEmpresas: () => {
+                document.getElementById('empresasContainer').innerHTML = State.empresas.map((e) => `
+                    <div style="display:flex; justify-content:space-between; padding:12px 15px; background:#f8fafc; border:1px solid var(--border); border-radius:8px; align-items:center;">
+                        <strong style="color:var(--text-main); font-size:13px;">${e}</strong>
+                        <button class="btn-action" style="background:#fee2e2; color:#b91c1c; border:none; padding:6px 12px;" onclick="Admin.removeEmpresa('${e}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            },
+            addEmpresa: async () => {
+                let val = document.getElementById('newEmpresaInput').value.trim();
+                if(!val || State.empresas.includes(val)) return;
+                State.empresas.push(val);
+                try {
+                    await setDoc(doc(db, "configuracion", "empresas"), { lista: State.empresas });
+                    document.getElementById('newEmpresaInput').value = "";
+                    Admin.renderEmpresas();
+                    UI.updateSelects();
+                    UI.showToast("Empresa agregada.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
+            },
+            removeEmpresa: async (val) => {
+                State.empresas = State.empresas.filter(e => e !== val);
+                try {
+                    await setDoc(doc(db, "configuracion", "empresas"), { lista: State.empresas });
+                    Admin.renderEmpresas();
+                    UI.updateSelects();
+                    UI.showToast("Empresa eliminada.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
+            },
+
+            renderNps: () => {
+                document.getElementById('npsContainer').innerHTML = State.npsOptions.map((n, idx) => `
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="n_val_${idx}" value="${n.val}" placeholder="Valor" style="width:80px; padding:10px; border-radius:6px; border:1px solid var(--border); text-align:center;">
+                        <input type="text" id="n_lbl_${idx}" value="${n.lbl}" placeholder="Etiqueta visible" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <button class="btn-action" style="background:#fee2e2; color:#b91c1c; border:none; padding:10px 14px;" onclick="Admin.removeNps(${idx})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `).join('');
+            },
+            addNpsRow: () => { State.npsOptions.push({val: "", lbl: ""}); Admin.renderNps(); },
+            removeNps: (idx) => { State.npsOptions.splice(idx, 1); Admin.renderNps(); },
+            saveNps: async () => {
+                let newList = [];
+                for(let i=0; i<State.npsOptions.length; i++) {
+                    newList.push({
+                        val: document.getElementById(`n_val_${i}`).value,
+                        lbl: document.getElementById(`n_lbl_${i}`).value
+                    });
+                }
+                try {
+                    await setDoc(doc(db, "configuracion", "nps"), { lista: newList });
+                    State.npsOptions = newList;
+                    UI.showToast("Opciones NPS guardadas.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
+            },
+
+            renderFeedbackRules: () => {
+                document.getElementById('cfgAutoClose').value = State.feedbackRules.autoClose || 100;
+                document.getElementById('cfgAllowInformativo').checked = State.feedbackRules.allowInformative;
+                document.getElementById('cfgMetaGlobal').value = State.feedbackRules.metaGlobal || 95;
+                document.getElementById('cfgFamaThreshold').value = State.feedbackRules.famaThreshold || 100;
+            },
+            saveFeedbackRules: async () => {
+                let rules = {
+                    autoClose: parseInt(document.getElementById('cfgAutoClose').value) || 100,
+                    allowInformative: document.getElementById('cfgAllowInformativo').checked,
+                    metaGlobal: parseInt(document.getElementById('cfgMetaGlobal').value) || 95,
+                    famaThreshold: parseInt(document.getElementById('cfgFamaThreshold').value) || 100
+                };
+                try {
+                    await setDoc(doc(db, "configuracion", "feedback_rules"), rules);
+                    State.feedbackRules = rules;
+                    document.getElementById('kpi-meta').innerText = rules.metaGlobal + "%";
+                    UI.showToast("Reglas operativas guardadas.", "success");
+                    refreshActiveView();
+                } catch(e) { UI.showToast("Error.", "error"); }
             },
 
             renderAlias: () => {
                 let html = "";
-                for(let badName in State.aliasMap) {
-                    html += `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); font-size:12px;">
-                                <div><strong style="color:var(--danger-txt);">${badName}</strong> <i class="fas fa-arrow-right" style="margin:0 10px; color:var(--text-muted);"></i> <strong style="color:var(--success-txt);">${State.aliasMap[badName]}</strong></div>
-                                <button class="btn-action" style="color:var(--danger-txt); border:none; padding:6px;" onclick="Admin.deleteAlias('${badName}')"><i class="fas fa-trash"></i></button>
-                             </div>`;
+                for(let bad in State.aliasMap) {
+                    html += `<div style="display:flex; justify-content:space-between; padding:12px; background:#f8fafc; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; align-items:center;">
+                        <span style="font-size:13px;"><strong style="color:var(--danger-txt);">${bad}</strong> <i class="fas fa-arrow-right" style="margin:0 10px; color:var(--text-muted);"></i> <strong style="color:var(--success-txt);">${State.aliasMap[bad]}</strong></span>
+                        <button class="btn-action" style="padding:6px 10px; font-size:11px; background:#fee2e2; color:#b91c1c; border:none;" onclick="Admin.removeAlias('${bad}')"><i class="fas fa-trash"></i></button>
+                    </div>`;
                 }
-                document.getElementById('aliasContainer').innerHTML = html || '<div style="font-size:12px; color:var(--text-muted);">No hay reglas de alias configuradas.</div>';
+                document.getElementById('aliasContainer').innerHTML = html;
             },
             addAlias: async () => {
                 let bad = document.getElementById('newAliasBad').value.trim();
                 let good = document.getElementById('newAliasGood').value.trim();
-                if(!bad || !good) return alert("Por favor, completa ambos campos.");
+                if(!bad || !good) return alert("Completa ambos campos.");
                 State.aliasMap[bad] = good;
                 try {
                     await setDoc(doc(db, "configuracion", "alias_nombres"), { mapa: State.aliasMap }, { merge: true });
                     document.getElementById('newAliasBad').value = ""; document.getElementById('newAliasGood').value = "";
                     Admin.renderAlias();
-                } catch(e) { alert("Error al guardar regla de corrección."); delete State.aliasMap[bad]; }
+                    UI.showToast("Alias de calidad agregado.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
             },
-            deleteAlias: async (badName) => {
-                if(!confirm(`¿Eliminar regla de corrección para: ${badName}?`)) return;
-                let temp = State.aliasMap[badName];
-                delete State.aliasMap[badName];
+            removeAlias: async (bad) => {
+                delete State.aliasMap[bad];
                 try {
-                    await setDoc(doc(db, "configuracion", "alias_nombres"), { mapa: State.aliasMap }, { merge: true });
+                    await setDoc(doc(db, "configuracion", "alias_nombres"), { mapa: State.aliasMap });
                     Admin.renderAlias();
-                } catch(e) { alert("Error al eliminar regla."); State.aliasMap[badName] = temp; }
+                    UI.showToast("Alias eliminado.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
             },
 
             renderNeotelAlias: () => {
                 let html = "";
-                for(let neoUser in State.neotelAliasMap) {
-                    html += `<div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); font-size:12px;">
-                                <div><strong style="color:#3b82f6;">${neoUser}</strong> <i class="fas fa-link" style="margin:0 10px; color:var(--text-muted);"></i> <strong style="color:var(--text-main);">${State.neotelAliasMap[neoUser]}</strong></div>
-                                <button class="btn-action" style="color:var(--danger-txt); border:none; padding:6px;" onclick="Admin.deleteNeotelAlias('${neoUser}')"><i class="fas fa-trash"></i></button>
-                             </div>`;
+                for(let bad in State.neotelAliasMap) {
+                    html += `<div style="display:flex; justify-content:space-between; padding:12px; background:white; border:1px solid var(--border); border-radius:6px; margin-bottom:8px; align-items:center;">
+                        <span style="font-size:12px;"><strong style="color:var(--primary);">${bad}</strong> <i class="fas fa-link" style="margin:0 8px; color:var(--text-muted);"></i> <strong style="color:var(--text-main);">${State.neotelAliasMap[bad]}</strong></span>
+                        <button class="btn-action" style="padding:6px 10px; font-size:11px; background:#fee2e2; color:#b91c1c; border:none;" onclick="Admin.removeNeotelAlias('${bad}')"><i class="fas fa-trash"></i></button>
+                    </div>`;
                 }
-                document.getElementById('neotelContainer').innerHTML = html || '<div style="font-size:12px; color:var(--text-muted);">No hay vinculaciones configuradas.</div>';
+                document.getElementById('neotelContainer').innerHTML = html;
             },
             addNeotelAlias: async () => {
                 let bad = document.getElementById('newNeoBad').value.trim();
                 let good = document.getElementById('newNeoGood').value.trim();
-                if(!bad || !good) return alert("Por favor, completa ambos campos.");
+                if(!bad || !good) return alert("Completa ambos campos.");
                 State.neotelAliasMap[bad] = good;
                 try {
                     await setDoc(doc(db, "configuracion", "alias_neotel"), { mapa: State.neotelAliasMap }, { merge: true });
                     document.getElementById('newNeoBad').value = ""; document.getElementById('newNeoGood').value = "";
                     Admin.renderNeotelAlias();
-                } catch(e) { alert("Error al guardar vinculación."); delete State.neotelAliasMap[bad]; }
+                    UI.showToast("Vinculación Neotel guardada.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
             },
-            deleteNeotelAlias: async (neoUser) => {
-                if(!confirm(`¿Eliminar vinculación de Neotel para: ${neoUser}?`)) return;
-                let temp = State.neotelAliasMap[neoUser];
-                delete State.neotelAliasMap[neoUser];
+            removeNeotelAlias: async (bad) => {
+                delete State.neotelAliasMap[bad];
                 try {
-                    await setDoc(doc(db, "configuracion", "alias_neotel"), { mapa: State.neotelAliasMap }, { merge: true });
+                    await setDoc(doc(db, "configuracion", "alias_neotel"), { mapa: State.neotelAliasMap });
                     Admin.renderNeotelAlias();
-                } catch(e) { alert("Error al eliminar vinculación."); State.neotelAliasMap[neoUser] = temp; }
+                    UI.showToast("Vinculación eliminada.", "success");
+                } catch(e) { UI.showToast("Error.", "error"); }
             },
 
             renderNeotelColumns: () => {
+                let grid = document.getElementById('neotelColumnsGrid');
+                if(!grid) return;
                 let html = "";
                 State.neotelAvailableCols.forEach(col => {
                     let isChecked = State.neotelVisibleCols.includes(col) ? "checked" : "";
                     let rule = State.neotelColRules[col] || "suma";
-                    html += `<div style="display:flex; flex-direction:column; gap:5px; padding:10px; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">
-                                <label style="font-size:12px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:8px; cursor:pointer;">
-                                    <input type="checkbox" class="neo-col-chk" value="${col}" ${isChecked}> ${col}
-                                </label>
-                                <select class="neo-col-rule form-input" style="font-size:11px; padding:4px;" data-col="${col}">
-                                    <option value="suma" ${rule === 'suma' ? 'selected' : ''}>Sumar Valores</option>
-                                    <option value="promedio" ${rule === 'promedio' ? 'selected' : ''}>Promediar Valores</option>
-                                </select>
-                             </div>`;
+                    html += `<div style="border:1px solid var(--border); padding:10px; border-radius:6px; background:#f8fafc;">
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:700; margin-bottom:8px; font-size:12px; cursor:pointer; color:var(--text-main);">
+                            <input type="checkbox" class="chk-neo-col" value="${col}" ${isChecked} style="accent-color:var(--primary);"> ${col}
+                        </label>
+                        <select id="rule_${col.replace(/\s+/g,'_')}" style="width:100%; padding:6px; font-size:11px; border-radius:4px; border:1px solid #cbd5e1; outline:none;">
+                            <option value="suma" ${rule === 'suma' ? 'selected' : ''}>Sumar valores</option>
+                            <option value="promedio" ${rule === 'promedio' ? 'selected' : ''}>Promediar</option>
+                        </select>
+                    </div>`;
                 });
-                document.getElementById('neotelColumnsGrid').innerHTML = html || '<div style="grid-column: 1/-1; text-align:center; padding:15px; font-size:12px; color:var(--text-muted);">Sube un reporte de Neotel primero para que el sistema detecte las columnas.</div>';
+                grid.innerHTML = html;
             },
             saveNeotelColumns: async () => {
-                let visible = [];
+                let selectedCols = [];
                 let rules = {};
-                document.querySelectorAll('.neo-col-chk:checked').forEach(chk => {
-                    visible.push(chk.value);
-                });
-                document.querySelectorAll('.neo-col-rule').forEach(sel => {
-                    let col = sel.getAttribute('data-col');
-                    if(visible.includes(col)) {
-                        rules[col] = sel.value;
-                    }
+                document.querySelectorAll('.chk-neo-col:checked').forEach(cb => {
+                    let col = cb.value;
+                    selectedCols.push(col);
+                    let ruleSelect = document.getElementById(`rule_${col.replace(/\s+/g,'_')}`);
+                    if(ruleSelect) rules[col] = ruleSelect.value;
                 });
                 try {
-                    await setDoc(doc(db, "configuracion", "neotel_vistas"), { columnas: visible, reglas: rules }, { merge: true });
-                    State.neotelVisibleCols = visible;
+                    await setDoc(doc(db, "configuracion", "neotel_vistas"), { columnas: selectedCols, reglas: rules }, { merge: true });
+                    State.neotelVisibleCols = selectedCols;
                     State.neotelColRules = rules;
-                    alert("Vista y reglas de Neotel guardadas.");
-                    App.processRecordsForYear();
-                } catch(e) { alert("Error al guardar configuración de Neotel."); }
+                    UI.showToast("Vista de productividad guardada.", "success");
+                    if (document.querySelector('.view-section.active')?.id === 'viewProductividad') Renders.drawProductividad();
+                } catch(e) { UI.showToast("Error al guardar vista.", "error"); }
             },
-
-            renderFeedbackRules: () => {
-                document.getElementById('cfgAutoClose').value = State.feedbackRules.autoClose || 100;
-                document.getElementById('cfgAllowInformativo').checked = !!State.feedbackRules.allowInformative;
-                document.getElementById('cfgMetaGlobal').value = State.feedbackRules.metaGlobal || 95;
-                document.getElementById('cfgFamaThreshold').value = State.feedbackRules.famaThreshold || 100;
-            },
-            saveFeedbackRules: async () => {
-                let freshRules = {
-                    autoClose: Number(document.getElementById('cfgAutoClose').value),
-                    allowInformative: document.getElementById('cfgAllowInformativo').checked,
-                    metaGlobal: Number(document.getElementById('cfgMetaGlobal').value),
-                    famaThreshold: Number(document.getElementById('cfgFamaThreshold').value)
-                };
+            
+            handleSaveUser: async () => {
+                let nombre = document.getElementById('newUserName').value.trim();
+                let email = document.getElementById('newUserEmail').value.trim();
+                let password = document.getElementById('newUserPass').value.trim();
+                let rol = document.getElementById('newUserRole').value;
+                
+                let areas = [];
+                document.querySelectorAll('.chk-area-user:checked').forEach(cb => areas.push(cb.value));
+                let empresas = [];
+                document.querySelectorAll('.chk-empresa-user:checked').forEach(cb => empresas.push(cb.value));
+                
+                if(!nombre || !rol) return alert("El Nombre y Rol son obligatorios.");
+                if(areas.length === 0 && !document.querySelector('.chk-area-user[value="Todas"]')?.checked) return alert("Selecciona al menos un área o asigna Permiso Global.");
+                
                 try {
-                    await setDoc(doc(db, "configuracion", "feedback_rules"), freshRules, { merge: true });
-                    State.feedbackRules = freshRules;
-                    alert("Reglas operativas guardadas correctamente.");
-                    document.getElementById('kpi-meta').innerText = freshRules.metaGlobal + "%";
-                    App.processRecordsForYear();
-                } catch (e) { alert("Error al guardar las reglas operativas."); }
+                    document.getElementById('btnSaveUser').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+                    let idDoc = State.admin.editingUserId || (email || nombre.replace(/\s+/g, '') + "_historico");
+                    
+                    if(!State.admin.editingUserId && email && password) {
+                        try {
+                            await createUserWithEmailAndPassword(adminAuth, email, password);
+                        } catch (err) {
+                            if(err.code !== 'auth/email-already-in-use') throw err;
+                        }
+                    }
+
+                    await setDoc(doc(db, "usuarios", idDoc), {
+                        nombre: nombre,
+                        rol: rol,
+                        areas: areas,
+                        empresas: empresas,
+                        correo: email
+                    }, { merge: true });
+
+                    UI.showToast("Perfil de usuario guardado exitosamente.", "success");
+                    
+                    document.getElementById('newUserName').value = "";
+                    document.getElementById('newUserEmail').value = "";
+                    document.getElementById('newUserPass').value = "";
+                    State.admin.editingUserId = null;
+                    document.getElementById('btnSaveUser').innerHTML = '<i class="fas fa-save"></i> Guardar Perfil';
+                    document.querySelectorAll('.chk-area-user, .chk-empresa-user').forEach(cb => cb.checked = false);
+                    
+                } catch (e) {
+                    UI.showToast("Error al guardar el usuario en la base.", "error");
+                    document.getElementById('btnSaveUser').innerHTML = '<i class="fas fa-save"></i> Guardar Perfil';
+                }
             }
         };
+
+        const btnSaveUserNode = document.getElementById('btnSaveUser');
+        if(btnSaveUserNode) {
+            btnSaveUserNode.addEventListener('click', Admin.handleSaveUser);
+        }
+
     </script>
-</body>
-</html>
