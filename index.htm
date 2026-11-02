@@ -4402,7 +4402,7 @@
                     ProdSync.progress = 'Guardando…'; ProdSync.renderStatus();
                     let cache = {};
                     try { cache = await Idb.get(ProdSync.HASHES) || {}; } catch {}
-                    const ops = [], ahora = new Date().toISOString();
+                    const ops = [], todos = [], ahora = new Date().toISOString();
                     const hash = async (obj) => Remote.hash(new TextEncoder().encode(JSON.stringify(obj)));
                     for (const [codigo, p] of per) {
                         const area = ProdSync.src.areaDestino || p.user.areas?.[0] || 'General';
@@ -4413,13 +4413,30 @@
                         Object.entries(p.dias).forEach(([mm, dias]) => docs.push([`${codigo}_${anio}_${mm}`, { ...base, tipo: 'mes', mes: mm, dias: Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, prodRound(v)])) }]));
                         for (const [id, data] of docs) {
                             const h = await hash(data);
+                            todos.push({ id, data: { ...data, h, actualizado: ahora } });
                             if (cache[id] === h && !rewrite) continue;   // las actualizaciones automáticas solo escriben lo que cambió
                             ops.push({ id, data: { ...data, h, actualizado: ahora } });
                             cache[id] = h;
                         }
                     }
-                    if (ops.length) await commitInBatches(ops.map(o => (b) => b.set(doc(db, COL_PROD, o.id), o.data)));
-                    await Idb.set(ProdSync.HASHES, cache).catch(() => {});
+                    ProdSync.progress = `Guardando ${ops.length} registro(s) en Firebase…`; ProdSync.renderStatus();
+                    try { if (ops.length) await commitInBatches(ops.map(o => (b) => b.set(doc(db, COL_PROD, o.id), o.data))); }
+                    catch (e) {
+                        if (e.code === 'permission-denied') throw new Error('Firebase rechazó el guardado por permisos. Revisa que estén publicadas las reglas v5 (Firebase Console › Firestore › Reglas) y que tu rol tenga "Cargar productividad".');
+                        throw new Error('Firebase no pudo guardar: ' + e.message);
+                    }
+                    // Comprobación: se vuelve a leer de Firebase lo que quedó guardado
+                    let enFirebase = await ProdSync.countSaved(anio);
+                    if (enFirebase < per.size && ops.length < todos.length) {
+                        // Faltan asesores en Firebase aunque este navegador creía haberlos guardado: se reescribe todo
+                        ProdSync.progress = `Completando ${todos.length} registro(s) en Firebase…`; ProdSync.renderStatus();
+                        await commitInBatches(todos.map(o => (b) => b.set(doc(db, COL_PROD, o.id), o.data)));
+                        ops.length = 0; ops.push(...todos);
+                        enFirebase = await ProdSync.countSaved(anio);
+                    }
+                    if (per.size && enFirebase === 0) throw new Error('Se enviaron los datos pero Firebase no devuelve ninguno. Revisa las reglas v5 en Firebase Console.');
+                    ProdSync.src.enFirebase = { asesores: enFirebase, fecha: new Date().toISOString() };
+                    await Idb.set(ProdSync.HASHES, cache).catch(() => {});   // solo después de confirmar
 
                     // Pendientes de vincular: códigos de la cola elegida que no están en la app
                     const colaSug = ProdSync.src.colaSugerir || '';
@@ -4433,7 +4450,7 @@
                     await ProdSync.save();
                     ProdSync.lastCheck = new Date();
                     const seg = Math.round((Date.now() - t0) / 1000);
-                    ProdSync.lastResult = `${per.size} asesor(es) vinculados con datos en ${anio}; ${ops.length} registro(s) actualizados en ${seg} s.` +
+                    ProdSync.lastResult = `${per.size} asesor(es) vinculados con datos en ${anio}; ${ops.length} registro(s) actualizados en ${seg} s. Guardados en Firebase: ${enFirebase} asesor(es).` +
                         (ProdSync.src.pendientes.length ? ` ${ProdSync.src.pendientes.length} asesor(es) de "${colaSug}" sin vincular.` : '');
                     if (ops.length) { UI.showToast(`Productividad sincronizada. ${ProdSync.lastResult}`, 'success', 9000); Prod.invalidate(); }
                     else if (ProdSync.src.pendientes.length && !per.size) UI.showToast(`Vincula los asesores con su código Neotel en Ajustes › Productividad para empezar a cargar.`, 'warning', 9000);
@@ -4448,6 +4465,21 @@
                     if (ok && ProdSync.src) await ProdSync.markRun();
                     ProdSync.busy = false; ProdSync.progress = ''; ProdSync.renderStatus(); ProdSync.renderSettings();
                 }
+            },
+
+            /** Cuántos asesores tienen productividad guardada en Firebase para el año (lectura de comprobación). */
+            countSaved: async (anio) => {
+                const snap = await getDocs(query(collection(db, COL_PROD), where('tipo', '==', 'anio'), where('anio', '==', Number(anio)), ...Prod.scopeFilter()));
+                return snap.size;
+            },
+            /** Muestra en Ajustes lo que hay realmente en Firebase. */
+            showSaved: async () => {
+                const el = $('prodFbInfo'); if (!el || !ProdSync.src) return;
+                try {
+                    const n = await ProdSync.countSaved(ProdSync.src.anio);
+                    el.innerHTML = n ? `<span style="color:var(--ok); font-weight:600;"><i class="fas fa-circle-check"></i> ${n} asesor(es) con productividad de ${esc(ProdSync.src.anio)} guardada.</span> La vista de Productividad lee de aquí, no del Excel.`
+                        : `<span style="color:#b91c1c; font-weight:600;"><i class="fas fa-triangle-exclamation"></i> No hay productividad de ${esc(ProdSync.src.anio)} guardada.</span> Pulsa "Sincronizar ahora".`;
+                } catch (e) { el.innerHTML = `<span style="color:#b91c1c; font-weight:600;">No se pudo consultar Firebase: ${esc(e.code === 'permission-denied' ? 'sin permiso (revisa las reglas v5)' : e.message)}</span>`; }
             },
 
             /** Guarda los vínculos código Neotel → usuario elegidos en la tabla. */
@@ -4534,6 +4566,7 @@
                         <p style="font-size:13px; margin:14px 0 6px;"><strong>Estado:</strong> ${ProdSync.needsPermission ? 'esperando permiso de lectura' : ProdSync.busy ? esc(ProdSync.progress) : `activo; próxima actualización ${esc(ProdSync.fmtWhen(ProdSync.nextRun()))}`}</p>
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Última actualización:</strong> ${ProdSync.lastRun() ? esc(ProdSync.lastRun().toLocaleString('es-GT')) : '—'}</p>
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(ProdSync.lastResult || '—')}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>En Firebase:</strong> <span id="prodFbInfo" class="hint">consultando…</span></p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
                             ${ProdSync.needsPermission ? `<button class="btn-action btn-primary" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> Reanudar</button>` : `<button class="btn-action btn-primary" onclick="ProdSync.check(true, true)" ${ProdSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Sincronizar ahora</button>`}
                             <button class="btn-action" onclick="ProdSync.changeSource()">Cambiar fuente</button>
@@ -4561,6 +4594,7 @@
             bindSettings: () => {
                 const dz = $('prodDrop');
                 if (dz) { dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over'); dz.ondrop = ProdSync.onDrop; }
+                if (!ProdSync.busy) ProdSync.showSaved();
                 const ub = $('prodUrlBtn'); if (ub) ub.onclick = () => ProdSync.linkUrl($('prodUrl').value);
                 const ap = $('prodApply');
                 if (ap) ap.onclick = async () => {
