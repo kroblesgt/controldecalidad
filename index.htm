@@ -235,6 +235,12 @@
         .prod-table th:first-child { background: var(--surface-2); z-index: 3; }
         .prod-table .num-col { text-align: right; font-variant-numeric: tabular-nums; }
         .prod-table tbody tr:hover td { background: var(--surface-2); }
+        .prod-table td.prod-bad { color: #B42318; background: #FEF3F2; font-weight: 600; }
+        .prod-table td.mejora-cell { white-space: normal; width: 340px; min-width: 340px; max-width: 340px; padding-top: 6px; padding-bottom: 6px; }
+        .mejora-chip { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 8px; border-radius: 999px; background: #FEF3F2; color: #B42318; border: 1px solid #FECDCA; font-size: 11px; font-weight: 600; cursor: help; white-space: nowrap; }
+        .mejora-ok { color: var(--ok); font-size: 11px; font-weight: 600; }
+        .mejora-resumen { padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid #FECDCA; background: #FFFBFA; font-size: 13px; margin-bottom: 14px; line-height: 1.9; }
+        .mejora-resumen.ok { border-color: var(--primary-line); background: var(--primary-soft); color: var(--ok); }
         .prod-table tfoot td { background: var(--surface-2); font-weight: 600; border-top: 1px solid var(--border-strong); }
         .sync-sidebar { margin: 4px 12px 0; font-size: 12px; color: var(--sidebar-text); display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
         .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #5FD08A; flex-shrink: 0; }
@@ -4073,6 +4079,135 @@
         const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
         /** Redondea y omite los ceros (documentos más livianos en Firebase). */
         const prodRound = (b) => Object.fromEntries(PROD_FIELDS.map(f => [f, PROD_PCT.has(f) ? Math.round(b[f] * 10000) / 10000 : Math.round(b[f])]).filter(([, v]) => v));
+        // =========================================================
+        // PRODUCTIVIDAD — áreas de mejora
+        // Cada indicador se evalúa contra su meta (si el admin la definió) o contra el promedio del equipo.
+        // Los indicadores que se suman (llamadas, tiempos) se comparan por día, para no castigar a quien trabajó menos días.
+        // =========================================================
+        const MEJORA_DIR = {   // bajo: menos es mejor · alto: más es mejor
+            bajo: ['tmo', 'ocio', 'pOcio', 'admin', 'pAdmin', 'almuerzo', 'pAlm', 'bano', 'pBano', 'descanso', 'p_descanso', 'holdE', 'p_holdE', 'holdS', 'p_holdS', 'perdE', 'perdS', 'noConS'],
+            alto: ['llam', 'llamE', 'login']
+        };
+        const MEJORA_TXT = {
+            tmo: ['TMO alto', 'Revisar las llamadas más largas y apoyarse en guiones y base de conocimiento.'],
+            pOcio: ['Ocio alto', 'Verificar disponibilidad y uso correcto de los estados.'], ocio: ['Ocio alto', 'Verificar disponibilidad y uso correcto de los estados.'],
+            pAdmin: ['Administrativo alto', 'Validar que el tiempo administrativo corresponda a tareas asignadas.'], admin: ['Administrativo alto', 'Validar que el tiempo administrativo corresponda a tareas asignadas.'],
+            pAlm: ['Almuerzo excedido', 'Respetar el tiempo de almuerzo establecido.'], almuerzo: ['Almuerzo excedido', 'Respetar el tiempo de almuerzo establecido.'],
+            pBano: ['Baño excedido', 'Cuidar la duración de las pausas de baño.'], bano: ['Baño excedido', 'Cuidar la duración de las pausas de baño.'],
+            p_descanso: ['Descanso excedido', 'Respetar los descansos programados.'], descanso: ['Descanso excedido', 'Respetar los descansos programados.'],
+            p_holdE: ['Hold alto', 'Preparar la información antes de poner al cliente en espera.'], holdE: ['Hold alto', 'Preparar la información antes de poner al cliente en espera.'],
+            p_holdS: ['Hold saliente alto', 'Reducir esperas en llamadas salientes.'], holdS: ['Hold saliente alto', 'Reducir esperas en llamadas salientes.'],
+            perdE: ['Llamadas perdidas', 'Atender a tiempo; revisar alertas y estado disponible.'], perdS: ['Salientes perdidas', 'Revisar el marcado y la atención de salientes.'],
+            noConS: ['Salientes no conectadas', 'Verificar números y horarios de contacto.'],
+            llam: ['Pocas llamadas', 'Aumentar el tiempo en estado disponible y reducir pausas.'], llamE: ['Pocas llamadas entrantes', 'Aumentar el tiempo en estado disponible.'],
+            login: ['Poco tiempo conectado', 'Cumplir con el horario de conexión.']
+        };
+        const Mejora = {
+            cfg: () => ({ auto: true, margen: 20, reglas: {}, ...(State.prodCfg?.mejora || {}) }),
+            dirDefault: (id) => MEJORA_DIR.bajo.includes(id) ? 'bajo' : MEJORA_DIR.alto.includes(id) ? 'alto' : '',
+            regla: (m) => { const r = Mejora.cfg().reglas[m.id] || {}; return { dir: r.dir ?? Mejora.dirDefault(m.id), meta: r.meta ?? null }; },
+            esSuma: (m) => m.fmt === fmtInt || m.fmt === fmtHMS,
+            /** Valor comparable: por día para indicadores que se suman. */
+            valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
+            fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
+            /** Analiza las filas: devuelve { porFila: Map(nombre -> [hallazgos]), malas: Set('nombre|id') }. */
+            analizar: (rows) => {
+                const c = Mejora.cfg(), porFila = new Map(), malas = new Set();
+                const conEquipo = rows.length >= 3 && Scope.hasTeamView();   // comparar con el equipo solo si hay equipo
+                PROD_METRICS.forEach(m => {
+                    const { dir, meta } = Mejora.regla(m);
+                    if (!dir) return;
+                    const vals = rows.map(r => Mejora.valor(m, r.b)).filter(v => v !== null);
+                    if (!vals.length) return;
+                    const prom = vals.reduce((a, b) => a + b, 0) / vals.length;
+                    let ref = null, tipo = '';
+                    if (meta !== null && meta !== '') { ref = Number(meta); tipo = 'meta'; }
+                    else if (c.auto && conEquipo && prom > 0) { ref = dir === 'bajo' ? prom * (1 + c.margen / 100) : prom * (1 - c.margen / 100); tipo = 'equipo'; }
+                    if (ref === null) return;
+                    const minAbs = PROD_PCT.has(m.id) ? 0.01 : m.fmt === fmtInt ? 1 : 30;   // diferencias mínimas que vale la pena señalar
+                    rows.forEach(r => {
+                        const v = Mejora.valor(m, r.b);
+                        if (v === null) return;
+                        const mal = dir === 'bajo' ? v > ref && (tipo === 'meta' || v - prom >= minAbs) : v < ref && (tipo === 'meta' || prom - v >= minAbs);
+                        if (!mal) return;
+                        malas.add(r.nombre + '|' + m.id);
+                        const [lbl, accion] = MEJORA_TXT[m.id] || [`${m.lbl} ${dir === 'bajo' ? 'alto' : 'bajo'}`, ''];
+                        const det = `${Mejora.fmtValor(m, v)} · ${tipo === 'meta' ? 'meta' : 'promedio del equipo'} ${Mejora.fmtValor(m, tipo === 'meta' ? ref : prom)}`;
+                        const desvio = Math.abs(v - (tipo === 'meta' ? ref : prom)) / Math.max(Math.abs(tipo === 'meta' ? ref : prom), 1e-9);
+                        const arr = porFila.get(r.nombre) || [];
+                        // Un mismo tema (p. ej. "Ocio alto" en tiempo y en %) se muestra una sola vez
+                        if (!arr.some(x => x.lbl === lbl)) arr.push({ id: m.id, lbl, accion, det, desvio });
+                        porFila.set(r.nombre, arr);
+                    });
+                });
+                porFila.forEach(arr => arr.sort((a, b) => b.desvio - a.desvio));
+                return { porFila, malas };
+            },
+            chips: (arr) => arr?.length
+                ? arr.map(x => `<span class="mejora-chip" title="${esc(x.det + (x.accion ? '\n' + x.accion : ''))}">${esc(x.lbl)}</span>`).join('')
+                : '<span class="mejora-ok"><i class="fas fa-check"></i> Sin áreas de mejora</span>',
+            resumen: (an, total) => {
+                const cuenta = new Map();
+                an.porFila.forEach(arr => arr.forEach(x => cuenta.set(x.lbl, { n: (cuenta.get(x.lbl)?.n || 0) + 1, accion: x.accion })));
+                if (!cuenta.size) return total ? `<div class="mejora-resumen ok"><i class="fas fa-circle-check"></i> Ningún asesor tiene áreas de mejora en este periodo.</div>` : '';
+                const items = [...cuenta.entries()].sort((a, b) => b[1].n - a[1].n);
+                return `<div class="mejora-resumen"><strong><i class="fas fa-bullseye"></i> Áreas de mejora del equipo:</strong> ${items.map(([lbl, x]) => `<span class="mejora-chip" title="${esc(x.accion)}">${esc(lbl)} · ${x.n}</span>`).join(' ')}</div>`;
+            },
+
+            // ---- Ajustes: metas ----
+            parse: (m, txt) => {
+                txt = String(txt || '').trim().replace(',', '.');
+                if (!txt) return null;
+                if (PROD_PCT.has(m.id)) { const n = Number(txt.replace('%', '')); return isNaN(n) ? NaN : n / 100; }
+                if (txt.includes(':')) { const p = txt.split(':').map(Number); if (p.some(isNaN)) return NaN; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1]; }
+                const n = Number(txt);
+                return isNaN(n) ? NaN : (m.fmt === fmtInt ? n : n * 60);   // tiempos sin ":" se leen en minutos
+            },
+            show: (m, v) => v === null || v === undefined ? '' : PROD_PCT.has(m.id) ? String(Math.round(v * 1000) / 10) : m.fmt === fmtInt ? String(v) : (m.fmt === fmtMS ? fmtMS(v) : fmtHMS(v)),
+            unidad: (m) => PROD_PCT.has(m.id) ? '%' : m.fmt === fmtInt ? 'por día' : m.fmt === fmtMS ? 'm:ss' : 'h:mm:ss por día',
+            box: () => {
+                const can = UI.hasPerm('chk_sync_productividad'), c = Mejora.cfg();
+                const evaluables = PROD_METRICS.filter(m => m.id !== 'd');
+                return `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Metas y áreas de mejora</h3>
+                        <p class="hint" style="margin-bottom:10px;">Cada asesor recibe automáticamente sus áreas de mejora del periodo que se esté viendo. Si un indicador tiene meta, se compara con la meta; si no, con el promedio del equipo.</p>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-size:13px;">
+                            <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="mejoraAuto" ${c.auto ? 'checked' : ''} ${can ? '' : 'disabled'}> Sin meta: comparar con el promedio del equipo</label>
+                            <label style="display:flex; gap:6px; align-items:center;">Margen <input type="number" id="mejoraMargen" min="0" max="100" value="${esc(c.margen)}" style="width:70px; padding:5px 8px;" ${can ? '' : 'disabled'}> %</label>
+                        </div>
+                        <div class="users-list" style="max-height:340px;">
+                            <table class="prod-table" style="font-size:12px;">
+                                <thead><tr><th>Indicador</th><th>Se evalúa</th><th>Meta</th></tr></thead>
+                                <tbody>${evaluables.map(m => { const r = Mejora.regla(m); return `<tr>
+                                    <td>${esc(m.lbl)}</td>
+                                    <td><select class="mejora-dir" data-id="${m.id}" ${can ? '' : 'disabled'} style="padding:4px 6px; font-size:12px;"><option value="" ${!r.dir ? 'selected' : ''}>No evaluar</option><option value="bajo" ${r.dir === 'bajo' ? 'selected' : ''}>Menos es mejor</option><option value="alto" ${r.dir === 'alto' ? 'selected' : ''}>Más es mejor</option></select></td>
+                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="sin meta" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td></tr>`; }).join('')}</tbody>
+                            </table>
+                        </div>
+                        ${can ? `<button class="btn-action" id="mejoraSave" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar metas</button>` : ''}
+                    </div>`;
+            },
+            save: async () => {
+                const reglas = {};
+                for (const sel of document.querySelectorAll('.mejora-dir')) {
+                    const m = PROD_METRICS.find(x => x.id === sel.dataset.id);
+                    const raw = document.querySelector(`.mejora-meta[data-id="${m.id}"]`).value;
+                    const meta = Mejora.parse(m, raw);
+                    if (Number.isNaN(meta)) return alert(`La meta de "${m.lbl}" no es válida (${Mejora.unidad(m)}).`);
+                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null) reglas[m.id] = { dir: sel.value, meta };
+                }
+                const margen = Math.max(0, Math.min(100, Number($('mejoraMargen').value) || 0));
+                const mejora = { auto: $('mejoraAuto').checked, margen, reglas };
+                try {
+                    await setDoc(doc(db, "configuracion", "productividad"), { mejora }, { merge: true });
+                    State.prodCfg = { ...(State.prodCfg || {}), mejora };
+                    UI.showToast("Metas guardadas.", 'success'); refreshActiveView();
+                } catch (e) { console.error(e); UI.showToast("No se pudieron guardar las metas.", 'error'); }
+            }
+        };
+        window.Mejora = Mejora;
+
         const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
         // =========================================================
@@ -4567,7 +4702,7 @@
                                 <button class="btn-action" id="prodUrlBtn"><i class="fas fa-link"></i> Vincular enlace</button>
                             </div>
                             ${ProdSync._prev ? `<button class="btn-action" style="margin-top:14px;" onclick="ProdSync.cancelChange()">Cancelar y seguir con ${esc(ProdSync._prev.name)}</button>` : ''}
-                        </div>${ProdSync.horarioBox()}${metricsBox}`;
+                        </div>${ProdSync.horarioBox()}${metricsBox}${Mejora.box()}`;
                     return ProdSync.bindSettings();
                 }
                 const s = ProdSync.src;
@@ -4612,7 +4747,7 @@
                         <button class="btn-action btn-primary" style="margin-top:12px;" onclick="ProdSync.saveLinks()"><i class="fas fa-link"></i> Guardar vínculos y cargar</button>`
                         : `<p class="hint">${vinculados.length ? 'Todos los asesores de la cola están vinculados.' : 'Se mostrarán aquí después de la primera lectura del archivo.'}</p>`}
                         ${vinculados.length ? `<details style="margin-top:12px;"><summary class="hint" style="cursor:pointer;">Ver vinculados</summary><div class="hint" style="line-height:1.8;">${vinculados.map(u => `${esc(u.codigo_neotel)} · ${esc(u.nombre)}`).join('<br>')}</div><p class="hint">Para cambiar un código, edita el usuario en la pestaña Usuarios.</p></details>` : ''}
-                    </div>${ProdSync.horarioBox()}${metricsBox}`;
+                    </div>${ProdSync.horarioBox()}${metricsBox}${Mejora.box()}`;
                 ProdSync.bindSettings();
             },
             bindSettings: () => {
@@ -4632,6 +4767,7 @@
                 const ha = $('prodHorAdd');
                 if (ha) ha.onclick = () => ha.insertAdjacentHTML('beforebegin', `<span style="display:inline-flex; gap:4px; align-items:center;"><input type="time" class="prod-hora" value="12:00" style="width:auto;"><button class="btn-action" style="padding:6px 9px;" title="Quitar" onclick="this.parentElement.remove()">✕</button></span>`);
                 const hsv = $('prodHorSave'); if (hsv) hsv.onclick = ProdSync.saveHorario;
+                const ms = $('mejoraSave'); if (ms) ms.onclick = Mejora.save;
                 const vs = $('prodVisSave');
                 if (vs) vs.onclick = async () => {
                     const visibles = [...document.querySelectorAll('.prod-vis:checked')].map(c => c.value);
@@ -4759,18 +4895,20 @@
             drawTable: (rows, vis, extraCtl, titulo, vacio = 'Sin datos en este periodo.') => {
                 rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
                 const team = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
+                const an = Mejora.analizar(rows);
                 $('prodContent').innerHTML = `
+                    ${Scope.hasTeamView() ? Mejora.resumen(an, rows.length) : ''}
                     <div class="table-card">
                         <div class="table-card-head" style="display:flex; align-items:center; gap:8px;"><h3>${esc(titulo)}</h3>${extraCtl}<span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll">
                             <table class="prod-table">
-                                <thead><tr><th>Asesor</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
-                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
-                                ${rows.length ? `<tfoot><tr><td>Equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
+                                <thead><tr><th>Asesor</th><th>Áreas de mejora</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
+                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td><td class="mejora-cell">${Mejora.chips(an.porFila.get(r.nombre))}</td>${vis.map(m => `<td class="num-col ${an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 2, esc(vacio))}</tbody>
+                                ${rows.length ? `<tfoot><tr><td>Equipo</td><td></td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
                             </table>
                         </div>
                     </div>`;
-                Prod.lastExport = { titulo, cols: vis, rows, team };
+                Prod.lastExport = { titulo, cols: vis, rows, team, an };
             },
 
             drawTrend: (docs, vis) => {
@@ -4801,7 +4939,9 @@
                 if (!ex) return alert("No hay datos de productividad en pantalla.");
                 let rows;
                 if (ex.trend) rows = ex.trend.rows.map(d => ({ Asesor: d.nombre, ...Object.fromEntries(ex.trend.shown.map(w => [w, d.semanas?.[w] ? ex.trend.m.fmt(ex.trend.m.calc(d.semanas[w])) : ''])), 'Año': ex.trend.m.fmt(ex.trend.m.calc(d.total || prodEmpty())) }));
-                else rows = [...ex.rows.map(r => ({ Asesor: r.nombre, ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(r.b))])) })), { Asesor: 'Equipo', ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(ex.team))])) }];
+                else rows = [...ex.rows.map(r => ({ Asesor: r.nombre, ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(r.b))])),
+                        'Áreas de mejora': (ex.an?.porFila.get(r.nombre) || []).map(x => `${x.lbl} (${x.det})`).join('; '),
+                        'Acciones sugeridas': (ex.an?.porFila.get(r.nombre) || []).map(x => x.accion).filter(Boolean).join(' ') })), { Asesor: 'Equipo', ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(ex.team))])) }];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Productividad");
                 XLSX.writeFile(wb, `Productividad_${ex.titulo.replace(/\s+/g, '_')}_${$('yearFilter').value}.xlsx`);
