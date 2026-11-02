@@ -4058,7 +4058,8 @@
             KEY: MODO_PRUEBA ? 'fuente_productividad_prueba' : 'fuente_productividad',
             HASHES: MODO_PRUEBA ? 'prod_hashes_prueba' : 'prod_hashes',
             SHEET: 'Base Productividad',
-            INTERVAL_MIN: 10,
+            HORARIO_DEF: { modo: 'horas', horas: ['10:00', '15:00'], cadaMin: 60 },
+            LAST_FIELD: MODO_PRUEBA ? 'ultimaSyncPrueba' : 'ultimaSync',
             src: null, timer: null, busy: false, lastCheck: null, lastResult: null, progress: '', needsPermission: false,
 
             allowed: () => UI.hasPerm('chk_sync_productividad'),
@@ -4080,7 +4081,108 @@
                 const perm = await ProdSync.src.handle.queryPermission({ mode: 'read' });
                 if (perm === 'granted') ProdSync.start(); else { ProdSync.needsPermission = true; ProdSync.renderStatus(); }
             },
-            start: () => { ProdSync.stop(); ProdSync.check(); ProdSync.timer = setInterval(() => ProdSync.check(), ProdSync.INTERVAL_MIN * 60000); ProdSync.renderStatus(); },
+            /** Arranca el reloj: cada minuto revisa si ya toca actualizar según el horario. runNow: lectura inmediata (al vincular). */
+            start: (runNow = false) => {
+                ProdSync.stop();
+                runNow ? ProdSync.check(true) : ProdSync.tick();
+                ProdSync.timer = setInterval(() => ProdSync.tick(), 60000);
+                ProdSync.renderStatus();
+            },
+
+            // ---------- Horario ----------
+            horario: () => ({ ...ProdSync.HORARIO_DEF, ...(State.prodCfg?.horario || {}) }),
+            horasOrdenadas: (h) => (h.horas || []).filter(t => /^\d{1,2}:\d{2}$/.test(t)).map(t => t.split(':').map(Number)).sort((a, b) => a[0] * 60 + a[1] - (b[0] * 60 + b[1])),
+            /** Última hora programada que ya pasó (hoy o ayer). */
+            lastSlot: (now = new Date()) => {
+                const hs = ProdSync.horasOrdenadas(ProdSync.horario());
+                for (let back = 0; back < 2; back++) {
+                    for (let i = hs.length - 1; i >= 0; i--) {
+                        const d = new Date(now); d.setDate(d.getDate() - back); d.setHours(hs[i][0], hs[i][1], 0, 0);
+                        if (d <= now) return d;
+                    }
+                }
+                return null;
+            },
+            nextRun: (now = new Date()) => {
+                const h = ProdSync.horario();
+                if (h.modo === 'intervalo') { const last = ProdSync.lastRun(); return last ? new Date(Math.max(now.getTime(), last.getTime() + h.cadaMin * 60000)) : now; }
+                const hs = ProdSync.horasOrdenadas(h);
+                for (let fwd = 0; fwd < 2; fwd++) for (const [hh, mm] of hs) {
+                    const d = new Date(now); d.setDate(d.getDate() + fwd); d.setHours(hh, mm, 0, 0);
+                    if (d > now) return d;
+                }
+                return null;
+            },
+            lastRun: () => ProdSync.src?.lastRun ? new Date(ProdSync.src.lastRun) : null,
+            fmtWhen: (d) => {
+                if (!d) return '—';
+                const hoy = new Date(), man = new Date(); man.setDate(man.getDate() + 1);
+                const dia = d.toDateString() === hoy.toDateString() ? 'hoy' : d.toDateString() === man.toDateString() ? 'mañana' : d.toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'short' });
+                return `${dia} a las ${d.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}`;
+            },
+            /** ¿Ya toca? Si a la hora programada nadie tenía la app abierta, se hace en cuanto alguien con permiso la abra. */
+            isDue: async () => {
+                const h = ProdSync.horario(), now = new Date();
+                const intervalo = h.modo === 'intervalo';
+                const objetivo = intervalo ? new Date(now.getTime() - h.cadaMin * 60000) : ProdSync.lastSlot(now);
+                if (!objetivo) return false;
+                const yaHecha = (d) => d && (intervalo ? d > objetivo : d >= objetivo);
+                if (yaHecha(ProdSync.lastRun())) return false;
+                // Otro navegador pudo haberla hecho ya: se consulta la última actualización compartida
+                try {
+                    const snap = await getDoc(doc(db, "configuracion", "productividad"));
+                    const remota = snap.exists() ? snap.data()[ProdSync.LAST_FIELD] : null;
+                    if (remota && yaHecha(new Date(remota))) { ProdSync.src.lastRun = remota; await ProdSync.save().catch(() => {}); Prod.invalidate(); return false; }
+                } catch (e) { console.warn(e); }
+                return true;
+            },
+            tick: async () => {
+                if (ProdSync.busy || !ProdSync.src || ProdSync.needsPermission) return;
+                if (await ProdSync.isDue()) await ProdSync.check(true);
+                else ProdSync.renderStatus();
+            },
+            markRun: async () => {
+                const ahora = new Date().toISOString();
+                ProdSync.src.lastRun = ahora;
+                await ProdSync.save().catch(() => {});
+                try { await setDoc(doc(db, "configuracion", "productividad"), { [ProdSync.LAST_FIELD]: ahora, [ProdSync.LAST_FIELD + 'Por']: State.user.nombre }, { merge: true }); } catch (e) { console.warn(e); }
+            },
+            saveHorario: async () => {
+                const modo = $('prodHorModo').value;
+                const horas = [...document.querySelectorAll('.prod-hora')].map(i => i.value).filter(Boolean);
+                const cadaMin = Number($('prodHorCada').value);
+                if (modo === 'horas' && !horas.length) return alert("Agrega al menos una hora.");
+                const horario = { modo, horas: uniq(horas).sort(), cadaMin };
+                try {
+                    await setDoc(doc(db, "configuracion", "productividad"), { horario }, { merge: true });
+                    State.prodCfg = { ...(State.prodCfg || {}), horario };
+                    UI.showToast(`Horario guardado. Próxima actualización: ${ProdSync.fmtWhen(ProdSync.nextRun())}`, 'success');
+                    ProdSync.renderSettings(); ProdSync.renderStatus();
+                } catch (e) { console.error(e); UI.showToast("No se pudo guardar el horario.", 'error'); }
+            },
+            horarioBox: () => {
+                const h = ProdSync.horario(), can = ProdSync.allowed();
+                const cadaOpts = [[30, 'Cada 30 minutos'], [60, 'Cada hora'], [120, 'Cada 2 horas'], [240, 'Cada 4 horas'], [480, 'Cada 8 horas'], [1440, 'Una vez al día']];
+                return `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Horario de actualización</h3>
+                        <div class="sync-filters">
+                            <div class="form-group"><label>Cuándo</label>
+                                <select id="prodHorModo" ${can ? '' : 'disabled'}><option value="horas" ${h.modo !== 'intervalo' ? 'selected' : ''}>A horas fijas cada día</option><option value="intervalo" ${h.modo === 'intervalo' ? 'selected' : ''}>Cada cierto tiempo</option></select></div>
+                            <div class="form-group" id="prodHorCadaBox" style="${h.modo === 'intervalo' ? '' : 'display:none;'}"><label>Frecuencia</label>
+                                <select id="prodHorCada" ${can ? '' : 'disabled'}>${cadaOpts.map(([v, l]) => `<option value="${v}" ${Number(h.cadaMin) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+                            <div class="form-group" id="prodHorHorasBox" style="grid-column: 1 / -1; ${h.modo === 'intervalo' ? 'display:none;' : ''}"><label>Horas</label>
+                                <div id="prodHorHoras" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                    ${(h.horas || []).map(t => `<span style="display:inline-flex; gap:4px; align-items:center;"><input type="time" class="prod-hora" value="${esc(t)}" ${can ? '' : 'disabled'} style="width:auto;">${can ? `<button class="btn-action" style="padding:6px 9px;" title="Quitar" onclick="this.parentElement.remove()">✕</button>` : ''}</span>`).join('')}
+                                    ${can ? `<button class="btn-action" id="prodHorAdd" type="button"><i class="fas fa-plus"></i> Agregar hora</button>` : ''}
+                                </div></div>
+                        </div>
+                        ${can ? `<button class="btn-action" id="prodHorSave"><i class="fas fa-save"></i> Guardar horario</button>` : ''}
+                        <p style="font-size:13px; margin:12px 0 4px;"><strong>Próxima actualización:</strong> ${esc(ProdSync.fmtWhen(ProdSync.nextRun()))}</p>
+                        <p class="hint">El horario es el mismo para todos. La actualización corre en el navegador de quien tenga permiso de carga y la app abierta; si a esa hora nadie la tiene abierta, se hace en cuanto alguien la abra. "Sincronizar ahora" sigue disponible en cualquier momento.</p>
+                    </div>`;
+            },
+
             stop: () => { if (ProdSync.timer) clearInterval(ProdSync.timer); ProdSync.timer = null; },
             /** Requiere un clic: el navegador (o Microsoft) pide confirmar el acceso en cada sesión. */
             resume: async () => {
@@ -4116,7 +4218,7 @@
                     ProdSync.src = ProdSync.newSrc({ kind: handle.kind === 'directory' ? 'folder' : 'file', handle, name: handle.name, anio: ProdSync.yearFrom(handle.name) });
                     ProdSync._prev = null; ProdSync.needsPermission = false;
                     await ProdSync.save();
-                    ProdSync.renderSettings(); ProdSync.start();
+                    ProdSync.renderSettings(); ProdSync.start(true);
                 } catch (e) { if (e.name !== 'AbortError') { console.error(e); alert("No se pudo vincular: " + e.message); } }
             },
             /** Vincula por enlace: SharePoint / OneDrive de la empresa (Microsoft 365) u hoja de cálculo de Google. */
@@ -4137,7 +4239,7 @@
                     }
                     ProdSync.stop(); ProdSync.src = candidate; ProdSync._prev = null; ProdSync.needsPermission = false;
                     await ProdSync.save();
-                    ProdSync.renderSettings(); ProdSync.start();
+                    ProdSync.renderSettings(); ProdSync.start(true);
                 } catch (e) { console.error(e); alert("No se pudo vincular el enlace.\n\n" + e.message); }
                 finally { ProdSync.progress = ''; ProdSync.renderStatus(); }
             },
@@ -4218,9 +4320,10 @@
             check: async (force = false) => {
                 if (ProdSync.busy || !ProdSync.src || !ProdSync.allowed()) return;
                 ProdSync.busy = true; ProdSync.progress = 'Revisando…'; ProdSync.renderStatus(); ProdSync.renderSettings();
+                let ok = false;
                 try {
                     const got = await ProdSync.resolve(force);
-                    if (!got) return;
+                    if (!got) { ok = true; ProdSync.lastCheck = new Date(); ProdSync.lastResult = 'Sin cambios en el archivo.'; return; }
                     const file = got.file;
                     const t0 = Date.now();
                     const book = await XlsxStream.open(file);
@@ -4307,7 +4410,7 @@
                         Object.entries(p.dias).forEach(([mm, dias]) => docs.push([`${codigo}_${anio}_${mm}`, { ...base, tipo: 'mes', mes: mm, dias: Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, prodRound(v)])) }]));
                         for (const [id, data] of docs) {
                             const h = await hash(data);
-                            if (cache[id] === h && !force) continue;
+                            if (cache[id] === h) continue;   // solo se escribe lo que cambió, aun al sincronizar manualmente
                             ops.push({ id, data: { ...data, h, actualizado: ahora } });
                             cache[id] = h;
                         }
@@ -4331,6 +4434,7 @@
                         (ProdSync.src.pendientes.length ? ` ${ProdSync.src.pendientes.length} asesor(es) de "${colaSug}" sin vincular.` : '');
                     if (ops.length) { UI.showToast(`Productividad sincronizada. ${ProdSync.lastResult}`, 'success', 9000); Prod.invalidate(); }
                     else if (ProdSync.src.pendientes.length && !per.size) UI.showToast(`Vincula los asesores con su código Neotel en Ajustes › Productividad para empezar a cargar.`, 'warning', 9000);
+                    ok = true;
                 } catch (e) {
                     console.error(e);
                     if (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'AuthRequired') { ProdSync.needsPermission = true; ProdSync.stop(); }
@@ -4338,6 +4442,7 @@
                     else UI.showToast("No se pudo sincronizar la productividad: " + e.message, 'error', 9000);
                     ProdSync.lastResult = 'Error: ' + e.message;
                 } finally {
+                    if (ok && ProdSync.src) await ProdSync.markRun();
                     ProdSync.busy = false; ProdSync.progress = ''; ProdSync.renderStatus(); ProdSync.renderSettings();
                 }
             },
@@ -4362,7 +4467,7 @@
                 if (!ProdSync.allowed() || !ProdSync.src) { box.style.display = 'none'; return; }
                 box.style.display = '';
                 if (ProdSync.needsPermission) { box.innerHTML = `<button class="sync-resume" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> ${ProdSync.src.kind === 'url' ? 'Iniciar sesión para productividad' : 'Reanudar productividad'}</button>`; return; }
-                box.innerHTML = `<span class="sync-dot ${ProdSync.busy ? 'busy' : ''}"></span><span>${ProdSync.busy ? esc(ProdSync.progress || 'Revisando…') : `Productividad al día${ProdSync.lastCheck ? ` <span style="opacity:.7">· ${esc(Sync.ago(ProdSync.lastCheck))}</span>` : ''}`}</span>`;
+                box.innerHTML = `<span class="sync-dot ${ProdSync.busy ? 'busy' : ''}"></span><span>${ProdSync.busy ? esc(ProdSync.progress || 'Revisando…') : `Productividad: próxima ${esc(ProdSync.fmtWhen(ProdSync.nextRun()))}`}</span>`;
                 box.title = ProdSync.lastResult || '';
             },
 
@@ -4386,7 +4491,7 @@
                     pane.innerHTML = `
                         <div class="panel-soft" style="max-width:760px;">
                             <h3 class="panel-title">Elige de dónde se lee la productividad</h3>
-                            <p class="hint" style="margin-bottom:12px;">Se lee la hoja "${ProdSync.SHEET}" (solo los totales diarios) y se guardan únicamente los asesores vinculados con su código Neotel. Se revisa cada ${ProdSync.INTERVAL_MIN} minutos y solo se carga lo que cambió.</p>
+                            <p class="hint" style="margin-bottom:12px;">Se lee la hoja "${ProdSync.SHEET}" (solo los totales diarios) y se guardan únicamente los asesores vinculados con su código Neotel. Se actualiza según el horario de abajo y solo se carga lo que cambió.</p>
                             <h4 style="font-size:13px; font-weight:600; margin-bottom:4px;">En esta PC</h4>
                             <p class="hint" style="margin-bottom:10px;">Incluye archivos sincronizados de OneDrive, SharePoint o Google Drive para escritorio. Si cada mes hay un Excel nuevo, vincula la carpeta: se toma el más reciente.</p>
                             ${ProdSync.localOk() ? `
@@ -4403,7 +4508,7 @@
                                 <button class="btn-action" id="prodUrlBtn"><i class="fas fa-link"></i> Vincular enlace</button>
                             </div>
                             ${ProdSync._prev ? `<button class="btn-action" style="margin-top:14px;" onclick="ProdSync.cancelChange()">Cancelar y seguir con ${esc(ProdSync._prev.name)}</button>` : ''}
-                        </div>${metricsBox}`;
+                        </div>${ProdSync.horarioBox()}${metricsBox}`;
                     return ProdSync.bindSettings();
                 }
                 const s = ProdSync.src;
@@ -4423,8 +4528,8 @@
                                 <p class="hint">Solo afecta la lista de sugerencias. Se cargan todos los días de los asesores vinculados, sin importar la cola.</p></div>
                         </div>
                         <button class="btn-action" id="prodApply"><i class="fas fa-filter"></i> Guardar y revisar</button>
-                        <p style="font-size:13px; margin:14px 0 6px;"><strong>Estado:</strong> ${ProdSync.needsPermission ? 'esperando permiso de lectura' : ProdSync.busy ? esc(ProdSync.progress) : `activo, revisa cada ${ProdSync.INTERVAL_MIN} minutos`}</p>
-                        <p style="font-size:13px; margin-bottom:6px;"><strong>Última revisión:</strong> ${ProdSync.lastCheck ? esc(ProdSync.lastCheck.toLocaleString()) : '—'}</p>
+                        <p style="font-size:13px; margin:14px 0 6px;"><strong>Estado:</strong> ${ProdSync.needsPermission ? 'esperando permiso de lectura' : ProdSync.busy ? esc(ProdSync.progress) : `activo; próxima actualización ${esc(ProdSync.fmtWhen(ProdSync.nextRun()))}`}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Última actualización:</strong> ${ProdSync.lastRun() ? esc(ProdSync.lastRun().toLocaleString('es-GT')) : '—'}</p>
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(ProdSync.lastResult || '—')}</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
                             ${ProdSync.needsPermission ? `<button class="btn-action btn-primary" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> Reanudar</button>` : `<button class="btn-action btn-primary" onclick="ProdSync.check(true)" ${ProdSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Sincronizar ahora</button>`}
@@ -4447,7 +4552,7 @@
                         <button class="btn-action btn-primary" style="margin-top:12px;" onclick="ProdSync.saveLinks()"><i class="fas fa-link"></i> Guardar vínculos y cargar</button>`
                         : `<p class="hint">${vinculados.length ? 'Todos los asesores de la cola están vinculados.' : 'Se mostrarán aquí después de la primera lectura del archivo.'}</p>`}
                         ${vinculados.length ? `<details style="margin-top:12px;"><summary class="hint" style="cursor:pointer;">Ver vinculados</summary><div class="hint" style="line-height:1.8;">${vinculados.map(u => `${esc(u.codigo_neotel)} · ${esc(u.nombre)}`).join('<br>')}</div><p class="hint">Para cambiar un código, edita el usuario en la pestaña Usuarios.</p></details>` : ''}
-                    </div>${metricsBox}`;
+                    </div>${ProdSync.horarioBox()}${metricsBox}`;
                 ProdSync.bindSettings();
             },
             bindSettings: () => {
@@ -4461,6 +4566,11 @@
                     Object.assign(ProdSync.src, { anio, areaDestino: $('prodArea').value, colaSugerir: $('prodCola').value, seen: null });
                     await ProdSync.save(); ProdSync.check(true);
                 };
+                const hm = $('prodHorModo');
+                if (hm) hm.onchange = () => { $('prodHorCadaBox').style.display = hm.value === 'intervalo' ? '' : 'none'; $('prodHorHorasBox').style.display = hm.value === 'intervalo' ? 'none' : ''; };
+                const ha = $('prodHorAdd');
+                if (ha) ha.onclick = () => ha.insertAdjacentHTML('beforebegin', `<span style="display:inline-flex; gap:4px; align-items:center;"><input type="time" class="prod-hora" value="12:00" style="width:auto;"><button class="btn-action" style="padding:6px 9px;" title="Quitar" onclick="this.parentElement.remove()">✕</button></span>`);
+                const hsv = $('prodHorSave'); if (hsv) hsv.onclick = ProdSync.saveHorario;
                 const vs = $('prodVisSave');
                 if (vs) vs.onclick = async () => {
                     const visibles = [...document.querySelectorAll('.prod-vis:checked')].map(c => c.value);
