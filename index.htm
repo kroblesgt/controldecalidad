@@ -584,8 +584,9 @@
             <div id="viewProd" class="view-section">
                 <div class="prod-controls">
                     <div class="form-group"><label>Periodo</label>
-                        <select id="prodPeriodo" class="filter-select"><option value="dia">Día</option><option value="semana">Semana</option><option value="mes">Mes</option><option value="anio">Año</option></select></div>
-                    <div class="form-group"><label>&nbsp;</label><select id="prodValor" class="filter-select"></select></div>
+                        <select id="prodPeriodo" class="filter-select"><option value="dia">Fecha</option><option value="semana">Semana</option><option value="mes">Mes</option><option value="anio">Año</option></select></div>
+                    <div class="form-group" id="prodValorBox"><label>&nbsp;</label><select id="prodValor" class="filter-select"></select></div>
+                    <div class="form-group" id="prodFechaBox" style="display:none;"><label>&nbsp;</label><input type="date" id="prodFecha" class="filter-select" style="padding:7px 10px;"></div>
                     <div class="form-group"><label>Vista</label>
                         <select id="prodVista" class="filter-select"><option value="tabla">Tabla del periodo</option><option value="tendencia">Tendencia por semana</option></select></div>
                     <div class="form-group" id="prodMetricaBox" style="display:none;"><label>Indicador</label><select id="prodMetrica" class="filter-select"></select></div>
@@ -4189,9 +4190,9 @@
             resume: async () => {
                 if (!ProdSync.src) return;
                 if (ProdSync.src.kind === 'url') {
-                    try { await Remote.token(true); ProdSync.needsPermission = false; ProdSync.start(); }
+                    try { await Remote.token(true); ProdSync.needsPermission = false; ProdSync.start(true); }
                     catch (e) { UI.showToast(e.message, 'warning'); }
-                } else if ((await ProdSync.src.handle.requestPermission({ mode: 'read' })) === 'granted') { ProdSync.needsPermission = false; ProdSync.start(); }
+                } else if ((await ProdSync.src.handle.requestPermission({ mode: 'read' })) === 'granted') { ProdSync.needsPermission = false; ProdSync.start(true); }
                 ProdSync.renderStatus(); ProdSync.renderSettings();
             },
 
@@ -4318,7 +4319,8 @@
                 return bestScore >= 2 && !tie ? best : null;
             },
 
-            check: async (force = false) => {
+            /** force: leer aunque el archivo no haya cambiado. rewrite: escribir todo aunque ya esté igual en Firebase (botón "Sincronizar ahora"). */
+            check: async (force = false, rewrite = false) => {
                 if (ProdSync.busy || !ProdSync.src || !ProdSync.allowed()) return;
                 ProdSync.busy = true; ProdSync.progress = 'Revisando…'; ProdSync.renderStatus(); ProdSync.renderSettings();
                 let ok = false;
@@ -4411,7 +4413,7 @@
                         Object.entries(p.dias).forEach(([mm, dias]) => docs.push([`${codigo}_${anio}_${mm}`, { ...base, tipo: 'mes', mes: mm, dias: Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, prodRound(v)])) }]));
                         for (const [id, data] of docs) {
                             const h = await hash(data);
-                            if (cache[id] === h) continue;   // solo se escribe lo que cambió, aun al sincronizar manualmente
+                            if (cache[id] === h && !rewrite) continue;   // las actualizaciones automáticas solo escriben lo que cambió
                             ops.push({ id, data: { ...data, h, actualizado: ahora } });
                             cache[id] = h;
                         }
@@ -4533,7 +4535,7 @@
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Última actualización:</strong> ${ProdSync.lastRun() ? esc(ProdSync.lastRun().toLocaleString('es-GT')) : '—'}</p>
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(ProdSync.lastResult || '—')}</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
-                            ${ProdSync.needsPermission ? `<button class="btn-action btn-primary" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> Reanudar</button>` : `<button class="btn-action btn-primary" onclick="ProdSync.check(true)" ${ProdSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Sincronizar ahora</button>`}
+                            ${ProdSync.needsPermission ? `<button class="btn-action btn-primary" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> Reanudar</button>` : `<button class="btn-action btn-primary" onclick="ProdSync.check(true, true)" ${ProdSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Sincronizar ahora</button>`}
                             <button class="btn-action" onclick="ProdSync.changeSource()">Cambiar fuente</button>
                             <button class="btn-action btn-danger-soft" onclick="ProdSync.unlink()">Desvincular</button>
                         </div>
@@ -4614,12 +4616,27 @@
                 return (Prod.cache.meses[mm] = snap.docs.map(d => d.data()));
             },
 
+            /** Explica por qué no hay datos y ofrece la acción que lo resuelve. */
+            emptyHelp: (anio) => {
+                if (!ProdSync.allowed()) return `<div class="callout">Todavía no hay productividad de ${anio} para mostrar. Pide a tu líder que la cargue.</div>`;
+                const s = ProdSync.src;
+                const vinc = Object.values(State.usersMap).filter(u => u.codigo_neotel).length;
+                const btn = (txt, fn, primary = true) => `<button class="btn-action ${primary ? 'btn-primary' : ''}" onclick="${fn}">${txt}</button>`;
+                const abrirAjustes = `document.getElementById('btnSettings').click(); App.switchSettingsTab('tabProd')`;
+                let why, acts;
+                if (!s) { why = 'Este navegador no tiene vinculado el archivo de productividad.'; acts = btn('<i class="fas fa-link"></i> Vincular archivo', abrirAjustes); }
+                else if (ProdSync.busy) { why = `Cargando el archivo: ${esc(ProdSync.progress || 'revisando…')}`; acts = ''; }
+                else if (ProdSync.needsPermission) { why = `El navegador pide permiso para leer "${esc(s.name)}" (lo pide una vez por sesión).`; acts = btn('<i class="fas fa-rotate"></i> Dar permiso y cargar ahora', 'ProdSync.resume()'); }
+                else if (!vinc) { why = 'Ningún asesor tiene código Neotel todavía, así que no se carga a nadie.'; acts = btn('<i class="fas fa-link"></i> Vincular asesores', abrirAjustes); }
+                else { why = `Hay ${vinc} asesor(es) vinculados, pero aún no se ha guardado su productividad de ${anio}.${ProdSync.lastResult ? ` Último resultado: ${esc(ProdSync.lastResult)}` : ''}`; acts = btn('<i class="fas fa-rotate"></i> Cargar ahora', 'ProdSync.check(true, true)') + btn('Ver ajustes', abrirAjustes, false); }
+                return `<div class="callout warn"><strong>Todavía no hay productividad de ${anio}.</strong> ${why}${acts ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">${acts}</div>` : ''}</div>`;
+            },
             visibles: () => (State.prodCfg?.visibles || PROD_DEFAULT_VISIBLES).map(id => PROD_METRICS.find(m => m.id === id)).filter(Boolean),
 
             /** Opciones del selector según el periodo. */
             options: (docs, periodo) => {
                 if (periodo === 'semana') return uniq(docs.flatMap(d => Object.keys(d.semanas || {}))).sort((a, b) => weekNum(b) - weekNum(a)).map(w => ({ v: w, l: `Semana ${weekNum(w)}` }));
-                if (periodo === 'mes' || periodo === 'dia') return uniq(docs.flatMap(d => Object.keys(d.meses || {}))).sort().reverse().map(m => ({ v: m, l: MESES[Number(m) - 1] }));
+                if (periodo === 'mes') return uniq(docs.flatMap(d => Object.keys(d.meses || {}))).sort().reverse().map(m => ({ v: m, l: MESES[Number(m) - 1] }));
                 return [{ v: 'anio', l: 'Todo el año' }];
             },
 
@@ -4640,7 +4657,8 @@
                 if (!opts.some(o => o.v === ui.valor)) ui.valor = opts[0]?.v || '';
                 $('prodPeriodo').value = ui.periodo;
                 $('prodValor').innerHTML = opts.map(o => `<option value="${esc(o.v)}" ${o.v === ui.valor ? 'selected' : ''}>${esc(o.l)}</option>`).join('');
-                $('prodValor').style.display = ui.periodo === 'anio' ? 'none' : '';
+                $('prodValorBox').style.display = ['anio', 'dia'].includes(ui.periodo) || !opts.length ? 'none' : '';
+                $('prodFechaBox').style.display = ui.periodo === 'dia' ? '' : 'none';
                 $('prodVista').value = ui.vista;
                 const vis = Prod.visibles();
                 $('prodMetrica').innerHTML = vis.map(m => `<option value="${m.id}" ${m.id === ui.metrica ? 'selected' : ''}>${esc(m.lbl)}</option>`).join('');
@@ -4652,7 +4670,7 @@
                     if (totalLeidos) msg = `<div class="callout">Hay ${totalLeidos} asesor(es) con productividad en ${anio}, pero ninguno coincide con la búsqueda o el área elegida, o están de baja.</div>`;
                     else if (MODO_PRUEBA) msg = `<div class="callout warn"><strong>Estás en modo prueba.</strong> Aquí solo aparece la productividad cargada en prueba, y todavía no hay. Los asesores sí ven los datos reales.
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;"><button class="btn-action btn-primary" onclick="TestMode.toggle(false)">Salir del modo prueba y ver los datos reales</button><button class="btn-action" onclick="TestMode.copyReal()">Copiar los datos reales a prueba</button></div></div>`;
-                    else msg = `<div class="callout">Todavía no hay productividad de ${anio} para mostrar. ${ProdSync.allowed() ? 'Vincula el archivo y los asesores en Ajustes › Productividad.' : 'Pide a tu líder que la cargue.'}</div>`;
+                    else msg = Prod.emptyHelp(anio);
                     box.innerHTML = msg;
                     return;
                 }
@@ -4661,14 +4679,18 @@
                 // Filas del periodo elegido
                 let filas;
                 if (ui.periodo === 'dia') {
-                    const meses = await Prod.loadMonth(anio, ui.valor);
-                    const dias = uniq(meses.flatMap(m => Object.keys(m.dias || {}))).sort();
-                    const sel = $('prodDia');
-                    const prevDia = sel?.value;
-                    filas = { dias, meses };
-                    const dia = dias.includes(prevDia) ? prevDia : dias[dias.length - 1];
-                    const rows = meses.filter(m => docs.some(d => d.codigo === m.codigo)).map(m => ({ nombre: m.nombre, b: m.dias?.[dia] || null })).filter(r => r.b);
-                    return Prod.drawTable(rows, vis, `<select id="prodDia" class="filter-select" style="margin-left:8px;">${dias.map(d => `<option value="${d}" ${d === dia ? 'selected' : ''}>${new Date(d + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric', month: 'short' })}</option>`).join('')}</select>`, `Día ${dia}`);
+                    // Por defecto: el último día con datos del año
+                    if (!ui.fecha || Number(ui.fecha.slice(0, 4)) !== anio) {
+                        const ultimoMes = uniq(docs.flatMap(d => Object.keys(d.meses || {}))).sort().pop();
+                        const delMes = ultimoMes ? await Prod.loadMonth(anio, ultimoMes) : [];
+                        ui.fecha = uniq(delMes.flatMap(m => Object.keys(m.dias || {}))).sort().pop() || `${anio}-01-01`;
+                    }
+                    const inp = $('prodFecha');
+                    inp.min = `${anio}-01-01`; inp.max = `${anio}-12-31`; inp.value = ui.fecha;
+                    const meses = await Prod.loadMonth(anio, ui.fecha.slice(5, 7));
+                    const rows = meses.filter(m => docs.some(d => d.codigo === m.codigo)).map(m => ({ nombre: m.nombre, b: m.dias?.[ui.fecha] || null })).filter(r => r.b);
+                    const titulo = new Date(ui.fecha + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                    return Prod.drawTable(rows, vis, '', titulo.charAt(0).toUpperCase() + titulo.slice(1), 'Sin datos ese día (fin de semana, feriado o aún no cargado).');
                 }
                 const pick = (d) => ui.periodo === 'semana' ? d.semanas?.[ui.valor] : ui.periodo === 'mes' ? d.meses?.[ui.valor] : d.total;
                 const rows = docs.map(d => ({ nombre: d.nombre, b: pick(d) || null })).filter(r => r.b);
@@ -4676,7 +4698,7 @@
                 Prod.drawTable(rows, vis, '', titulo);
             },
 
-            drawTable: (rows, vis, extraCtl, titulo) => {
+            drawTable: (rows, vis, extraCtl, titulo, vacio = 'Sin datos en este periodo.') => {
                 rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
                 const team = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
                 $('prodContent').innerHTML = `
@@ -4685,12 +4707,11 @@
                         <div class="table-scroll">
                             <table class="prod-table">
                                 <thead><tr><th>Asesor</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
-                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, 'Sin datos en este periodo.')}</tbody>
+                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
                                 ${rows.length ? `<tfoot><tr><td>Equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
                             </table>
                         </div>
                     </div>`;
-                const dsel = $('prodDia'); if (dsel) dsel.onchange = () => Prod.draw();
                 Prod.lastExport = { titulo, cols: vis, rows, team };
             },
 
@@ -4969,6 +4990,7 @@
         $('btnTestCopy').addEventListener('click', TestMode.copyReal);
         $('btnTestClear').addEventListener('click', TestMode.clear);
         $('prodPeriodo').addEventListener('change', (e) => { Prod.ui.periodo = e.target.value; Prod.ui.valor = ''; if (e.target.value === 'dia') Prod.ui.vista = 'tabla'; Prod.draw(); });
+        $('prodFecha').addEventListener('change', (e) => { if (e.target.value) { Prod.ui.fecha = e.target.value; Prod.draw(); } });
         $('prodValor').addEventListener('change', (e) => { Prod.ui.valor = e.target.value; Prod.draw(); });
         $('prodVista').addEventListener('change', (e) => { Prod.ui.vista = e.target.value; Prod.draw(); });
         $('prodMetrica').addEventListener('change', (e) => { Prod.ui.metrica = e.target.value; Prod.draw(); });
