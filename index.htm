@@ -2618,8 +2618,10 @@
                 const sheetRows = {};
                 const sheetsFound = workbook.SheetNames.filter(n => {
                     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[n], { header: 1, raw: true });
-                    // Cuenta como hoja de resultados si tiene un encabezado con al menos 2 semanas (S1, S2…)
-                    if (!rows.some(r => detectHeader(r) && Array.from(r || [], x => norm(x)).filter(x => Importer.weekFromHeader(x, false)).length >= 2)) return false;
+                    // Cuenta como hoja de resultados si tiene un encabezado con semanas: una tabla con columna Asesor basta con 1 semana (p. ej. solo S44);
+                    // una tabla dinámica necesita al menos 2 (S1, S2…) para no confundirla con otras hojas.
+                    if (!rows.some(r => { const h = detectHeader(r); if (!h) return false;
+                        return h.mode === 'table' ? h.allWeeks.length >= 1 : Array.from(r || [], x => norm(x)).filter(x => Importer.weekFromHeader(x, false)).length >= 2; })) return false;
                     sheetRows[n] = rows; return true;
                 });
                 const sheetUsed = (sheet && sheetsFound.includes(sheet)) ? sheet
