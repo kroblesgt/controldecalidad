@@ -4110,11 +4110,11 @@
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
-            /** Analiza las filas: devuelve { porFila: Map(nombre -> [hallazgos]), malas: Set('nombre|id') }. */
-            analizar: (rows) => {
+            /** Analiza las filas, solo con los indicadores visibles: devuelve { porFila: Map(nombre -> [hallazgos]), malas: Set('nombre|id') }. */
+            analizar: (rows, metricas = Prod.visibles()) => {
                 const c = Mejora.cfg(), porFila = new Map(), malas = new Set();
                 const conEquipo = rows.length >= 3 && Scope.hasTeamView();   // comparar con el equipo solo si hay equipo
-                PROD_METRICS.forEach(m => {
+                metricas.forEach(m => {
                     const { dir, meta } = Mejora.regla(m);
                     if (!dir) return;
                     const vals = rows.map(r => Mejora.valor(m, r.b)).filter(v => v !== null);
@@ -4171,7 +4171,7 @@
                 return `
                     <div class="panel-soft" style="max-width:760px; margin-top:16px;">
                         <h3 class="panel-title">Metas y áreas de mejora</h3>
-                        <p class="hint" style="margin-bottom:10px;">Cada asesor recibe automáticamente sus áreas de mejora del periodo que se esté viendo. Si un indicador tiene meta, se compara con la meta; si no, con el promedio del equipo.</p>
+                        <p class="hint" style="margin-bottom:10px;">Cada asesor recibe automáticamente sus áreas de mejora del periodo que se esté viendo, solo de los indicadores marcados como visibles. Si un indicador tiene meta, se compara con la meta; si no, con el promedio del equipo.</p>
                         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-size:13px;">
                             <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="mejoraAuto" ${c.auto ? 'checked' : ''} ${can ? '' : 'disabled'}> Sin meta: comparar con el promedio del equipo</label>
                             <label style="display:flex; gap:6px; align-items:center;">Margen <input type="number" id="mejoraMargen" min="0" max="100" value="${esc(c.margen)}" style="width:70px; padding:5px 8px;" ${can ? '' : 'disabled'}> %</label>
@@ -4895,7 +4895,7 @@
             drawTable: (rows, vis, extraCtl, titulo, vacio = 'Sin datos en este periodo.') => {
                 rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
                 const team = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
-                const an = Mejora.analizar(rows);
+                const an = Mejora.analizar(rows, vis);
                 $('prodContent').innerHTML = `
                     ${Scope.hasTeamView() ? Mejora.resumen(an, rows.length) : ''}
                     <div class="table-card">
