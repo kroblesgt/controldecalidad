@@ -219,7 +219,7 @@
         .score-badge.is-text { font-size: 10px; font-weight: 600; min-width: 0; max-width: 100%; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 28px; max-width: 88px; }
         .single-area .area-lbl { display: none; }
         /* --- SINCRONIZACIÓN --- */
-        .test-banner { background: repeating-linear-gradient(-45deg, #F6C453, #F6C453 14px, #F2B93B 14px, #F2B93B 28px); color: #3A2600; padding: 8px 32px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .test-banner { position: sticky; top: 0; z-index: 50; background: repeating-linear-gradient(-45deg, #F6C453, #F6C453 14px, #F2B93B 14px, #F2B93B 28px); color: #3A2600; padding: 8px 32px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
         .test-banner button { background: #3A2600; color: #FFF6DE; border: none; border-radius: var(--radius-sm); padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
         .sync-drop { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 22px; text-align: center; display: flex; flex-direction: column; gap: 4px; align-items: center; color: var(--text-muted); font-size: 12px; margin-bottom: 12px; background: var(--surface); transition: background 0.15s, border-color 0.15s; }
         .sync-drop i { font-size: 22px; color: var(--brand-blue); margin-bottom: 4px; }
@@ -1575,6 +1575,7 @@
                 $('statusFilter').style.display = ['viewMatriz', 'viewGerencial'].includes(viewId) ? '' : 'none';
                 $('weekFilter').style.display = ['viewBajas', 'viewAgente', 'viewProd'].includes(viewId) ? 'none' : '';
                 document.querySelector('.search-box').style.display = viewId === 'viewAgente' ? 'none' : '';
+                if (viewId === 'viewProd') Prod.cache = { anio: null, docs: null, meses: {} };   // al entrar siempre se lee lo último
                 refreshActiveView();
             },
 
@@ -4598,7 +4599,7 @@
                 return [where('area', 'in', a.length ? a : ['__ninguna__'])];
             },
             loadYear: async (anio) => {
-                if (Prod.cache.anio === anio && Prod.cache.docs) return Prod.cache.docs;
+                if (Prod.cache.anio === anio && Prod.cache.docs?.length) return Prod.cache.docs;   // un resultado vacío no se guarda: se vuelve a consultar
                 const base = [where('tipo', '==', 'anio'), where('anio', '==', anio)];
                 const q = query(collection(db, COL_PROD), ...base, ...Prod.scopeFilter());
                 const snap = await getDocs(q);
@@ -4630,6 +4631,7 @@
                 let docs;
                 try { docs = await Prod.loadYear(anio); }
                 catch (e) { console.error(e); box.innerHTML = `<div class="callout warn">No se pudo cargar la productividad (${esc(e.message)}).</div>`; return; }
+                const totalLeidos = docs.length;
                 docs = docs.filter(d => Scope.inView(d.area) && Filters.matchArea(d.area, f) && String(d.nombre).toLowerCase().includes(f.search) && !isInactiveEstado(normalizeEstado(State.estadosAgentes[d.nombre])));
 
                 // Controles
@@ -4646,7 +4648,12 @@
                 $('prodMetricaBox').style.display = ui.vista === 'tendencia' ? '' : 'none';
 
                 if (!docs.length) {
-                    box.innerHTML = `<div class="callout">Todavía no hay productividad de ${anio} para mostrar. ${ProdSync.allowed() ? 'Vincula el archivo y los asesores en Ajustes › Productividad.' : 'Pide a tu líder que la cargue.'}</div>`;
+                    let msg;
+                    if (totalLeidos) msg = `<div class="callout">Hay ${totalLeidos} asesor(es) con productividad en ${anio}, pero ninguno coincide con la búsqueda o el área elegida, o están de baja.</div>`;
+                    else if (MODO_PRUEBA) msg = `<div class="callout warn"><strong>Estás en modo prueba.</strong> Aquí solo aparece la productividad cargada en prueba, y todavía no hay. Los asesores sí ven los datos reales.
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;"><button class="btn-action btn-primary" onclick="TestMode.toggle(false)">Salir del modo prueba y ver los datos reales</button><button class="btn-action" onclick="TestMode.copyReal()">Copiar los datos reales a prueba</button></div></div>`;
+                    else msg = `<div class="callout">Todavía no hay productividad de ${anio} para mostrar. ${ProdSync.allowed() ? 'Vincula el archivo y los asesores en Ajustes › Productividad.' : 'Pide a tu líder que la cargue.'}</div>`;
+                    box.innerHTML = msg;
                     return;
                 }
                 if (ui.vista === 'tendencia') return Prod.drawTrend(docs, vis);
