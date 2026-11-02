@@ -1163,6 +1163,30 @@
 
         const chunk = (arr, size) => { const out = []; for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size)); return out; };
 
+        /**
+         * Guarda documentos grandes en lotes pequeños. Firestore rechaza un lote demasiado pesado
+         * ("Transaction too big"): se limita a ~10 documentos o ~1 MB por lote, y se avisa el avance.
+         */
+        const commitLargeDocs = async (col, items, onProgress) => {
+            let group = [], size = 0, done = 0;
+            const flush = async () => {
+                if (!group.length) return;
+                const b = writeBatch(db);
+                group.forEach(o => b.set(doc(db, col, o.id), o.data));
+                await b.commit();
+                done += group.length; group = []; size = 0;
+                if (onProgress) onProgress(done, items.length);
+            };
+            // Peso aproximado: bytes del documento + índice que Firestore crea por cada campo (~300 bytes por campo)
+            const leaves = (v) => v && typeof v === 'object' ? Object.values(v).reduce((n, x) => n + leaves(x), 0) : 1;
+            for (const o of items) {
+                const cost = JSON.stringify(o.data).length + leaves(o.data) * 300;
+                if (group.length && (group.length >= 10 || size + cost > 2000000)) await flush();
+                group.push(o); size += cost;
+            }
+            await flush();
+        };
+
         /** Ejecuta operaciones en lotes de Firestore (máx. 450 por lote). */
         const commitInBatches = async (ops) => {
             for (const group of chunk(ops, MAX_BATCH)) {
@@ -3811,7 +3835,7 @@
                     let n = 0;
                     for (const [real, prueba] of [["notas_calidad", COL_NOTAS], ["productividad", COL_PROD]]) {
                         const snap = await getDocs(query(collection(db, real), where("anio", "==", anio)));
-                        await commitInBatches(snap.docs.map(d => (b) => b.set(doc(db, prueba, d.id), d.data())));
+                        await commitLargeDocs(prueba, snap.docs.map(d => ({ id: d.id, data: d.data() })));
                         n += snap.size;
                     }
                     st.innerText = `${n} registros copiados a prueba.`;
@@ -4420,7 +4444,7 @@
                         }
                     }
                     ProdSync.progress = `Guardando ${ops.length} registro(s) en Firebase…`; ProdSync.renderStatus();
-                    try { if (ops.length) await commitInBatches(ops.map(o => (b) => b.set(doc(db, COL_PROD, o.id), o.data))); }
+                    try { if (ops.length) await commitLargeDocs(COL_PROD, ops, (n, t) => { ProdSync.progress = `Guardando en Firebase ${n} de ${t}…`; ProdSync.renderStatus(); }); }
                     catch (e) {
                         if (e.code === 'permission-denied') throw new Error('Firebase rechazó el guardado por permisos. Revisa que estén publicadas las reglas v5 (Firebase Console › Firestore › Reglas) y que tu rol tenga "Cargar productividad".');
                         throw new Error('Firebase no pudo guardar: ' + e.message);
@@ -4430,7 +4454,7 @@
                     if (enFirebase < per.size && ops.length < todos.length) {
                         // Faltan asesores en Firebase aunque este navegador creía haberlos guardado: se reescribe todo
                         ProdSync.progress = `Completando ${todos.length} registro(s) en Firebase…`; ProdSync.renderStatus();
-                        await commitInBatches(todos.map(o => (b) => b.set(doc(db, COL_PROD, o.id), o.data)));
+                        await commitLargeDocs(COL_PROD, todos, (n, t) => { ProdSync.progress = `Guardando en Firebase ${n} de ${t}…`; ProdSync.renderStatus(); });
                         ops.length = 0; ops.push(...todos);
                         enFirebase = await ProdSync.countSaved(anio);
                     }
