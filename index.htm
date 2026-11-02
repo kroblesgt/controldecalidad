@@ -219,11 +219,23 @@
         .score-badge.is-text { font-size: 10px; font-weight: 600; min-width: 0; max-width: 100%; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 28px; max-width: 88px; }
         .single-area .area-lbl { display: none; }
         /* --- SINCRONIZACIÓN --- */
+        .test-banner { background: repeating-linear-gradient(-45deg, #F6C453, #F6C453 14px, #F2B93B 14px, #F2B93B 28px); color: #3A2600; padding: 8px 32px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .test-banner button { background: #3A2600; color: #FFF6DE; border: none; border-radius: var(--radius-sm); padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
         .sync-drop { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 22px; text-align: center; display: flex; flex-direction: column; gap: 4px; align-items: center; color: var(--text-muted); font-size: 12px; margin-bottom: 12px; background: var(--surface); transition: background 0.15s, border-color 0.15s; }
         .sync-drop i { font-size: 22px; color: var(--brand-blue); margin-bottom: 4px; }
         .sync-drop strong { color: var(--text-main); font-size: 14px; }
         .sync-drop.over { border-color: var(--brand-blue); background: var(--primary-soft); }
         .sync-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+        .prod-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+        .prod-controls .form-group { margin: 0; }
+        .prod-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .prod-table th, .prod-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        .prod-table th { position: sticky; top: 0; background: var(--surface-2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); text-align: left; z-index: 1; }
+        .prod-table th:first-child, .prod-table td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 2; max-width: 260px; }
+        .prod-table th:first-child { background: var(--surface-2); z-index: 3; }
+        .prod-table .num-col { text-align: right; font-variant-numeric: tabular-nums; }
+        .prod-table tbody tr:hover td { background: var(--surface-2); }
+        .prod-table tfoot td { background: var(--surface-2); font-weight: 600; border-top: 1px solid var(--border-strong); }
         .sync-sidebar { margin: 4px 12px 0; font-size: 12px; color: var(--sidebar-text); display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
         .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #5FD08A; flex-shrink: 0; }
         .sync-dot.busy { background: var(--brand-blue); animation: alertPulse 1.2s infinite; }
@@ -284,7 +296,7 @@
         .form-group textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
         .hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
 
-        .settings-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 22px; gap: 4px; overflow-x: auto; }
+        .settings-tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 22px; gap: 2px 4px; }
         .tab-btn { padding: 10px 12px; background: transparent; border: none; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
         .tab-btn:hover { color: var(--text-main); }
         .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
@@ -369,12 +381,14 @@
             <div class="nav-item" id="navGerencial" data-view="viewGerencial" style="display:none;" tabindex="0"><i class="fas fa-chart-line"></i> Tablero</div>
             <div class="nav-item" id="navFirmas" data-view="viewFirmas" style="display:none;" tabindex="0"><i class="fas fa-file-signature"></i> Firmas <span class="nav-count" id="navFirmasCount" style="display:none;"></span></div>
             <div class="nav-item" id="navNps" data-view="viewNps" style="display:none;" tabindex="0"><i class="fas fa-face-smile"></i> Satisfacción</div>
+            <div class="nav-item" id="navProd" data-view="viewProd" style="display:none;" tabindex="0"><i class="fas fa-gauge-high"></i> Productividad</div>
             <div class="nav-item" id="navBajas" data-view="viewBajas" style="display:none;" tabindex="0"><i class="fas fa-user-slash"></i> Asesores de baja <span class="nav-count" id="navBajasCount" style="display:none;"></span></div>
             <div class="nav-group" id="navGroupPersonal" style="display:none;">Personal</div>
             <div class="nav-item" id="navAgente" data-view="viewAgente" style="display:none;" tabindex="0"><i class="fas fa-user"></i> Mi desempeño</div>
         </div>
 
         <div class="sync-sidebar" id="syncSidebar" style="display:none;"></div>
+        <div class="sync-sidebar" id="prodSyncStatus" style="display:none;"></div>
         <div class="upload-area">
             <button class="btn-upload" id="btnSettings" style="display: none;">
                 <i class="fas fa-gear"></i> Ajustes
@@ -399,6 +413,10 @@
 
     <!-- PRINCIPAL -->
     <main class="main">
+        <div id="testBanner" class="test-banner" style="display:none;">
+            <span><i class="fas fa-flask"></i> <strong>Modo prueba</strong> — notas, firmas y productividad se guardan en datos de prueba. Usuarios y ajustes son los reales.</span>
+            <button onclick="TestMode.toggle(false)">Salir del modo prueba</button>
+        </div>
         <header class="topbar">
             <div>
                 <h1 id="mainTitle">Calidad CX</h1>
@@ -560,6 +578,20 @@
                         </table>
                     </div>
                 </div>
+            </div>
+
+            <!-- VISTA: PRODUCTIVIDAD -->
+            <div id="viewProd" class="view-section">
+                <div class="prod-controls">
+                    <div class="form-group"><label>Periodo</label>
+                        <select id="prodPeriodo" class="filter-select"><option value="dia">Día</option><option value="semana">Semana</option><option value="mes">Mes</option><option value="anio">Año</option></select></div>
+                    <div class="form-group"><label>&nbsp;</label><select id="prodValor" class="filter-select"></select></div>
+                    <div class="form-group"><label>Vista</label>
+                        <select id="prodVista" class="filter-select"><option value="tabla">Tabla del periodo</option><option value="tendencia">Tendencia por semana</option></select></div>
+                    <div class="form-group" id="prodMetricaBox" style="display:none;"><label>Indicador</label><select id="prodMetrica" class="filter-select"></select></div>
+                </div>
+                <div id="prodContent"></div>
+                <p class="hint" style="margin-top:10px;">Llamadas y tiempos son la suma del periodo. TMO y porcentajes son el promedio de los días, igual que el reporte de productividad.</p>
             </div>
 
             <!-- VISTA: ASESORES DE BAJA -->
@@ -790,6 +822,7 @@
                     <button class="tab-btn" data-tab="tabAlias">Alias (Calidad)</button>
                     <button class="tab-btn" data-tab="tabOperativas" style="color: var(--primary);">Reglas Operativas</button>
                     <button class="tab-btn" data-tab="tabSync"><i class="fas fa-rotate"></i> Fuente de resultados</button>
+                    <button class="tab-btn" data-tab="tabProd"><i class="fas fa-gauge-high"></i> Productividad</button>
                     <button class="tab-btn" data-tab="tabMantenimiento" style="color: #b91c1c;"><i class="fas fa-broom"></i> Depuración</button>
                 </div>
 
@@ -798,6 +831,7 @@
                     <div style="background: var(--surface-2); padding: 25px; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;">
                         <h3 id="userFormTitle" style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">Nuevo usuario</h3>
                         <div class="form-group"><label>Nombre Completo</label><input type="text" id="newUserName" placeholder="Ej. Dany Alexis Lopez Escalante"></div>
+                        <div class="form-group"><label>Código Neotel (Opcional)</label><input type="text" id="newUserNeotel" placeholder="Ej: 1075" inputmode="numeric"><p class="hint">Liga al asesor con el archivo de productividad.</p></div>
                         <div class="form-group"><label>Correo Electrónico (Opcional)</label><input type="email" id="newUserEmail" placeholder="Dejar en blanco si ya no labora"></div>
                         <div class="form-group" id="passGroup"><label>Contraseña (solo cuentas nuevas)</label><input type="password" id="newUserPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"><p class="hint">Para cambiar la contraseña de una cuenta existente usa el botón <i class="fas fa-key"></i> del directorio.</p></div>
                         <div class="form-group"><label>Rol Operativo</label><select id="newUserRole"></select></div>
@@ -851,6 +885,7 @@
                                     <label><input type="checkbox" class="perm-chk" id="chk_ver_global"> Tablero</label>
                                     <label><input type="checkbox" class="perm-chk" id="chk_ver_firmas"> Firmas</label>
                                     <label><input type="checkbox" class="perm-chk" id="chk_ver_nps"> Satisfacción</label>
+                                    <label><input type="checkbox" class="perm-chk" id="chk_ver_productividad"> Productividad (equipo si ve la matriz o el tablero; si no, solo la suya)</label>
                                     <label><input type="checkbox" class="perm-chk" id="chk_ver_bajas"> Asesores de baja</label>
                                     <label><input type="checkbox" class="perm-chk" id="chk_ver_propio"> Mi desempeño (sus propias notas)</label>
                                 </div>
@@ -862,6 +897,7 @@
                                     <label><input type="checkbox" class="perm-chk" id="chk_editar_notas"> Corregir notas ya registradas</label>
                                     <label><input type="checkbox" class="perm-chk" id="chk_add_feedback"> Escribir feedback</label>
                                     <label><input type="checkbox" class="perm-chk" id="chk_sync_resultados"> Sincronizar resultados desde el Excel</label>
+                                    <label><input type="checkbox" class="perm-chk" id="chk_sync_productividad"> Cargar productividad y elegir indicadores</label>
                                 </div>
                             </section>
                             <section>
@@ -987,8 +1023,23 @@
                     <div id="syncPane"></div>
                 </div>
 
+                <!-- Productividad (archivo, vínculos e indicadores) -->
+                <div id="tabProd" class="settings-pane" style="display: none;">
+                    <div id="prodPane"></div>
+                </div>
+
                 <!-- Depuración (solo Admin) -->
                 <div id="tabMantenimiento" class="settings-pane" style="display: none;">
+                    <div class="panel-soft" style="margin-bottom:20px; border-color:#EED7A6; background:var(--amber-soft);">
+                        <h3 class="panel-title" style="border-color:#EED7A6;"><i class="fas fa-flask"></i> Modo prueba</h3>
+                        <p class="hint" style="margin-bottom:12px;">Para probar cambios sin afectar a los asesores. Mientras está activo (solo en este navegador), notas, firmas, feedback y productividad se leen y guardan en colecciones de prueba. Usuarios, roles y ajustes siguen siendo los reales.</p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-action" id="btnTestToggle"></button>
+                            <button class="btn-action" id="btnTestCopy" style="display:none;"><i class="fas fa-copy"></i> Copiar datos reales del año a prueba</button>
+                            <button class="btn-action btn-danger-soft" id="btnTestClear" style="display:none;"><i class="fas fa-eraser"></i> Vaciar datos de prueba</button>
+                        </div>
+                        <p id="testStatus" class="hint" style="font-weight:600;"></p>
+                    </div>
                     <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; color: #991b1b; font-size: 12px; line-height: 1.6;">
                         <strong style="font-size: 13px;"><i class="fas fa-exclamation-triangle"></i> Depuración masiva de historial</strong><br>
                         Elimina de forma permanente todas las notas (con su feedback, firmas y NPS) de las áreas que marques.
@@ -1058,14 +1109,19 @@
         // CONSTANTES Y UTILIDADES
         // =========================================================
         const $ = (id) => document.getElementById(id);
-        const COL_NOTAS = "notas_calidad";
+        // Modo prueba (solo Admin): los datos operativos se guardan en colecciones "prueba_…".
+        // Usuarios, roles y configuración siguen siendo los reales.
+        const MODO_PRUEBA = (() => { try { return localStorage.getItem('calidadcx_modo_prueba') === '1'; } catch { return false; } })();
+        const COL = (name) => MODO_PRUEBA ? `prueba_${name}` : name;
+        const COL_NOTAS = COL("notas_calidad");
+        const COL_PROD = COL("productividad");
         const DOC_ESTADOS = "estados_agentes";   // Único documento de estados (antes había dos nombres distintos)
         const MAX_BATCH = 450;
 
-        const ALL_PERMS = ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_subir_excel', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_dar_baja', 'chk_reactivar_bajas', 'chk_ver_bajas', 'chk_add_feedback', 'chk_sync_resultados', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks'];
+        const ALL_PERMS = ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_subir_excel', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_dar_baja', 'chk_reactivar_bajas', 'chk_ver_bajas', 'chk_ver_productividad', 'chk_add_feedback', 'chk_sync_resultados', 'chk_sync_productividad', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks'];
         const TEAM_PERMS = ['chk_ver_area', 'chk_ver_global', 'chk_ver_nps', 'chk_ver_firmas', 'chk_ver_bajas', 'chk_subir_excel', 'chk_cfg_usuarios'];
         /** Permiso requerido para abrir cada vista. */
-        const VIEW_PERM = { viewMatriz: 'chk_ver_area', viewGerencial: 'chk_ver_global', viewNps: 'chk_ver_nps', viewFirmas: 'chk_ver_firmas', viewBajas: 'chk_ver_bajas' };
+        const VIEW_PERM = { viewMatriz: 'chk_ver_area', viewGerencial: 'chk_ver_global', viewNps: 'chk_ver_nps', viewFirmas: 'chk_ver_firmas', viewBajas: 'chk_ver_bajas', viewProd: 'chk_ver_productividad' };
         const SETTINGS_TABS = [
             { id: 'tabUsuarios', perm: 'chk_cfg_usuarios' }, { id: 'tabEmpresas', perm: 'chk_cfg_areas' },
             { id: 'tabAreas', perm: 'chk_cfg_areas' }, { id: 'tabRoles', perm: 'chk_cfg_roles' },
@@ -1073,6 +1129,7 @@
             { id: 'tabNps', perm: 'chk_cfg_nps' }, { id: 'tabAlias', perm: 'chk_cfg_usuarios' },
             { id: 'tabOperativas', perm: 'chk_cfg_feedbacks' },
             { id: 'tabSync', perm: 'chk_sync_resultados', also: 'chk_subir_excel' },
+            { id: 'tabProd', perm: 'chk_sync_productividad' },
             { id: 'tabMantenimiento', adminOnly: true }
         ];
         /** Las pestañas marcadas adminOnly solo las ve el rol Admin, sin importar los permisos del rol. */
@@ -1319,10 +1376,11 @@
         const Config = {
             load: async () => {
                 const read = async (id) => { const s = await getDoc(doc(db, "configuracion", id)); return s.exists() ? s.data() : null; };
-                const [empresas, areas, escalas, estadosList, nps, fbRules, alias, m365] = await Promise.all(
-                    ["empresas", "areas", "escalas", "estados_list", "nps", "feedback_rules", "alias_nombres", "m365"].map(read)
+                const [empresas, areas, escalas, estadosList, nps, fbRules, alias, m365, prodCfg] = await Promise.all(
+                    ["empresas", "areas", "escalas", "estados_list", "nps", "feedback_rules", "alias_nombres", "m365", "productividad"].map(read)
                 );
                 State.m365 = m365 || null;
+                State.prodCfg = prodCfg || null;
                 if (empresas?.lista) State.empresas = empresas.lista;
                 if (areas?.lista) State.areas = areas.lista;
                 if (escalas?.lista) State.scales = escalas.lista;
@@ -1374,6 +1432,8 @@
                 UI.updateSelects();
                 UI.renderAreaBadge();
                 App.applyPermissions();
+                if (MODO_PRUEBA && State.user.rol !== 'Admin') { try { localStorage.removeItem('calidadcx_modo_prueba'); } catch {} location.reload(); return; }
+                $('testBanner').style.display = MODO_PRUEBA ? 'flex' : 'none';
                 $('authOverlay').style.display = 'none';
                 $('passwordInput').value = "";
                 UI.showToast(`Hola, ${State.user.nombre.split(' ')[0]}.`, 'info', 2500);
@@ -1400,7 +1460,7 @@
                         snap.forEach(d => {
                             const u = d.data();
                             if (!u.nombre) return;
-                            State.usersMap[u.nombre] = { id: d.id, nombre: u.nombre, areas: u.areas || (u.area ? [u.area] : []), empresas: u.empresas || [], rol: u.rol || "Agente" };
+                            State.usersMap[u.nombre] = { id: d.id, nombre: u.nombre, areas: u.areas || (u.area ? [u.area] : []), empresas: u.empresas || [], rol: u.rol || "Agente", codigo_neotel: u.codigo_neotel ? String(u.codigo_neotel) : '' };
                         });
                         if (State.allRecords.length > 0) App.processRecordsForYear();
                     }, onErr("usuarios"));
@@ -1409,10 +1469,12 @@
                 }
 
                 App.startDataSync();
+                setTimeout(() => ProdSync.init(), 1500);   // espera a que lleguen los usuarios (para los códigos Neotel)
             },
 
             teardown: () => {
                 Sync.stop(); Sync.src = null; $('syncSidebar').style.display = 'none';
+                ProdSync.stop(); ProdSync.src = null; $('prodSyncStatus').style.display = 'none'; Prod.cache = { anio: null, docs: null, meses: {} };
                 Object.values(State.unsub).forEach(u => { if (typeof u === 'function') u(); });
                 Object.values(State.charts).forEach(c => { if (c) c.destroy(); });
                 Object.assign(State, defaultState());
@@ -1438,13 +1500,14 @@
         // =========================================================
         // APP
         // =========================================================
-        const VIEW_NAV = { viewMatriz: 'navMatriz', viewGerencial: 'navGerencial', viewNps: 'navNps', viewFirmas: 'navFirmas', viewBajas: 'navBajas', viewAgente: 'navAgente' };
+        const VIEW_NAV = { viewMatriz: 'navMatriz', viewGerencial: 'navGerencial', viewNps: 'navNps', viewFirmas: 'navFirmas', viewBajas: 'navBajas', viewProd: 'navProd', viewAgente: 'navAgente' };
         const VIEW_SUBTITLES = {
             viewMatriz: 'Notas por semana de cada asesor activo',
             viewGerencial: 'Resumen del equipo y comparación entre semanas',
             viewNps: 'Cómo califican los asesores su evaluación',
             viewFirmas: 'Seguimiento de compromisos firmados',
             viewBajas: 'Historial de asesores inactivos o dados de baja',
+            viewProd: 'Llamadas, TMO y tiempos por día, semana, mes o año',
             viewAgente: 'Notas, feedback y compromisos'
         };
 
@@ -1453,7 +1516,7 @@
                 const canUpload = UI.hasPerm('chk_subir_excel');
                 $('btnImportarPopup').style.display = canUpload ? 'flex' : 'none';
                 $('btnIngresoManual').style.display = canUpload ? 'flex' : 'none';
-                $('btnExportar').style.display = UI.hasAnyPerm(['chk_ver_global', 'chk_ver_area', 'chk_ver_nps', 'chk_ver_firmas']) ? 'flex' : 'none';
+                $('btnExportar').style.display = UI.hasAnyPerm(['chk_ver_global', 'chk_ver_area', 'chk_ver_nps', 'chk_ver_firmas', 'chk_ver_productividad']) ? 'flex' : 'none';
                 $('btnExportUsers').style.display = UI.hasPerm('chk_exportar_usuarios') ? 'inline-flex' : 'none';
                 $('btnImportUsers').style.display = UI.hasPerm('chk_importar_usuarios') ? 'inline-flex' : 'none';
 
@@ -1471,6 +1534,7 @@
                 $('navFirmas').style.display = UI.hasPerm('chk_ver_firmas') ? 'flex' : 'none';
                 $('navAgente').style.display = UI.hasPerm('chk_ver_propio') ? 'flex' : 'none';
                 $('navBajas').style.display = UI.hasPerm('chk_ver_bajas') ? 'flex' : 'none';
+                $('navProd').style.display = UI.hasPerm('chk_ver_productividad') ? 'flex' : 'none';
                 $('navGroupPersonal').style.display = UI.hasPerm('chk_ver_propio') && Scope.hasTeamView() ? 'block' : 'none';
 
                 $('kpiPanel').style.display = Scope.hasTeamView() ? '' : 'none';
@@ -1481,6 +1545,7 @@
                 if (UI.hasPerm('chk_ver_global')) return App.switchView('viewGerencial');
                 if (UI.hasPerm('chk_ver_firmas')) return App.switchView('viewFirmas');
                 if (UI.hasPerm('chk_ver_nps')) return App.switchView('viewNps');
+                if (UI.hasPerm('chk_ver_productividad') && !UI.hasPerm('chk_ver_propio')) return App.switchView('viewProd');
                 App.switchView('viewAgente', true);
             },
 
@@ -1500,6 +1565,7 @@
                     viewNps: 'Satisfacción',
                     viewFirmas: 'Firmas',
                     viewBajas: 'Asesores de baja',
+                    viewProd: 'Productividad',
                     viewAgente: State.viewingAgentName === State.user.nombre ? 'Mi desempeño' : State.viewingAgentName
                 };
                 $('mainTitle').innerText = titles[viewId];
@@ -1507,7 +1573,7 @@
                 $('mainSubtitle').innerText = [areasTxt, VIEW_SUBTITLES[viewId]].filter(Boolean).join(' — ');
                 // Filtros que no aplican en cada vista
                 $('statusFilter').style.display = ['viewMatriz', 'viewGerencial'].includes(viewId) ? '' : 'none';
-                $('weekFilter').style.display = ['viewBajas', 'viewAgente'].includes(viewId) ? 'none' : '';
+                $('weekFilter').style.display = ['viewBajas', 'viewAgente', 'viewProd'].includes(viewId) ? 'none' : '';
                 document.querySelector('.search-box').style.display = viewId === 'viewAgente' ? 'none' : '';
                 refreshActiveView();
             },
@@ -1530,8 +1596,9 @@
                     tabEstados: () => Admin.renderEstados(),
                     tabOperativas: () => Admin.renderFeedbackRules(),
                     tabAlias: () => Admin.renderAlias(),
-                    tabMantenimiento: () => Maintenance.scan(),
-                    tabSync: () => Sync.renderSettings()
+                    tabMantenimiento: () => { TestMode.render(); Maintenance.scan(); },
+                    tabSync: () => Sync.renderSettings(),
+                    tabProd: () => ProdSync.renderSettings()
                 };
                 loaders[tabId]?.();
             },
@@ -1634,6 +1701,7 @@
             exportToExcel: () => {
                 const f = Filters.get();
                 const active = document.querySelector('.view-section.active')?.id;
+                if (active === 'viewProd') return Prod.exportRows();
                 const isBajas = active === 'viewBajas' && UI.hasPerm('chk_ver_bajas');
                 const base = State.records.filter(r => isBajas
                     ? isInactiveEstado(r.estado) && Filters.match(r, f, { week: false, status: false, activeOnly: false })
@@ -2258,7 +2326,7 @@
         const refreshActiveView = () => {
             if (!State.user.nombre) return;
             const active = document.querySelector('.view-section.active')?.id;
-            const map = { viewMatriz: Renders.drawMatrix, viewGerencial: Renders.drawManager, viewNps: Renders.drawNps, viewFirmas: Renders.drawFirmas, viewBajas: Renders.drawBajas, viewAgente: Renders.drawAgent };
+            const map = { viewMatriz: Renders.drawMatrix, viewGerencial: Renders.drawManager, viewNps: Renders.drawNps, viewFirmas: Renders.drawFirmas, viewBajas: Renders.drawBajas, viewProd: Prod.draw, viewAgente: Renders.drawAgent };
             Renders.updateNavCounts();
             map[active]?.();
         };
@@ -2822,7 +2890,7 @@
         window.Remote = Remote;
 
         const Sync = {
-            KEY: 'fuente_resultados',
+            KEY: MODO_PRUEBA ? 'fuente_resultados_prueba' : 'fuente_resultados',
             INTERVAL_MIN: 5,
             src: null,            // { handle, kind: 'file'|'folder', name, anio, seen: { ruta: lastModified } }
             timer: null, busy: false, lastCheck: null, lastResult: null, needsPermission: false,
@@ -3053,7 +3121,7 @@
                         Sync.lastResult = resumen;
                         if (total.nuevas || total.corregidas || total.fbCambios) {
                             UI.showToast(`Resultados sincronizados. ${resumen}`, 'success', 10000);
-                            setDoc(doc(db, "configuracion", "sync_resultados"), { ultima: Sync.lastCheck.toISOString(), por: State.user.nombre, archivo: Sync.src.name, resumen }, { merge: true }).catch(() => {});
+                            if (!MODO_PRUEBA) setDoc(doc(db, "configuracion", "sync_resultados"), { ultima: Sync.lastCheck.toISOString(), por: State.user.nombre, archivo: Sync.src.name, resumen }, { merge: true }).catch(() => {});
                         }
                         if (extra.sinUsuario.size) console.warn("Sincronización — nombres sin usuario:", [...extra.sinUsuario]);
                     }
@@ -3306,7 +3374,7 @@
                     return `<div class="user-row ${State.admin.editingUserId === u.id ? 'selected' : ''}">
                         <div>
                             <div style="font-size:13px; font-weight:600;">${esc(u.nombre)} <span style="font-size:10px; color:var(--text-muted); font-weight:700;">(${esc(u.rol)})</span>${estadoTag}</div>
-                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${idTxt} | Áreas: ${esc(u.areas.join(', '))}</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${idTxt} | Áreas: ${esc(u.areas.join(', '))}${u.codigo_neotel ? ` | Neotel ${esc(u.codigo_neotel)}` : ''}</div>
                             <div style="font-size:10px; color:${u.empresas?.length ? 'var(--primary)' : '#B3261E'}; font-weight:700; margin-top:2px;">[ ${esc(emp)} ]</div>
                         </div>
                         <div style="display:flex; gap:5px;">
@@ -3324,7 +3392,7 @@
             },
 
             resetUserForm: () => {
-                ['newUserName', 'newUserEmail', 'newUserPass'].forEach(id => $(id).value = "");
+                ['newUserName', 'newUserEmail', 'newUserPass', 'newUserNeotel'].forEach(id => $(id).value = "");
                 document.querySelectorAll('.chk-area-user, .chk-empresa-user').forEach(cb => cb.checked = false);
                 State.admin.editingUserId = null;
                 $('userFormTitle').innerText = "Nuevo usuario";
@@ -3341,6 +3409,7 @@
                 State.admin.editingUserId = id;
                 $('newUserName').value = u.nombre || "";
                 $('newUserEmail').value = isHist ? "" : id;
+                $('newUserNeotel').value = u.codigo_neotel || "";
                 $('newUserPass').value = "";
                 $('newUserRole').value = u.rol;
                 // Un histórico puede recibir correo y contraseña para habilitarle acceso.
@@ -3356,6 +3425,10 @@
             handleSaveUser: async () => {
                 const nombre = $('newUserName').value.trim().replace(/\s+/g, ' ');
                 const email = $('newUserEmail').value.trim().toLowerCase();
+                const codigoNeotel = $('newUserNeotel').value.trim();
+                if (codigoNeotel && !/^\d{2,8}$/.test(codigoNeotel)) return alert("El código Neotel debe ser numérico (ej. 1075).");
+                const dupNeotel = codigoNeotel && Object.values(State.usersMap).find(u => u.codigo_neotel === codigoNeotel && u.id !== State.admin.editingUserId);
+                if (dupNeotel) return alert(`El código Neotel ${codigoNeotel} ya está asignado a ${dupNeotel.nombre}.`);
                 const password = $('newUserPass').value;
                 const rol = $('newUserRole').value;
                 const areas = [...document.querySelectorAll('.chk-area-user:checked')].map(cb => cb.value);
@@ -3391,7 +3464,7 @@
                         finally { await signOut(adminAuth).catch(() => {}); }
                     }
 
-                    await setDoc(doc(db, "usuarios", targetId), { nombre, rol, areas, empresas, correo: email }, { merge: true });
+                    await setDoc(doc(db, "usuarios", targetId), { nombre, rol, areas, empresas, correo: email, codigo_neotel: codigoNeotel }, { merge: true });
 
                     // Histórico que ahora tiene correo: se migra al nuevo id y se elimina el anterior.
                     if (editingId && targetId !== editingId) await deleteDoc(doc(db, "usuarios", editingId));
@@ -3707,6 +3780,839 @@
         // =========================================================
         // DEPURACIÓN MASIVA (solo Admin)
         // =========================================================
+        // =========================================================
+        // MODO PRUEBA (solo Admin, por navegador)
+        // =========================================================
+        const TestMode = {
+            KEY: 'calidadcx_modo_prueba',
+            toggle: (on) => {
+                if (State.user.rol !== 'Admin') return;
+                if (on && !confirm("¿Entrar al modo prueba?\n\nEn este navegador, notas, firmas, feedback y productividad se leerán y guardarán en datos de prueba hasta que salgas. Los asesores no verán nada de esto.")) return;
+                try { on ? localStorage.setItem(TestMode.KEY, '1') : localStorage.removeItem(TestMode.KEY); } catch { return alert("Este navegador no permite activar el modo prueba."); }
+                location.reload();
+            },
+            render: () => {
+                const btn = $('btnTestToggle'); if (!btn) return;
+                btn.innerHTML = MODO_PRUEBA ? '<i class="fas fa-right-from-bracket"></i> Salir del modo prueba' : '<i class="fas fa-flask"></i> Entrar al modo prueba';
+                btn.className = MODO_PRUEBA ? 'btn-action' : 'btn-action btn-primary';
+                btn.onclick = () => TestMode.toggle(!MODO_PRUEBA);
+                $('btnTestCopy').style.display = MODO_PRUEBA ? '' : 'none';
+                $('btnTestClear').style.display = MODO_PRUEBA ? '' : 'none';
+            },
+            /** Copia las notas y la productividad reales del año a las colecciones de prueba. */
+            copyReal: async () => {
+                if (!MODO_PRUEBA || State.user.rol !== 'Admin') return;
+                const anio = Number($('yearFilter').value);
+                if (!confirm(`¿Copiar las notas y la productividad reales de ${anio} al modo prueba? Lo que ya exista en prueba con el mismo identificador se reemplaza.`)) return;
+                const st = $('testStatus'); st.innerText = 'Copiando…';
+                try {
+                    let n = 0;
+                    for (const [real, prueba] of [["notas_calidad", COL_NOTAS], ["productividad", COL_PROD]]) {
+                        const snap = await getDocs(query(collection(db, real), where("anio", "==", anio)));
+                        await commitInBatches(snap.docs.map(d => (b) => b.set(doc(db, prueba, d.id), d.data())));
+                        n += snap.size;
+                    }
+                    st.innerText = `${n} registros copiados a prueba.`;
+                    UI.showToast(`${n} registros reales copiados al modo prueba.`, 'success');
+                    App.startDataSync(); Prod.invalidate();
+                } catch (e) { console.error(e); st.innerText = 'No se pudo copiar: ' + e.message; }
+            },
+            clear: async () => {
+                if (!MODO_PRUEBA || State.user.rol !== 'Admin') return;
+                if (!confirm("¿Vaciar todos los datos de prueba (notas y productividad)? Los datos reales no se tocan.")) return;
+                const st = $('testStatus'); st.innerText = 'Vaciando…';
+                try {
+                    let n = 0;
+                    for (const c of [COL_NOTAS, COL_PROD]) {
+                        if (!c.startsWith('prueba_')) continue;           // salvaguarda: nunca borrar colecciones reales
+                        const snap = await getDocs(collection(db, c));
+                        await commitInBatches(snap.docs.map(d => (b) => b.delete(d.ref)));
+                        n += snap.size;
+                    }
+                    await Idb.del(ProdSync.HASHES).catch(() => {});
+                    st.innerText = `${n} registros de prueba eliminados.`;
+                    App.startDataSync(); Prod.invalidate();
+                } catch (e) { console.error(e); st.innerText = 'No se pudo vaciar: ' + e.message; }
+            }
+        };
+        window.TestMode = TestMode;
+
+        // =========================================================
+        // LECTOR DE EXCEL POR PARTES
+        // Lee un .xlsx directamente del archivo, descomprimiendo una hoja en flujo.
+        // Sirve para libros enormes (p. ej. 113 MB / 630 MB descomprimidos) que no caben en memoria.
+        // =========================================================
+        const XlsxStream = {
+            supported: () => typeof DecompressionStream === 'function' && typeof TextDecoderStream === 'function',
+            unesc: (s) => String(s).replace(/&(lt|gt|amp|quot|apos|#\d+|#x[0-9a-f]+);/gi, (m, g) => {
+                const k = g.toLowerCase();
+                if (k === 'lt') return '<'; if (k === 'gt') return '>'; if (k === 'amp') return '&'; if (k === 'quot') return '"'; if (k === 'apos') return "'";
+                return String.fromCodePoint(k.startsWith('#x') ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10));
+            }),
+            colIndex: (letters) => { let n = 0; for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64); return n - 1; },
+            colLetters: (idx) => { let s = '', n = idx + 1; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; },
+
+            /** Directorio del ZIP (el .xlsx es un ZIP). */
+            dir: async (file) => {
+                const tailLen = Math.min(file.size, 70000);
+                const tail = new DataView(await file.slice(file.size - tailLen).arrayBuffer());
+                let eocd = -1;
+                for (let i = tailLen - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+                if (eocd < 0) throw new Error('El archivo no es un Excel (.xlsx) válido.');
+                const cdSize = tail.getUint32(eocd + 12, true), cdOff = tail.getUint32(eocd + 16, true);
+                if (cdOff === 0xFFFFFFFF) throw new Error('El archivo es demasiado grande (más de 4 GB).');
+                const cd = new DataView(await file.slice(cdOff, cdOff + cdSize).arrayBuffer());
+                const dec = new TextDecoder(), entries = {};
+                let p = 0;
+                while (p + 46 <= cd.byteLength && cd.getUint32(p, true) === 0x02014b50) {
+                    const nLen = cd.getUint16(p + 28, true), xLen = cd.getUint16(p + 30, true), cLen = cd.getUint16(p + 32, true);
+                    const name = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nLen));
+                    entries[name] = { method: cd.getUint16(p + 10, true), comp: cd.getUint32(p + 20, true), size: cd.getUint32(p + 24, true), off: cd.getUint32(p + 42, true) };
+                    p += 46 + nLen + xLen + cLen;
+                }
+                return entries;
+            },
+            stream: async (file, e) => {
+                const h = new DataView(await file.slice(e.off, e.off + 30).arrayBuffer());
+                if (h.getUint32(0, true) !== 0x04034b50) throw new Error('El Excel está dañado.');
+                const start = e.off + 30 + h.getUint16(26, true) + h.getUint16(28, true);
+                let s = file.slice(start, start + e.comp).stream();
+                if (e.method === 8) s = s.pipeThrough(new DecompressionStream('deflate-raw'));
+                else if (e.method !== 0) throw new Error('Tipo de compresión no soportado.');
+                return s.pipeThrough(new TextDecoderStream());
+            },
+            text: async (file, e) => {
+                let out = '';
+                const r = (await XlsxStream.stream(file, e)).getReader();
+                for (;;) { const { done, value } = await r.read(); if (done) break; out += value; }
+                return out;
+            },
+
+            open: async (file) => {
+                if (!XlsxStream.supported()) throw new Error('Tu navegador no puede leer este archivo. Usa Google Chrome o Microsoft Edge actualizados.');
+                const entries = await XlsxStream.dir(file);
+                if (!entries['xl/workbook.xml']) throw new Error('El archivo no es un libro de Excel (.xlsx).');
+                const wbXml = await XlsxStream.text(file, entries['xl/workbook.xml']);
+                const relXml = entries['xl/_rels/workbook.xml.rels'] ? await XlsxStream.text(file, entries['xl/_rels/workbook.xml.rels']) : '';
+                const rels = {};
+                relXml.replace(/<Relationship\b([^>]*)\/?>/g, (m, a) => { const id = (a.match(/\bId="([^"]+)"/) || [])[1], t = (a.match(/\bTarget="([^"]+)"/) || [])[1]; if (id && t) rels[id] = t; return m; });
+                const sheets = [];
+                wbXml.replace(/<sheet\b([^>]*)\/?>/g, (m, a) => {
+                    const name = XlsxStream.unesc((a.match(/\bname="([^"]*)"/) || [])[1] || '');
+                    const rid = (a.match(/\br:id="([^"]+)"/) || [])[1];
+                    let t = rels[rid] || '';
+                    t = t.startsWith('/') ? t.slice(1) : 'xl/' + t.replace(/^\.\//, '');
+                    sheets.push({ name, path: t });
+                    return m;
+                });
+                let shared = null;
+                const loadShared = async () => {
+                    if (shared) return shared;
+                    shared = [];
+                    const e = entries['xl/sharedStrings.xml'];
+                    if (!e) return shared;
+                    const xml = await XlsxStream.text(file, e);
+                    const re = /<si>([\s\S]*?)<\/si>/g; let m;
+                    while ((m = re.exec(xml))) {
+                        const inner = m[1].replace(/<rPh\b[\s\S]*?<\/rPh>/g, '');
+                        let t = ''; const rt = /<t\b[^>]*>([\s\S]*?)<\/t>/g; let k;
+                        while ((k = rt.exec(inner))) t += k[1];
+                        shared.push(XlsxStream.unesc(t));
+                    }
+                    return shared;
+                };
+
+                return {
+                    sheets,
+                    sheetNames: sheets.map(s => s.name),
+                    /**
+                     * Recorre las filas de una hoja. onRow(valores[], numeroFila).
+                     * quick: { col, values:Set<string> } → solo se procesan filas cuya columna `col` sea uno de esos textos
+                     * (la fila 1 siempre se entrega: son los encabezados).
+                     */
+                    rows: async (sheetName, onRow, { quick = null, onProgress = null } = {}) => {
+                        const sh = sheets.find(s => s.name === sheetName);
+                        if (!sh || !entries[sh.path]) throw new Error(`No existe la hoja "${sheetName}".`);
+                        const ss = await loadShared();
+                        let quickRe = null, quickIdx = null;
+                        if (quick) {
+                            quickIdx = new Set(); ss.forEach((v, i) => { if (quick.values.has(String(v).trim())) quickIdx.add(String(i)); });
+                            quickRe = new RegExp(`<c r="${XlsxStream.colLetters(quick.col)}\\d+"([^>]*?)>(?:<f[^>]*>[\\s\\S]*?<\\/f>|<f[^>]*\\/>)?<v>([^<]*)<\\/v>`);
+                        }
+                        const cellRe = /<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+                        const parseRow = (xml) => {
+                            const out = []; let m; cellRe.lastIndex = 0;
+                            while ((m = cellRe.exec(xml))) {
+                                const idx = XlsxStream.colIndex(m[1]), attrs = m[2], body = m[3] || '';
+                                const t = (attrs.match(/\bt="([^"]+)"/) || [])[1];
+                                let v;
+                                if (t === 'inlineStr') { const k = body.match(/<t\b[^>]*>([\s\S]*?)<\/t>/); v = k ? XlsxStream.unesc(k[1]) : ''; }
+                                else {
+                                    const k = body.match(/<v>([\s\S]*?)<\/v>/);
+                                    if (!k) continue;
+                                    if (t === 's') v = ss[Number(k[1])];
+                                    else if (t === 'str' || t === 'e') v = XlsxStream.unesc(k[1]);
+                                    else if (t === 'b') v = k[1] === '1';
+                                    else v = Number(k[1]);
+                                }
+                                out[idx] = v;
+                            }
+                            return out;
+                        };
+                        const total = entries[sh.path].size || 1;
+                        let seen = 0, lastPct = -1, rowNum = 0;
+                        const reader = (await XlsxStream.stream(file, entries[sh.path])).getReader();
+                        let buf = '';
+                        for (;;) {
+                            const { done, value } = await reader.read();
+                            if (value) { buf += value; seen += value.length; }
+                            let pos = 0, end;
+                            while ((end = buf.indexOf('</row>', pos)) !== -1) {
+                                const st = buf.lastIndexOf('<row', end);
+                                const xml = buf.slice(st, end);
+                                pos = end + 6; rowNum++;
+                                const rAttr = xml.match(/^<row\b[^>]*?\br="(\d+)"/);
+                                const n = rAttr ? Number(rAttr[1]) : rowNum;
+                                if (n !== 1 && quickRe) {
+                                    const q = xml.match(quickRe);
+                                    if (!q || !/\bt="s"/.test(q[1]) || !quickIdx.has(q[2])) continue;
+                                }
+                                if (onRow(parseRow(xml), n) === false) { reader.cancel().catch(() => {}); return; }
+                            }
+                            buf = buf.slice(pos);
+                            if (onProgress) { const pct = Math.min(99, Math.floor(seen / total * 100)); if (pct !== lastPct && pct % 5 === 0) { lastPct = pct; await onProgress(pct); } }
+                            if (done) break;
+                        }
+                    }
+                };
+            }
+        };
+        window.XlsxStream = XlsxStream;
+
+        // =========================================================
+        // PRODUCTIVIDAD — definiciones de indicadores
+        // Igual que el reporte: tiempos y llamadas se suman; TMO y porcentajes son el promedio de los días.
+        // =========================================================
+        const fmtHMS = (s) => { if (s === null || s === undefined || isNaN(s)) return '—'; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`; };
+        const fmtMS = (s) => { if (s === null || s === undefined || isNaN(s)) return '—'; s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+        const fmtPct = (v) => (v === null || v === undefined || isNaN(v)) ? '—' : (v * 100).toFixed(1) + '%';
+        const fmtInt = (v) => (v === null || v === undefined || isNaN(v)) ? '—' : Math.round(v).toLocaleString('es-GT');
+        const v0 = (b, f) => Number(b?.[f] || 0);
+        // Columnas del Excel que se leen. last: tomar la última columna con ese nombre (las calculadas del reporte).
+        const PROD_CALLS = [
+            { f: 'llam', lbl: 'Llamadas conectadas', col: 'Llamadas Conectadas', last: true },
+            { f: 'llamE', lbl: 'Llamadas entrantes', col: 'Llamadas Conectadas (Entrante)' },
+            { f: 'llamS', lbl: 'Salientes conectadas', col: 'Llamadas Conectadas (Saliente)' },
+            { f: 'noConS', lbl: 'Salientes no conectadas', col: 'Llamadas No Conectadas (Saliente)' },
+            { f: 'perdE', lbl: 'Perdidas en timbre (entrante)', col: 'Llamadas Perdidas en Ringing (Entrante)' },
+            { f: 'perdS', lbl: 'Perdidas en timbre (saliente)', col: 'Llamadas Perdidas en Ringing (Saliente)' }
+        ];
+        // Estados de Neotel. p/pcol: el % viene del reporte; si no, se calcula cada día como tiempo del estado ÷ login.
+        const PROD_STATES = [
+            { f: 'login', lbl: 'Login', col: 'Login', last: true },
+            { f: 'ocio', lbl: 'Ocio', col: 'Ocio', last: true, p: 'pOcio', pcol: '% Ocio' },
+            { f: 'admin', lbl: 'Administrativo', col: 'Administrativo', last: true, p: 'pAdmin', pcol: '% Administrativo' },
+            { f: 'almuerzo', lbl: 'Almuerzo', col: 'Almuerzo', last: true, p: 'pAlm', pcol: '% Almuerzo' },
+            { f: 'bano', lbl: 'Baño', col: 'Baño', last: true, p: 'pBano', pcol: '% Baño' },
+            { f: 'coaching', lbl: 'Coaching', col: 'Coaching', last: true, p: 'pCoach', pcol: '% Coaching' },
+            { f: 'descanso', lbl: 'Descanso', col: 'Descanso' },
+            { f: 'testear', lbl: 'Testear', col: 'Testear' },
+            { f: 'rrss', lbl: 'Redes sociales (chats activos)', col: 'Redes Sociales (Solo Chats Activos)' },
+            { f: 'rrss2', lbl: 'Redes sociales (nuevos + activos)', col: 'Redes Sociales (Chats Nuevos + Activos)' },
+            { f: 'convE', lbl: 'Conversación entrante', col: 'Tiempo de Conversación (Entrante)' },
+            { f: 'convS', lbl: 'Conversación saliente', col: 'Tiempo de Conversación (Saliente)' },
+            { f: 'marcado', lbl: 'Marcado', col: 'Tiempo de Marcado' },
+            { f: 'atenE', lbl: 'Atención entrante', col: 'Tiempo de Atención (Entrante)' },
+            { f: 'atenS', lbl: 'Atención saliente', col: 'Tiempo de Atención (Saliente)' },
+            { f: 'preview', lbl: 'Preview CRM', col: 'Tiempo de Preview CRM' },
+            { f: 'postview', lbl: 'Postview CRM', col: 'Tiempo de Postview CRM' },
+            { f: 'otrosCrm', lbl: 'Otros CRM', col: 'Tiempo Otros CRM' },
+            { f: 'holdE', lbl: 'Hold entrante', col: 'Tiempo de Hold Entrante' },
+            { f: 'holdS', lbl: 'Hold saliente', col: 'Tiempo de Hold Saliente' }
+        ];
+        const pctKey = (st) => st.p || ('p_' + st.f);
+        const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
+        const PROD_METRICS = [
+            ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
+            { id: 'tmo', grupo: 'Llamadas', lbl: 'TMO', calc: b => b?.d ? v0(b, 'tmo') / b.d : null, fmt: fmtMS, hint: 'Promedio diario del tiempo medio de operación' },
+            { id: 'd', grupo: 'Llamadas', lbl: 'Días conectado', calc: b => v0(b, 'd'), fmt: fmtInt },
+            ...PROD_PCT_STATES.map(st => ({ id: pctKey(st), grupo: 'Porcentaje del login', lbl: '% ' + st.lbl, calc: b => b?.d ? v0(b, pctKey(st)) / b.d : null, fmt: fmtPct, hint: 'Promedio de los días' })),
+            ...PROD_STATES.map(st => ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS }))
+        ];
+        const PROD_GROUPS = ['Llamadas', 'Porcentaje del login', 'Tiempo en cada estado'];
+        const PROD_DEFAULT_VISIBLES = ['llam', 'tmo', 'login', 'pOcio', 'pAdmin', 'pAlm', 'pBano', 'pCoach'];
+        const PROD_PCT = new Set(PROD_PCT_STATES.map(pctKey));
+        const PROD_FIELDS = ['d', 'tmo', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT];
+        const prodEmpty = () => Object.fromEntries(PROD_FIELDS.map(f => [f, 0]));
+        const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
+        /** Redondea y omite los ceros (documentos más livianos en Firebase). */
+        const prodRound = (b) => Object.fromEntries(PROD_FIELDS.map(f => [f, PROD_PCT.has(f) ? Math.round(b[f] * 10000) / 10000 : Math.round(b[f])]).filter(([, v]) => v));
+        const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        // =========================================================
+        // PRODUCTIVIDAD — sincronización con el Excel
+        // Solo se guardan los asesores vinculados por su código Neotel.
+        // Por asesor y año: 1 documento con semanas, meses y total + 12 documentos con los días de cada mes.
+        // =========================================================
+        const ProdSync = {
+            KEY: MODO_PRUEBA ? 'fuente_productividad_prueba' : 'fuente_productividad',
+            HASHES: MODO_PRUEBA ? 'prod_hashes_prueba' : 'prod_hashes',
+            SHEET: 'Base Productividad',
+            INTERVAL_MIN: 10,
+            src: null, timer: null, busy: false, lastCheck: null, lastResult: null, progress: '', needsPermission: false,
+
+            allowed: () => UI.hasPerm('chk_sync_productividad'),
+            supported: () => XlsxStream.supported(),
+            localOk: () => typeof window.showOpenFilePicker === 'function' && typeof window.showDirectoryPicker === 'function',
+            save: async () => { await Idb.set(ProdSync.KEY, ProdSync.src); },
+
+            init: async () => {
+                ProdSync.stop(); ProdSync.src = null; ProdSync.needsPermission = false;
+                if (!ProdSync.allowed() || !ProdSync.supported()) return ProdSync.renderStatus();
+                try { ProdSync.src = await Idb.get(ProdSync.KEY) || null; } catch (e) { console.warn(e); }
+                if (!ProdSync.src) return ProdSync.renderStatus();
+                if (ProdSync.src.kind === 'url') {
+                    if (ProdSync.src.provider !== 'm365') return ProdSync.start();
+                    try { await Remote.token(false); ProdSync.start(); } catch { ProdSync.needsPermission = true; ProdSync.renderStatus(); }
+                    return;
+                }
+                if (!ProdSync.src.handle) { ProdSync.src = null; return ProdSync.renderStatus(); }
+                const perm = await ProdSync.src.handle.queryPermission({ mode: 'read' });
+                if (perm === 'granted') ProdSync.start(); else { ProdSync.needsPermission = true; ProdSync.renderStatus(); }
+            },
+            start: () => { ProdSync.stop(); ProdSync.check(); ProdSync.timer = setInterval(() => ProdSync.check(), ProdSync.INTERVAL_MIN * 60000); ProdSync.renderStatus(); },
+            stop: () => { if (ProdSync.timer) clearInterval(ProdSync.timer); ProdSync.timer = null; },
+            /** Requiere un clic: el navegador (o Microsoft) pide confirmar el acceso en cada sesión. */
+            resume: async () => {
+                if (!ProdSync.src) return;
+                if (ProdSync.src.kind === 'url') {
+                    try { await Remote.token(true); ProdSync.needsPermission = false; ProdSync.start(); }
+                    catch (e) { UI.showToast(e.message, 'warning'); }
+                } else if ((await ProdSync.src.handle.requestPermission({ mode: 'read' })) === 'granted') { ProdSync.needsPermission = false; ProdSync.start(); }
+                ProdSync.renderStatus(); ProdSync.renderSettings();
+            },
+
+            newSrc: (extra) => {
+                const prev = ProdSync.src || ProdSync._prev || {};
+                return { colaSugerir: prev.colaSugerir ?? 'Servicio Técnico', areaDestino: prev.areaDestino || (State.areas.length === 1 ? State.areas[0] : ''),
+                    seen: null, pendientes: [], colasVistas: [], ...extra };
+            },
+            yearFrom: (txt) => Number((String(txt).match(/20\d{2}/) || [])[0]) || new Date().getFullYear(),
+            /** Vincula un archivo o una carpeta de la PC (incluye OneDrive / SharePoint sincronizados). */
+            link: async (kind = 'file', given = null) => {
+                if (!given && !ProdSync.localOk()) return alert("Para buscar en la PC abre la app en Google Chrome o Microsoft Edge.");
+                try {
+                    let handle = given;
+                    const startIn = ProdSync.src?.handle || ProdSync._prev?.handle || 'documents';
+                    if (!handle && kind === 'folder') handle = await window.showDirectoryPicker({ startIn, mode: 'read' });
+                    else if (!handle) [handle] = await window.showOpenFilePicker({ startIn, types: [{ description: 'Excel o acceso directo', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'], 'application/internet-shortcut': ['.url'] } }] });
+                    if (given && (await handle.queryPermission({ mode: 'read' })) !== 'granted' && (await handle.requestPermission({ mode: 'read' })) !== 'granted') return;
+                    if (handle.kind === 'file' && /\.url$/i.test(handle.name)) {
+                        const url = ((await (await handle.getFile()).text()).match(/^URL=(.+)$/m) || [])[1];
+                        return url ? ProdSync.linkUrl(url.trim()) : alert("Ese acceso directo no contiene un enlace válido.");
+                    }
+                    if (handle.kind === 'file' && !/\.xlsx$/i.test(handle.name)) return alert(`"${handle.name}" no es un archivo de Excel (.xlsx).`);
+                    ProdSync.stop();
+                    ProdSync.src = ProdSync.newSrc({ kind: handle.kind === 'directory' ? 'folder' : 'file', handle, name: handle.name, anio: ProdSync.yearFrom(handle.name) });
+                    ProdSync._prev = null; ProdSync.needsPermission = false;
+                    await ProdSync.save();
+                    ProdSync.renderSettings(); ProdSync.start();
+                } catch (e) { if (e.name !== 'AbortError') { console.error(e); alert("No se pudo vincular: " + e.message); } }
+            },
+            /** Vincula por enlace: SharePoint / OneDrive de la empresa (Microsoft 365) u hoja de cálculo de Google. */
+            linkUrl: async (raw) => {
+                const url = String(raw || '').trim();
+                if (!/^https?:\/\//i.test(url)) return alert("Pega un enlace que empiece con https://");
+                const provider = Remote.detect(url);
+                if (provider === 'gdrive') return alert("Los archivos de Google Drive no se pueden leer por enlace. Ábrelo como Hoja de cálculo de Google y pega ese enlace, o usa Google Drive para escritorio y vincula el archivo de la PC.");
+                const candidate = ProdSync.newSrc({ kind: 'url', url, provider, name: decodeURIComponent(url.split('?')[0].split('/').pop() || 'Excel en línea'), anio: ProdSync.yearFrom(decodeURIComponent(url)) });
+                try {
+                    ProdSync.progress = 'Conectando…'; ProdSync.renderStatus();
+                    if (provider === 'm365') {
+                        await Remote.token(true);                      // ventana de inicio de sesión de Microsoft
+                        candidate.loc = await Remote.m365Locate(url);  // solo ubica el archivo; la descarga se hace al sincronizar
+                        candidate.name = candidate.loc.name;
+                        if (!/\.xlsx$/i.test(candidate.name)) throw new Error(`"${candidate.name}" no es un archivo de Excel (.xlsx).`);
+                        candidate.anio = ProdSync.yearFrom(candidate.name);
+                    }
+                    ProdSync.stop(); ProdSync.src = candidate; ProdSync._prev = null; ProdSync.needsPermission = false;
+                    await ProdSync.save();
+                    ProdSync.renderSettings(); ProdSync.start();
+                } catch (e) { console.error(e); alert("No se pudo vincular el enlace.\n\n" + e.message); }
+                finally { ProdSync.progress = ''; ProdSync.renderStatus(); }
+            },
+            onDrop: async (ev) => {
+                ev.preventDefault(); $('prodDrop')?.classList.remove('over');
+                const item = [...(ev.dataTransfer?.items || [])].find(i => i.kind === 'file');
+                if (!item || typeof item.getAsFileSystemHandle !== 'function') return alert("Arrastra el archivo o la carpeta desde el Explorador de Windows (Chrome o Edge).");
+                const h = await item.getAsFileSystemHandle();
+                if (h) await ProdSync.link(h.kind === 'directory' ? 'folder' : 'file', h);
+            },
+            /** Muestra de nuevo las opciones de fuente; la actual sigue guardada hasta elegir otra. */
+            changeSource: () => { ProdSync._prev = ProdSync.src; ProdSync.src = null; ProdSync.renderSettings(); },
+            cancelChange: () => { if (ProdSync._prev) { ProdSync.src = ProdSync._prev; ProdSync._prev = null; } ProdSync.renderSettings(); },
+            unlink: async () => {
+                if (!confirm("¿Desvincular la fuente de productividad? Los datos ya cargados se conservan.")) return;
+                ProdSync.stop(); ProdSync.src = null; ProdSync._prev = null; await Idb.del(ProdSync.KEY);
+                ProdSync.renderSettings(); ProdSync.renderStatus();
+            },
+
+            /**
+             * Obtiene el Excel a leer. Devuelve null si no cambió desde la última lectura.
+             * Carpeta: el Excel más reciente cuyo nombre diga "productividad" (o el más reciente si ninguno lo dice).
+             */
+            resolve: async (force) => {
+                const s = ProdSync.src;
+                if (s.kind === 'url') {
+                    const meta = await Remote.fetchMeta(s);
+                    if (!force && s.seen === meta.version) return null;
+                    ProdSync.progress = 'Descargando…'; ProdSync.renderStatus();
+                    const buf = await meta.getBuffer();
+                    return { file: new Blob([buf]), version: meta.version, name: meta.name || s.name };
+                }
+                let file, name;
+                if (s.kind === 'folder') {
+                    const found = [];
+                    const walk = async (dir, prefix, depth) => {
+                        for await (const [n, h] of dir.entries()) {
+                            if (h.kind === 'directory' && depth < 3) await walk(h, `${prefix}${n}/`, depth + 1);
+                            else if (h.kind === 'file' && /\.xlsx$/i.test(n) && !n.startsWith('~$')) found.push({ path: prefix + n, h });
+                        }
+                    };
+                    await walk(s.handle, '', 0);
+                    const pref = found.filter(x => /productividad/i.test(x.path));
+                    const pool = pref.length ? pref : found;
+                    if (!pool.length) throw new Error('La carpeta no tiene archivos de Excel (.xlsx).');
+                    const withDates = await Promise.all(pool.map(async x => ({ ...x, file: await x.h.getFile() })));
+                    withDates.sort((a, b) => b.file.lastModified - a.file.lastModified);
+                    file = withDates[0].file; name = withDates[0].path;
+                } else { file = await s.handle.getFile(); name = s.name; }
+                const version = `${name}|${file.lastModified}|${file.size}`;
+                if (!force && s.seen === version) return null;
+                return { file, version, name };
+            },
+
+            /** Segundos desde un valor de Excel (fracción de día) o un texto h:mm:ss. */
+            secs: (v) => {
+                if (v === null || v === undefined || v === '') return 0;
+                if (typeof v === 'number') return v * 86400;
+                const p = String(v).trim().split(':');
+                if (p.length >= 2) return (Number(p[0]) || 0) * 3600 + (Number(p[1]) || 0) * 60 + (Number(p[2]) || 0);
+                const n = Number(v); return isNaN(n) ? 0 : n * 86400;
+            },
+            num: (v) => { const n = Number(v); return isNaN(n) ? 0 : n; },
+            tokens: (s) => norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^\d+\s*-\s*/, '').split(/[^A-Z]+/).filter(t => t.length >= 3),
+
+            /** Sugiere el usuario de la app para un nombre de Neotel ("Apellidos, Nombres"). */
+            suggest: (nombreNeotel, usados) => {
+                const tk = new Set(ProdSync.tokens(nombreNeotel));
+                let best = null, bestScore = 0, tie = false;
+                Object.values(State.usersMap).forEach(u => {
+                    if (u.codigo_neotel || usados.has(u.nombre)) return;
+                    const score = ProdSync.tokens(u.nombre).filter(t => tk.has(t)).length;
+                    if (score > bestScore) { best = u; bestScore = score; tie = false; } else if (score === bestScore && score > 0) tie = true;
+                });
+                return bestScore >= 2 && !tie ? best : null;
+            },
+
+            check: async (force = false) => {
+                if (ProdSync.busy || !ProdSync.src || !ProdSync.allowed()) return;
+                ProdSync.busy = true; ProdSync.progress = 'Revisando…'; ProdSync.renderStatus(); ProdSync.renderSettings();
+                try {
+                    const got = await ProdSync.resolve(force);
+                    if (!got) return;
+                    const file = got.file;
+                    const t0 = Date.now();
+                    const book = await XlsxStream.open(file);
+                    if (!book.sheetNames.includes(ProdSync.SHEET)) throw new Error(`El archivo no tiene la hoja "${ProdSync.SHEET}".`);
+
+                    // Asesores vinculados por código Neotel (solo ellos se guardan)
+                    const byCode = new Map();
+                    Object.values(State.usersMap).forEach(u => { if (u.codigo_neotel) byCode.set(String(u.codigo_neotel), u); });
+                    const anio = Number(ProdSync.src.anio);
+                    let H = null;
+                    const C = {};
+                    const per = new Map();                     // codigo -> { user, total, semanas, meses, dias }
+                    const vistos = new Map();                  // codigo -> { nombreNeotel, dias, colas:Set } (para vincular)
+                    const colas = new Set();
+                    let filas = 0;
+                    const lastIdx = (name) => { let k = -1; H.forEach((h, i) => { if (norm(h) === norm(name)) k = i; }); return k; };
+                    const firstIdx = (name) => H.findIndex(h => norm(h) === norm(name));
+                    const CI = {}, SI = {}, PI = {};
+
+                    await book.rows(ProdSync.SHEET, (r, n) => {
+                        if (n === 1) {
+                            H = r.map(x => String(x ?? '').trim());
+                            Object.assign(C, {
+                                rango: lastIdx('Rango Horario'), codigo: lastIdx('Usuario #'), usuario: firstIdx('Usuario'), cola: lastIdx('Cola'),
+                                fecha: lastIdx('Fecha 2'), anio: lastIdx('Año'), mes: lastIdx('Mes'), semana: lastIdx('Semana'), tmo: lastIdx('TMO')
+                            });
+                            PROD_CALLS.forEach(c => CI[c.f] = c.last ? lastIdx(c.col) : firstIdx(c.col));
+                            PROD_STATES.forEach(st => { SI[st.f] = st.last ? lastIdx(st.col) : firstIdx(st.col); if (st.pcol) PI[st.f] = lastIdx(st.pcol); });
+                            const falta = [...Object.entries(C).filter(([k, v]) => v === -1 && k !== 'usuario').map(([k]) => k),
+                                ...(CI.llam === -1 ? ['Llamadas Conectadas'] : []), ...(SI.login === -1 ? ['Login'] : [])];
+                            if (falta.length) throw new Error(`Faltan columnas en "${ProdSync.SHEET}": ${falta.join(', ')}.`);
+                            ProdSync.src.columnasFaltantes = [...PROD_CALLS.filter(c => CI[c.f] === -1).map(c => c.col), ...PROD_STATES.filter(st => SI[st.f] === -1).map(st => st.col)];
+                            return;
+                        }
+                        filas++;
+                        if (Number(r[C.anio]) !== anio) return;
+                        const codigo = String(r[C.codigo] ?? '').trim();
+                        if (!codigo) return;
+                        const cola = String(r[C.cola] ?? '').trim();
+                        if (cola) colas.add(cola);
+                        const u = byCode.get(codigo);
+                        if (!u) {
+                            const v = vistos.get(codigo) || { nombreNeotel: String(r[C.usuario] ?? codigo).replace(/\t/g, ' ').replace(/\s+/g, ' ').trim(), dias: 0, colas: new Set() };
+                            v.dias++; v.colas.add(cola); vistos.set(codigo, v);
+                            return;
+                        }
+                        const fechaSerial = Number(r[C.fecha]);
+                        const fecha = isNaN(fechaSerial) ? null : new Date(Math.round((fechaSerial - 25569) * 86400000)).toISOString().slice(0, 10);
+                        if (!fecha) return;
+                        const b = { d: 1, tmo: ProdSync.secs(r[C.tmo]) };
+                        PROD_CALLS.forEach(c => { b[c.f] = ProdSync.num(r[CI[c.f]]); });
+                        const loginDia = ProdSync.secs(r[SI.login]);
+                        PROD_STATES.forEach(st => {
+                            const t = ProdSync.secs(r[SI[st.f]]);
+                            b[st.f] = t;
+                            if (st.f !== 'login') b[pctKey(st)] = st.pcol ? ProdSync.num(r[PI[st.f]]) : (loginDia ? t / loginDia : 0);
+                        });
+                        const p = per.get(codigo) || { user: u, total: prodEmpty(), semanas: {}, meses: {}, dias: {} };
+                        const wk = 'S' + Number(r[C.semana]), mm = String(Number(r[C.mes])).padStart(2, '0');
+                        prodAdd(p.total, b);
+                        prodAdd(p.semanas[wk] || (p.semanas[wk] = prodEmpty()), b);
+                        prodAdd(p.meses[mm] || (p.meses[mm] = prodEmpty()), b);
+                        const dm = p.dias[mm] || (p.dias[mm] = {});
+                        prodAdd(dm[fecha] || (dm[fecha] = prodEmpty()), b);
+                        per.set(codigo, p);
+                    }, {
+                        quick: { col: 2, values: new Set(['Total']) },   // solo las filas de total diario ("Rango Horario" = Total)
+                        onProgress: async (pct) => { ProdSync.progress = `Leyendo ${pct}%…`; ProdSync.renderStatus(); await new Promise(r => setTimeout(r, 0)); }
+                    });
+                    if (C.rango !== 2) console.warn('La columna "Rango Horario" no está en C; el filtro rápido usa la columna C.');
+
+                    // Documentos a escribir (solo si cambiaron)
+                    ProdSync.progress = 'Guardando…'; ProdSync.renderStatus();
+                    let cache = {};
+                    try { cache = await Idb.get(ProdSync.HASHES) || {}; } catch {}
+                    const ops = [], ahora = new Date().toISOString();
+                    const hash = async (obj) => Remote.hash(new TextEncoder().encode(JSON.stringify(obj)));
+                    for (const [codigo, p] of per) {
+                        const area = ProdSync.src.areaDestino || p.user.areas?.[0] || 'General';
+                        const base = { codigo, nombre: p.user.nombre, area, anio };
+                        const docs = [[`${codigo}_${anio}`, { ...base, tipo: 'anio', total: prodRound(p.total),
+                            semanas: Object.fromEntries(Object.entries(p.semanas).map(([k, v]) => [k, prodRound(v)])),
+                            meses: Object.fromEntries(Object.entries(p.meses).map(([k, v]) => [k, prodRound(v)])) }]];
+                        Object.entries(p.dias).forEach(([mm, dias]) => docs.push([`${codigo}_${anio}_${mm}`, { ...base, tipo: 'mes', mes: mm, dias: Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, prodRound(v)])) }]));
+                        for (const [id, data] of docs) {
+                            const h = await hash(data);
+                            if (cache[id] === h && !force) continue;
+                            ops.push({ id, data: { ...data, h, actualizado: ahora } });
+                            cache[id] = h;
+                        }
+                    }
+                    if (ops.length) await commitInBatches(ops.map(o => (b) => b.set(doc(db, COL_PROD, o.id), o.data)));
+                    await Idb.set(ProdSync.HASHES, cache).catch(() => {});
+
+                    // Pendientes de vincular: códigos de la cola elegida que no están en la app
+                    const colaSug = ProdSync.src.colaSugerir || '';
+                    const usados = new Set();
+                    ProdSync.src.pendientes = [...vistos.entries()]
+                        .filter(([, v]) => !colaSug || [...v.colas].some(c => norm(c) === norm(colaSug)))
+                        .sort((a, b) => b[1].dias - a[1].dias)
+                        .map(([codigo, v]) => { const s = ProdSync.suggest(v.nombreNeotel, usados); if (s) usados.add(s.nombre); return { codigo, nombreNeotel: v.nombreNeotel, dias: v.dias, sugerido: s?.nombre || '' }; });
+                    ProdSync.src.colasVistas = [...colas].sort();
+                    ProdSync.src.seen = got.version; ProdSync.src.archivoUsado = got.name;
+                    await ProdSync.save();
+                    ProdSync.lastCheck = new Date();
+                    const seg = Math.round((Date.now() - t0) / 1000);
+                    ProdSync.lastResult = `${per.size} asesor(es) vinculados con datos en ${anio}; ${ops.length} registro(s) actualizados en ${seg} s.` +
+                        (ProdSync.src.pendientes.length ? ` ${ProdSync.src.pendientes.length} asesor(es) de "${colaSug}" sin vincular.` : '');
+                    if (ops.length) { UI.showToast(`Productividad sincronizada. ${ProdSync.lastResult}`, 'success', 9000); Prod.invalidate(); }
+                    else if (ProdSync.src.pendientes.length && !per.size) UI.showToast(`Vincula los asesores con su código Neotel en Ajustes › Productividad para empezar a cargar.`, 'warning', 9000);
+                } catch (e) {
+                    console.error(e);
+                    if (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'AuthRequired') { ProdSync.needsPermission = true; ProdSync.stop(); }
+                    else if (e.name === 'NotFoundError') UI.showToast("No se encontró el archivo de productividad. ¿Se movió? Vincúlalo de nuevo.", 'error', 9000);
+                    else UI.showToast("No se pudo sincronizar la productividad: " + e.message, 'error', 9000);
+                    ProdSync.lastResult = 'Error: ' + e.message;
+                } finally {
+                    ProdSync.busy = false; ProdSync.progress = ''; ProdSync.renderStatus(); ProdSync.renderSettings();
+                }
+            },
+
+            /** Guarda los vínculos código Neotel → usuario elegidos en la tabla. */
+            saveLinks: async () => {
+                if (!UI.hasPerm('chk_cfg_usuarios')) return alert("Para vincular asesores necesitas el permiso Crear y editar usuarios.");
+                const rows = [...document.querySelectorAll('.prod-link-sel')].filter(s => s.value);
+                if (!rows.length) return alert("Elige al menos un usuario.");
+                const nombres = rows.map(s => s.value);
+                if (new Set(nombres).size !== nombres.length) return alert("Hay un mismo usuario elegido para dos códigos distintos.");
+                try {
+                    await commitInBatches(rows.map(s => { const u = State.usersMap[s.value]; return (b) => b.update(doc(db, "usuarios", u.id), { codigo_neotel: s.dataset.codigo }); }));
+                    rows.forEach(s => { State.usersMap[s.value].codigo_neotel = s.dataset.codigo; });
+                    UI.showToast(`${rows.length} asesor(es) vinculados. Cargando su productividad…`, 'success');
+                    ProdSync.check(true);
+                } catch (e) { console.error(e); UI.showToast("No se pudieron guardar los vínculos: " + e.message, 'error'); }
+            },
+
+            renderStatus: () => {
+                const box = $('prodSyncStatus'); if (!box) return;
+                if (!ProdSync.allowed() || !ProdSync.src) { box.style.display = 'none'; return; }
+                box.style.display = '';
+                if (ProdSync.needsPermission) { box.innerHTML = `<button class="sync-resume" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> ${ProdSync.src.kind === 'url' ? 'Iniciar sesión para productividad' : 'Reanudar productividad'}</button>`; return; }
+                box.innerHTML = `<span class="sync-dot ${ProdSync.busy ? 'busy' : ''}"></span><span>${ProdSync.busy ? esc(ProdSync.progress || 'Revisando…') : `Productividad al día${ProdSync.lastCheck ? ` <span style="opacity:.7">· ${esc(Sync.ago(ProdSync.lastCheck))}</span>` : ''}`}</span>`;
+                box.title = ProdSync.lastResult || '';
+            },
+
+            renderSettings: () => {
+                const pane = $('prodPane'); if (!pane || pane.closest('.settings-pane')?.style.display === 'none') return;
+                const visibles = State.prodCfg?.visibles || PROD_DEFAULT_VISIBLES;
+                const canCfg = UI.hasPerm('chk_sync_productividad');
+                const metricsBox = `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Indicadores visibles en el módulo</h3>
+                        <p class="hint" style="margin-bottom:10px;">Todos se guardan; aquí eliges cuáles se muestran como columnas.${canCfg ? ` <a href="#" onclick="document.querySelectorAll('.prod-vis').forEach(c=>c.checked=true);return false;">Marcar todos</a> · <a href="#" onclick="document.querySelectorAll('.prod-vis').forEach(c=>c.checked=false);return false;">Ninguno</a>` : ''}</p>
+                        ${PROD_GROUPS.map(g => `
+                        <h4 style="font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.03em; margin:12px 0 6px;">${esc(g)}</h4>
+                        <div class="perm-grid" style="grid-template-columns: repeat(3, 1fr); background: var(--surface);">
+                            ${PROD_METRICS.filter(m => m.grupo === g).map(m => `<label><input type="checkbox" class="prod-vis" value="${m.id}" ${visibles.includes(m.id) ? 'checked' : ''} ${canCfg ? '' : 'disabled'}> ${esc(m.lbl)}</label>`).join('')}
+                        </div>`).join('')}
+                        ${canCfg ? `<button class="btn-action" id="prodVisSave" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar indicadores</button>` : ''}
+                    </div>`;
+                if (!ProdSync.supported()) { pane.innerHTML = `<div class="callout warn">Para leer el archivo de productividad abre la app en Google Chrome o Microsoft Edge actualizados.</div>${metricsBox}`; return ProdSync.bindSettings(); }
+                if (!ProdSync.src) {
+                    pane.innerHTML = `
+                        <div class="panel-soft" style="max-width:760px;">
+                            <h3 class="panel-title">Elige de dónde se lee la productividad</h3>
+                            <p class="hint" style="margin-bottom:12px;">Se lee la hoja "${ProdSync.SHEET}" (solo los totales diarios) y se guardan únicamente los asesores vinculados con su código Neotel. Se revisa cada ${ProdSync.INTERVAL_MIN} minutos y solo se carga lo que cambió.</p>
+                            <h4 style="font-size:13px; font-weight:600; margin-bottom:4px;">En esta PC</h4>
+                            <p class="hint" style="margin-bottom:10px;">Incluye archivos sincronizados de OneDrive, SharePoint o Google Drive para escritorio. Si cada mes hay un Excel nuevo, vincula la carpeta: se toma el más reciente.</p>
+                            ${ProdSync.localOk() ? `
+                            <div id="prodDrop" class="sync-drop"><i class="fas fa-file-arrow-down"></i><strong>Arrastra aquí el Excel o la carpeta</strong><span>desde el Explorador de Windows (recomendado)</span></div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; align-items:center;">
+                                <span class="hint" style="margin:0;">o bien</span>
+                                <button class="btn-action" onclick="ProdSync.link('file')"><i class="fas fa-file-excel"></i> Buscar archivo</button>
+                                <button class="btn-action" onclick="ProdSync.link('folder')"><i class="fas fa-folder-open"></i> Buscar carpeta</button>
+                            </div>` : `<div class="callout warn" style="margin-bottom:18px;">Para buscar archivos en la PC abre la app en Google Chrome o Microsoft Edge.</div>`}
+                            <h4 style="font-size:13px; font-weight:600; margin-bottom:4px;">Por enlace</h4>
+                            <p class="hint" style="margin-bottom:10px;">SharePoint u OneDrive de la empresa${Remote.m365Ready() ? '' : ' (requiere la conexión con Microsoft 365, en Ajustes › Fuente de resultados)'}, o una hoja de cálculo de Google compartida con enlace.</p>
+                            <div style="display:flex; gap:8px;">
+                                <input type="url" id="prodUrl" placeholder="https://distelsagt.sharepoint.com/…" style="flex:1; padding:9px 12px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:13px;">
+                                <button class="btn-action" id="prodUrlBtn"><i class="fas fa-link"></i> Vincular enlace</button>
+                            </div>
+                            ${ProdSync._prev ? `<button class="btn-action" style="margin-top:14px;" onclick="ProdSync.cancelChange()">Cancelar y seguir con ${esc(ProdSync._prev.name)}</button>` : ''}
+                        </div>${metricsBox}`;
+                    return ProdSync.bindSettings();
+                }
+                const s = ProdSync.src;
+                const opciones = Object.values(State.usersMap).filter(u => !u.codigo_neotel).sort((a, b) => a.nombre.localeCompare(b.nombre));
+                const vinculados = Object.values(State.usersMap).filter(u => u.codigo_neotel).sort((a, b) => a.nombre.localeCompare(b.nombre));
+                pane.innerHTML = `
+                    <div class="panel-soft" style="max-width:760px;">
+                        <h3 class="panel-title">${s.kind === 'url' ? `${esc(Remote.label(s.provider))}: ${esc(s.name)}` : `${s.kind === 'folder' ? 'Carpeta' : 'Archivo'} en esta PC: ${esc(s.name)}`}</h3>
+                        ${s.kind === 'folder' && s.archivoUsado ? `<p class="hint" style="margin-bottom:10px;">Archivo leído: ${esc(s.archivoUsado)}</p>` : ''}
+                        ${(s.columnasFaltantes || []).length ? `<div class="callout warn">El archivo no trae estas columnas (se toman como 0): ${esc(s.columnasFaltantes.join(', '))}.</div>` : ''}
+                        <div class="sync-filters">
+                            <div class="form-group"><label>Año</label><input type="number" id="prodAnio" min="2020" max="2100" value="${esc(s.anio)}"></div>
+                            <div class="form-group"><label>Guardar en el área</label>
+                                <select id="prodArea"><option value="">Área de cada asesor</option>${Scope.assignedList().map(a => `<option value="${esc(a)}" ${a === s.areaDestino ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Cola para buscar asesores sin vincular</label>
+                                <select id="prodCola"><option value="">Todas</option>${uniq([...(s.colasVistas || []), s.colaSugerir].filter(Boolean)).map(c => `<option value="${esc(c)}" ${c === s.colaSugerir ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+                                <p class="hint">Solo afecta la lista de sugerencias. Se cargan todos los días de los asesores vinculados, sin importar la cola.</p></div>
+                        </div>
+                        <button class="btn-action" id="prodApply"><i class="fas fa-filter"></i> Guardar y revisar</button>
+                        <p style="font-size:13px; margin:14px 0 6px;"><strong>Estado:</strong> ${ProdSync.needsPermission ? 'esperando permiso de lectura' : ProdSync.busy ? esc(ProdSync.progress) : `activo, revisa cada ${ProdSync.INTERVAL_MIN} minutos`}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Última revisión:</strong> ${ProdSync.lastCheck ? esc(ProdSync.lastCheck.toLocaleString()) : '—'}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(ProdSync.lastResult || '—')}</p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                            ${ProdSync.needsPermission ? `<button class="btn-action btn-primary" onclick="ProdSync.resume()"><i class="fas fa-rotate"></i> Reanudar</button>` : `<button class="btn-action btn-primary" onclick="ProdSync.check(true)" ${ProdSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Sincronizar ahora</button>`}
+                            <button class="btn-action" onclick="ProdSync.changeSource()">Cambiar fuente</button>
+                            <button class="btn-action btn-danger-soft" onclick="ProdSync.unlink()">Desvincular</button>
+                        </div>
+                    </div>
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Asesores vinculados por código Neotel (${vinculados.length})</h3>
+                        ${(s.pendientes || []).length ? `
+                        <p class="hint" style="margin-bottom:10px;">Estos códigos aparecen en el archivo pero aún no están ligados a un usuario. La sugerencia compara apellidos y nombres; revisa y guarda.</p>
+                        <div class="users-list" style="max-height:320px;">
+                            ${s.pendientes.map(p => `<div class="user-row">
+                                <div><div style="font-size:13px; font-weight:600;">${esc(p.codigo)} · ${esc(p.nombreNeotel.replace(/^\d+\s*-\s*/, ''))}</div><div class="hint" style="margin:0;">${p.dias} día(s) en el archivo</div></div>
+                                <select class="prod-link-sel" data-codigo="${esc(p.codigo)}" style="max-width:280px; padding:6px 8px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:12px;">
+                                    <option value="">— No vincular —</option>
+                                    ${opciones.map(u => `<option value="${esc(u.nombre)}" ${u.nombre === p.sugerido ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
+                                </select></div>`).join('')}
+                        </div>
+                        <button class="btn-action btn-primary" style="margin-top:12px;" onclick="ProdSync.saveLinks()"><i class="fas fa-link"></i> Guardar vínculos y cargar</button>`
+                        : `<p class="hint">${vinculados.length ? 'Todos los asesores de la cola están vinculados.' : 'Se mostrarán aquí después de la primera lectura del archivo.'}</p>`}
+                        ${vinculados.length ? `<details style="margin-top:12px;"><summary class="hint" style="cursor:pointer;">Ver vinculados</summary><div class="hint" style="line-height:1.8;">${vinculados.map(u => `${esc(u.codigo_neotel)} · ${esc(u.nombre)}`).join('<br>')}</div><p class="hint">Para cambiar un código, edita el usuario en la pestaña Usuarios.</p></details>` : ''}
+                    </div>${metricsBox}`;
+                ProdSync.bindSettings();
+            },
+            bindSettings: () => {
+                const dz = $('prodDrop');
+                if (dz) { dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over'); dz.ondrop = ProdSync.onDrop; }
+                const ub = $('prodUrlBtn'); if (ub) ub.onclick = () => ProdSync.linkUrl($('prodUrl').value);
+                const ap = $('prodApply');
+                if (ap) ap.onclick = async () => {
+                    const anio = Number($('prodAnio').value);
+                    if (!(anio >= 2000 && anio <= 2100)) return alert("Año inválido.");
+                    Object.assign(ProdSync.src, { anio, areaDestino: $('prodArea').value, colaSugerir: $('prodCola').value, seen: null });
+                    await ProdSync.save(); ProdSync.check(true);
+                };
+                const vs = $('prodVisSave');
+                if (vs) vs.onclick = async () => {
+                    const visibles = [...document.querySelectorAll('.prod-vis:checked')].map(c => c.value);
+                    if (!visibles.length) return alert("Elige al menos un indicador.");
+                    try { await setDoc(doc(db, "configuracion", "productividad"), { visibles }, { merge: true }); State.prodCfg = { ...(State.prodCfg || {}), visibles }; UI.showToast("Indicadores guardados.", 'success'); refreshActiveView(); }
+                    catch (e) { console.error(e); UI.showToast("No se pudo guardar.", 'error'); }
+                };
+            }
+        };
+        window.ProdSync = ProdSync;
+
+        // =========================================================
+        // PRODUCTIVIDAD — vista
+        // =========================================================
+        const Prod = {
+            cache: { anio: null, docs: null, meses: {} },
+            ui: { periodo: 'semana', valor: '', vista: 'tabla', metrica: 'pOcio' },
+            invalidate: () => { Prod.cache = { anio: null, docs: null, meses: {} }; if (document.querySelector('#viewProd.active')) Prod.draw(); },
+
+            /** Igual que las notas: global sin filtro de área; líder por sus áreas (máx. 30); asesor solo lo suyo. */
+            scopeFilter: () => {
+                if (!Scope.hasTeamView()) return [where('nombre', '==', State.user.nombre)];
+                if (Scope.viewIsGlobal()) return [];
+                const a = Scope.viewList().slice(0, 30);
+                return [where('area', 'in', a.length ? a : ['__ninguna__'])];
+            },
+            loadYear: async (anio) => {
+                if (Prod.cache.anio === anio && Prod.cache.docs) return Prod.cache.docs;
+                const base = [where('tipo', '==', 'anio'), where('anio', '==', anio)];
+                const q = query(collection(db, COL_PROD), ...base, ...Prod.scopeFilter());
+                const snap = await getDocs(q);
+                Prod.cache = { anio, docs: snap.docs.map(d => d.data()), meses: {} };
+                return Prod.cache.docs;
+            },
+            loadMonth: async (anio, mm) => {
+                if (Prod.cache.meses[mm]) return Prod.cache.meses[mm];
+                const base = [where('tipo', '==', 'mes'), where('anio', '==', anio), where('mes', '==', mm)];
+                const q = query(collection(db, COL_PROD), ...base, ...Prod.scopeFilter());
+                const snap = await getDocs(q);
+                return (Prod.cache.meses[mm] = snap.docs.map(d => d.data()));
+            },
+
+            visibles: () => (State.prodCfg?.visibles || PROD_DEFAULT_VISIBLES).map(id => PROD_METRICS.find(m => m.id === id)).filter(Boolean),
+
+            /** Opciones del selector según el periodo. */
+            options: (docs, periodo) => {
+                if (periodo === 'semana') return uniq(docs.flatMap(d => Object.keys(d.semanas || {}))).sort((a, b) => weekNum(b) - weekNum(a)).map(w => ({ v: w, l: `Semana ${weekNum(w)}` }));
+                if (periodo === 'mes' || periodo === 'dia') return uniq(docs.flatMap(d => Object.keys(d.meses || {}))).sort().reverse().map(m => ({ v: m, l: MESES[Number(m) - 1] }));
+                return [{ v: 'anio', l: 'Todo el año' }];
+            },
+
+            draw: async () => {
+                const box = $('prodContent');
+                const anio = Number($('yearFilter').value);
+                const f = Filters.get();
+                box.innerHTML = '<p class="hint" style="padding:30px; text-align:center;">Cargando productividad…</p>';
+                let docs;
+                try { docs = await Prod.loadYear(anio); }
+                catch (e) { console.error(e); box.innerHTML = `<div class="callout warn">No se pudo cargar la productividad (${esc(e.message)}).</div>`; return; }
+                docs = docs.filter(d => Scope.inView(d.area) && Filters.matchArea(d.area, f) && String(d.nombre).toLowerCase().includes(f.search) && !isInactiveEstado(normalizeEstado(State.estadosAgentes[d.nombre])));
+
+                // Controles
+                const ui = Prod.ui;
+                const opts = Prod.options(docs, ui.periodo);
+                if (!opts.some(o => o.v === ui.valor)) ui.valor = opts[0]?.v || '';
+                $('prodPeriodo').value = ui.periodo;
+                $('prodValor').innerHTML = opts.map(o => `<option value="${esc(o.v)}" ${o.v === ui.valor ? 'selected' : ''}>${esc(o.l)}</option>`).join('');
+                $('prodValor').style.display = ui.periodo === 'anio' ? 'none' : '';
+                $('prodVista').value = ui.vista;
+                const vis = Prod.visibles();
+                $('prodMetrica').innerHTML = vis.map(m => `<option value="${m.id}" ${m.id === ui.metrica ? 'selected' : ''}>${esc(m.lbl)}</option>`).join('');
+                if (!vis.some(m => m.id === ui.metrica)) ui.metrica = vis[0]?.id;
+                $('prodMetricaBox').style.display = ui.vista === 'tendencia' ? '' : 'none';
+
+                if (!docs.length) {
+                    box.innerHTML = `<div class="callout">Todavía no hay productividad de ${anio} para mostrar. ${ProdSync.allowed() ? 'Vincula el archivo y los asesores en Ajustes › Productividad.' : 'Pide a tu líder que la cargue.'}</div>`;
+                    return;
+                }
+                if (ui.vista === 'tendencia') return Prod.drawTrend(docs, vis);
+
+                // Filas del periodo elegido
+                let filas;
+                if (ui.periodo === 'dia') {
+                    const meses = await Prod.loadMonth(anio, ui.valor);
+                    const dias = uniq(meses.flatMap(m => Object.keys(m.dias || {}))).sort();
+                    const sel = $('prodDia');
+                    const prevDia = sel?.value;
+                    filas = { dias, meses };
+                    const dia = dias.includes(prevDia) ? prevDia : dias[dias.length - 1];
+                    const rows = meses.filter(m => docs.some(d => d.codigo === m.codigo)).map(m => ({ nombre: m.nombre, b: m.dias?.[dia] || null })).filter(r => r.b);
+                    return Prod.drawTable(rows, vis, `<select id="prodDia" class="filter-select" style="margin-left:8px;">${dias.map(d => `<option value="${d}" ${d === dia ? 'selected' : ''}>${new Date(d + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric', month: 'short' })}</option>`).join('')}</select>`, `Día ${dia}`);
+                }
+                const pick = (d) => ui.periodo === 'semana' ? d.semanas?.[ui.valor] : ui.periodo === 'mes' ? d.meses?.[ui.valor] : d.total;
+                const rows = docs.map(d => ({ nombre: d.nombre, b: pick(d) || null })).filter(r => r.b);
+                const titulo = ui.periodo === 'semana' ? `Semana ${weekNum(ui.valor)}` : ui.periodo === 'mes' ? MESES[Number(ui.valor) - 1] : `Año ${anio}`;
+                Prod.drawTable(rows, vis, '', titulo);
+            },
+
+            drawTable: (rows, vis, extraCtl, titulo) => {
+                rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                const team = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
+                $('prodContent').innerHTML = `
+                    <div class="table-card">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:8px;"><h3>${esc(titulo)}</h3>${extraCtl}<span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
+                        <div class="table-scroll">
+                            <table class="prod-table">
+                                <thead><tr><th>Asesor</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
+                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, 'Sin datos en este periodo.')}</tbody>
+                                ${rows.length ? `<tfoot><tr><td>Equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
+                            </table>
+                        </div>
+                    </div>`;
+                const dsel = $('prodDia'); if (dsel) dsel.onchange = () => Prod.draw();
+                Prod.lastExport = { titulo, cols: vis, rows, team };
+            },
+
+            drawTrend: (docs, vis) => {
+                const m = PROD_METRICS.find(x => x.id === Prod.ui.metrica) || vis[0];
+                const weeks = uniq(docs.flatMap(d => Object.keys(d.semanas || {}))).sort((a, b) => weekNum(a) - weekNum(b));
+                const f = Filters.get();
+                const shown = weeks;
+                const rows = [...docs].sort((a, b) => a.nombre.localeCompare(b.nombre));
+                const teamWk = Object.fromEntries(shown.map(w => [w, rows.reduce((acc, d) => prodAdd(acc, d.semanas?.[w]), prodEmpty())]));
+                $('prodContent').innerHTML = `
+                    <div class="table-card">
+                        <div class="table-card-head"><h3>${esc(m.lbl)} por semana</h3></div>
+                        <div class="table-scroll">
+                            <table class="prod-table">
+                                <thead><tr><th>Asesor</th>${shown.map(w => `<th class="num-col">${esc(w)}</th>`).join('')}<th class="num-col">Año</th></tr></thead>
+                                <tbody>${rows.map(d => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(d.nombre)})">${esc(d.nombre)}</button></td>${shown.map(w => `<td class="num-col">${d.semanas?.[w] ? m.fmt(m.calc(d.semanas[w])) : '<span class="hint">—</span>'}</td>`).join('')}<td class="num-col"><strong>${m.fmt(m.calc(d.total || prodEmpty()))}</strong></td></tr>`).join('')}</tbody>
+                                <tfoot><tr><td>Equipo</td>${shown.map(w => `<td class="num-col">${m.fmt(m.calc(teamWk[w]))}</td>`).join('')}<td class="num-col">${m.fmt(m.calc(rows.reduce((acc, d) => prodAdd(acc, d.total), prodEmpty())))}</td></tr></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <p class="hint" style="margin-top:8px;">Se muestran primero las semanas más recientes; desliza a la izquierda para ver las anteriores.</p>`;
+                const sc = $('prodContent').querySelector('.table-scroll'); if (sc) sc.scrollLeft = sc.scrollWidth;   // abre en las semanas más recientes
+                Prod.lastExport = { titulo: `${m.lbl} por semana`, trend: { m, shown, rows } };
+            },
+
+            exportRows: () => {
+                const ex = Prod.lastExport;
+                if (!ex) return alert("No hay datos de productividad en pantalla.");
+                let rows;
+                if (ex.trend) rows = ex.trend.rows.map(d => ({ Asesor: d.nombre, ...Object.fromEntries(ex.trend.shown.map(w => [w, d.semanas?.[w] ? ex.trend.m.fmt(ex.trend.m.calc(d.semanas[w])) : ''])), 'Año': ex.trend.m.fmt(ex.trend.m.calc(d.total || prodEmpty())) }));
+                else rows = [...ex.rows.map(r => ({ Asesor: r.nombre, ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(r.b))])) })), { Asesor: 'Equipo', ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(ex.team))])) }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Productividad");
+                XLSX.writeFile(wb, `Productividad_${ex.titulo.replace(/\s+/g, '_')}_${$('yearFilter').value}.xlsx`);
+            }
+        };
+        window.Prod = Prod;
+
         const Maintenance = {
             notes: [],          // [{ ref, data }] de toda la colección, cargado al analizar
             busy: false,
@@ -3943,6 +4849,12 @@
         $('btnPurgeSelectOthers').addEventListener('click', Maintenance.selectAllButMain);
         $('purgeConfirmInput').addEventListener('input', Maintenance.updateRunButton);
         $('btnPurgeRun').addEventListener('click', Maintenance.run);
+        $('btnTestCopy').addEventListener('click', TestMode.copyReal);
+        $('btnTestClear').addEventListener('click', TestMode.clear);
+        $('prodPeriodo').addEventListener('change', (e) => { Prod.ui.periodo = e.target.value; Prod.ui.valor = ''; if (e.target.value === 'dia') Prod.ui.vista = 'tabla'; Prod.draw(); });
+        $('prodValor').addEventListener('change', (e) => { Prod.ui.valor = e.target.value; Prod.draw(); });
+        $('prodVista').addEventListener('change', (e) => { Prod.ui.vista = e.target.value; Prod.draw(); });
+        $('prodMetrica').addEventListener('change', (e) => { Prod.ui.metrica = e.target.value; Prod.draw(); });
     </script>
 </body>
 </html>
