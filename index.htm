@@ -4066,22 +4066,37 @@
             { f: 'holdS', lbl: 'Hold saliente', col: 'Tiempo de Hold Saliente' }
         ];
         const pctKey = (st) => st.p || ('p_' + st.f);
+        // Columnas de promedio del reporte (por llamada). En un periodo se muestra el promedio de los días con valor, igual que el TMO.
+        const PROD_AVGS = [
+            { f: 'avgConvE', lbl: 'Prom. conversación entrante', col: 'Tiempo Prom. de Conversación (Entrante)' },
+            { f: 'avgConvS', lbl: 'Prom. conversación saliente', col: 'Tiempo Prom. de Conversación (Saliente)' },
+            { f: 'avgAtenE', lbl: 'Prom. atención entrante', col: 'Tiempo Prom. de Atención (Entrante)' },
+            { f: 'avgAtenS', lbl: 'Prom. atención saliente', col: 'Tiempo Prom. de Atención (Saliente)' },
+            { f: 'avgMarcado', lbl: 'Prom. marcado', col: 'Tiempo Prom. de Marcado' },
+            { f: 'avgPreview', lbl: 'Prom. preview CRM', col: 'Tiempo Prom. de Preview CRM' },
+            { f: 'avgPostview', lbl: 'Prom. postview CRM', col: 'Tiempo Prom. de Postview CRM' },
+            { f: 'avgHoldE', lbl: 'Prom. hold entrante', col: 'Promedio de Tiempo de Hold Entrante' },
+            { f: 'avgHoldS', lbl: 'Prom. hold saliente', col: 'Promedio de Tiempo de Hold Saliente' },
+            { f: 'avgRingS', lbl: 'Prom. ringing saliente', col: 'Promedio de Ringing Saliente' },
+            { f: 'avgDiscado', lbl: 'Prom. tiempo de discado', col: 'Promedio de Tiempo de Discado' }
+        ];
         const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
         const PROD_METRICS = [
             ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
             { id: 'tmo', grupo: 'Llamadas', lbl: 'TMO', calc: b => b?.d ? v0(b, 'tmo') / b.d : null, fmt: fmtMS, hint: 'Promedio diario del tiempo medio de operación' },
             { id: 'd', grupo: 'Llamadas', lbl: 'Días conectado', calc: b => v0(b, 'd'), fmt: fmtInt },
             ...PROD_PCT_STATES.map(st => ({ id: pctKey(st), grupo: 'Porcentaje del login', lbl: '% ' + st.lbl, calc: b => b?.d ? v0(b, pctKey(st)) / b.d : null, fmt: fmtPct, hint: 'Promedio de los días' })),
-            ...PROD_STATES.map(st => ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS }))
+            ...PROD_STATES.map(st => ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS })),
+            ...PROD_AVGS.map(a => ({ id: a.f, grupo: 'Promedios por llamada', lbl: a.lbl, calc: b => v0(b, 'n_' + a.f) ? v0(b, 'a_' + a.f) / v0(b, 'n_' + a.f) : null, fmt: fmtMS, hint: 'Promedio de los días con valor' }))
         ];
-        const PROD_GROUPS = ['Llamadas', 'Porcentaje del login', 'Tiempo en cada estado'];
+        const PROD_GROUPS = ['Llamadas', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
         const PROD_DEFAULT_VISIBLES = ['llam', 'tmo', 'login', 'pOcio', 'pAdmin', 'pAlm', 'pBano', 'pCoach'];
         const PROD_PCT = new Set(PROD_PCT_STATES.map(pctKey));
-        const PROD_FIELDS = ['d', 'tmo', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT];
+        const PROD_FIELDS = ['d', 'tmo', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f])];
         const prodEmpty = () => Object.fromEntries(PROD_FIELDS.map(f => [f, 0]));
         const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
         /** Redondea y omite los ceros (documentos más livianos en Firebase). */
-        const prodRound = (b) => Object.fromEntries(PROD_FIELDS.map(f => [f, PROD_PCT.has(f) ? Math.round(b[f] * 10000) / 10000 : Math.round(b[f])]).filter(([, v]) => v));
+        const prodRound = (b) => Object.fromEntries(PROD_FIELDS.map(f => [f, PROD_PCT.has(f) ? Math.round(b[f] * 10000) / 10000 : f.startsWith('a_') ? Math.round(b[f] * 10) / 10 : Math.round(b[f])]).filter(([, v]) => v));
         // =========================================================
         // PRODUCTIVIDAD — áreas de mejora
         // Cada indicador se evalúa contra su meta (si el admin la definió) o contra el promedio del equipo.
@@ -4093,6 +4108,7 @@
                 'preview', 'p_preview', 'postview', 'p_postview', 'otrosCrm', 'p_otrosCrm'],
             alto: ['llam', 'llamE', 'llamS', 'login', 'convE', 'p_convE', 'convS', 'p_convS', 'd']
         };
+        PROD_AVGS.forEach(a => MEJORA_DIR.bajo.push(a.f));
         const MEJORA_TXT = {
             tmo: ['TMO alto', 'Revisar las llamadas más largas y apoyarse en guiones y base de conocimiento.'],
             pOcio: ['Ocio alto', 'Verificar disponibilidad y uso correcto de los estados.'], ocio: ['Ocio alto', 'Verificar disponibilidad y uso correcto de los estados.'],
@@ -4119,7 +4135,13 @@
             p_postview: ['Postview CRM alto', 'Agilizar el registro en CRM después de la llamada.'], postview: ['Postview CRM alto', 'Agilizar el registro en CRM después de la llamada.'],
             p_otrosCrm: ['Otros CRM alto', 'Revisar el tiempo en otras pantallas del CRM.'], otrosCrm: ['Otros CRM alto', 'Revisar el tiempo en otras pantallas del CRM.'],
             p_convE: ['Poca conversación entrante', 'Aumentar el tiempo disponible para recibir llamadas.'], convE: ['Poca conversación entrante', 'Aumentar el tiempo disponible para recibir llamadas.'],
-            p_convS: ['Poca conversación saliente', 'Revisar la gestión de salientes.'], convS: ['Poca conversación saliente', 'Revisar la gestión de salientes.']
+            p_convS: ['Poca conversación saliente', 'Revisar la gestión de salientes.'], convS: ['Poca conversación saliente', 'Revisar la gestión de salientes.'],
+            avgConvE: ['Conversación entrante larga', 'Revisar las llamadas largas y apoyarse en guiones.'], avgConvS: ['Conversación saliente larga', 'Ir al punto en llamadas salientes.'],
+            avgAtenE: ['Atención entrante alta', 'Reducir el tiempo de gestión después de la llamada.'], avgAtenS: ['Atención saliente alta', 'Reducir el tiempo de gestión en salientes.'],
+            avgMarcado: ['Marcado lento', 'Agilizar el marcado.'], avgPreview: ['Preview CRM lento', 'Agilizar la revisión del CRM antes de la llamada.'],
+            avgPostview: ['Postview CRM lento', 'Agilizar el registro en CRM después de la llamada.'], avgHoldE: ['Hold promedio alto', 'Preparar la información antes de poner en espera.'],
+            avgHoldS: ['Hold saliente promedio alto', 'Reducir esperas en salientes.'], avgRingS: ['Ringing saliente alto', 'Revisar horarios y números de contacto.'],
+            avgDiscado: ['Discado lento', 'Revisar el proceso de discado.']
         };
         const Mejora = {
             cfg: () => ({ auto: true, margen: 20, reglas: {}, ...(State.prodCfg?.mejora || {}) }),
@@ -4522,7 +4544,7 @@
                     let filas = 0;
                     const lastIdx = (name) => { let k = -1; H.forEach((h, i) => { if (norm(h) === norm(name)) k = i; }); return k; };
                     const firstIdx = (name) => H.findIndex(h => norm(h) === norm(name));
-                    const CI = {}, SI = {}, PI = {};
+                    const CI = {}, SI = {}, PI = {}, AI = {};
 
                     await book.rows(ProdSync.SHEET, (r, n) => {
                         if (n === 1) {
@@ -4532,11 +4554,12 @@
                                 fecha: lastIdx('Fecha 2'), anio: lastIdx('Año'), mes: lastIdx('Mes'), semana: lastIdx('Semana'), tmo: lastIdx('TMO')
                             });
                             PROD_CALLS.forEach(c => CI[c.f] = c.last ? lastIdx(c.col) : firstIdx(c.col));
+                            PROD_AVGS.forEach(a => AI[a.f] = firstIdx(a.col));
                             PROD_STATES.forEach(st => { SI[st.f] = st.last ? lastIdx(st.col) : firstIdx(st.col); if (st.pcol) PI[st.f] = lastIdx(st.pcol); });
                             const falta = [...Object.entries(C).filter(([k, v]) => v === -1 && k !== 'usuario').map(([k]) => k),
                                 ...(CI.llam === -1 ? ['Llamadas Conectadas'] : []), ...(SI.login === -1 ? ['Login'] : [])];
                             if (falta.length) throw new Error(`Faltan columnas en "${ProdSync.SHEET}": ${falta.join(', ')}.`);
-                            ProdSync.src.columnasFaltantes = [...PROD_CALLS.filter(c => CI[c.f] === -1).map(c => c.col), ...PROD_STATES.filter(st => SI[st.f] === -1).map(st => st.col)];
+                            ProdSync.src.columnasFaltantes = [...PROD_CALLS.filter(c => CI[c.f] === -1).map(c => c.col), ...PROD_STATES.filter(st => SI[st.f] === -1).map(st => st.col), ...PROD_AVGS.filter(a => AI[a.f] === -1).map(a => a.col)];
                             return;
                         }
                         filas++;
@@ -4556,6 +4579,7 @@
                         if (!fecha) return;
                         const b = { d: 1, tmo: ProdSync.secs(r[C.tmo]) };
                         PROD_CALLS.forEach(c => { b[c.f] = ProdSync.num(r[CI[c.f]]); });
+                        PROD_AVGS.forEach(a => { const v = ProdSync.secs(r[AI[a.f]]); if (v > 0) { b['a_' + a.f] = v; b['n_' + a.f] = 1; } });
                         const loginDia = ProdSync.secs(r[SI.login]);
                         PROD_STATES.forEach(st => {
                             const t = ProdSync.secs(r[SI[st.f]]);
