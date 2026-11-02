@@ -229,6 +229,9 @@
         .prod-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
         .prod-controls .form-group { margin: 0; }
         .prod-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .prod-scroll { max-height: calc(100vh - 290px); min-height: 260px; }
+        .prod-scroll-hint { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .prod-scroll-hint button { border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-sm); padding: 3px 9px; cursor: pointer; }
         .prod-table th, .prod-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
         .prod-table th { position: sticky; top: 0; background: var(--surface-2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); text-align: left; z-index: 1; }
         .prod-table th:first-child, .prod-table td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 2; max-width: 260px; }
@@ -4085,8 +4088,10 @@
         // Los indicadores que se suman (llamadas, tiempos) se comparan por día, para no castigar a quien trabajó menos días.
         // =========================================================
         const MEJORA_DIR = {   // bajo: menos es mejor · alto: más es mejor
-            bajo: ['tmo', 'ocio', 'pOcio', 'admin', 'pAdmin', 'almuerzo', 'pAlm', 'bano', 'pBano', 'descanso', 'p_descanso', 'holdE', 'p_holdE', 'holdS', 'p_holdS', 'perdE', 'perdS', 'noConS'],
-            alto: ['llam', 'llamE', 'login']
+            bajo: ['tmo', 'ocio', 'pOcio', 'admin', 'pAdmin', 'almuerzo', 'pAlm', 'bano', 'pBano', 'descanso', 'p_descanso', 'holdE', 'p_holdE', 'holdS', 'p_holdS', 'perdE', 'perdS', 'noConS',
+                'coaching', 'pCoach', 'testear', 'p_testear', 'rrss', 'p_rrss', 'rrss2', 'p_rrss2', 'marcado', 'p_marcado', 'atenE', 'p_atenE', 'atenS', 'p_atenS',
+                'preview', 'p_preview', 'postview', 'p_postview', 'otrosCrm', 'p_otrosCrm'],
+            alto: ['llam', 'llamE', 'llamS', 'login', 'convE', 'p_convE', 'convS', 'p_convS', 'd']
         };
         const MEJORA_TXT = {
             tmo: ['TMO alto', 'Revisar las llamadas más largas y apoyarse en guiones y base de conocimiento.'],
@@ -4100,13 +4105,27 @@
             perdE: ['Llamadas perdidas', 'Atender a tiempo; revisar alertas y estado disponible.'], perdS: ['Salientes perdidas', 'Revisar el marcado y la atención de salientes.'],
             noConS: ['Salientes no conectadas', 'Verificar números y horarios de contacto.'],
             llam: ['Pocas llamadas', 'Aumentar el tiempo en estado disponible y reducir pausas.'], llamE: ['Pocas llamadas entrantes', 'Aumentar el tiempo en estado disponible.'],
-            login: ['Poco tiempo conectado', 'Cumplir con el horario de conexión.']
+            login: ['Poco tiempo conectado', 'Cumplir con el horario de conexión.'],
+            d: ['Pocos días conectado', 'Revisar asistencia y ausencias del periodo.'],
+            llamS: ['Pocas salientes conectadas', 'Revisar la gestión de llamadas salientes.'],
+            pCoach: ['Coaching alto', 'Validar que el tiempo de coaching esté programado.'], coaching: ['Coaching alto', 'Validar que el tiempo de coaching esté programado.'],
+            p_testear: ['Testear alto', 'Usar el estado de prueba solo cuando corresponda.'], testear: ['Testear alto', 'Usar el estado de prueba solo cuando corresponda.'],
+            p_rrss: ['Redes sociales alto', 'Revisar el tiempo en chats de redes sociales.'], rrss: ['Redes sociales alto', 'Revisar el tiempo en chats de redes sociales.'],
+            p_rrss2: ['Redes sociales alto', 'Revisar el tiempo en chats de redes sociales.'], rrss2: ['Redes sociales alto', 'Revisar el tiempo en chats de redes sociales.'],
+            p_marcado: ['Marcado alto', 'Agilizar el marcado de llamadas salientes.'], marcado: ['Marcado alto', 'Agilizar el marcado de llamadas salientes.'],
+            p_atenE: ['Atención entrante alta', 'Reducir el tiempo de gestión después de la llamada.'], atenE: ['Atención entrante alta', 'Reducir el tiempo de gestión después de la llamada.'],
+            p_atenS: ['Atención saliente alta', 'Reducir el tiempo de gestión en salientes.'], atenS: ['Atención saliente alta', 'Reducir el tiempo de gestión en salientes.'],
+            p_preview: ['Preview CRM alto', 'Agilizar la revisión del CRM antes de la llamada.'], preview: ['Preview CRM alto', 'Agilizar la revisión del CRM antes de la llamada.'],
+            p_postview: ['Postview CRM alto', 'Agilizar el registro en CRM después de la llamada.'], postview: ['Postview CRM alto', 'Agilizar el registro en CRM después de la llamada.'],
+            p_otrosCrm: ['Otros CRM alto', 'Revisar el tiempo en otras pantallas del CRM.'], otrosCrm: ['Otros CRM alto', 'Revisar el tiempo en otras pantallas del CRM.'],
+            p_convE: ['Poca conversación entrante', 'Aumentar el tiempo disponible para recibir llamadas.'], convE: ['Poca conversación entrante', 'Aumentar el tiempo disponible para recibir llamadas.'],
+            p_convS: ['Poca conversación saliente', 'Revisar la gestión de salientes.'], convS: ['Poca conversación saliente', 'Revisar la gestión de salientes.']
         };
         const Mejora = {
             cfg: () => ({ auto: true, margen: 20, reglas: {}, ...(State.prodCfg?.mejora || {}) }),
             dirDefault: (id) => MEJORA_DIR.bajo.includes(id) ? 'bajo' : MEJORA_DIR.alto.includes(id) ? 'alto' : '',
             regla: (m) => { const r = Mejora.cfg().reglas[m.id] || {}; return { dir: r.dir ?? Mejora.dirDefault(m.id), meta: r.meta ?? null }; },
-            esSuma: (m) => m.fmt === fmtInt || m.fmt === fmtHMS,
+            esSuma: (m) => m.id !== 'd' && (m.fmt === fmtInt || m.fmt === fmtHMS),
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
@@ -4167,7 +4186,7 @@
             unidad: (m) => PROD_PCT.has(m.id) ? '%' : m.fmt === fmtInt ? 'por día' : m.fmt === fmtMS ? 'm:ss' : 'h:mm:ss por día',
             box: () => {
                 const can = UI.hasPerm('chk_sync_productividad'), c = Mejora.cfg();
-                const evaluables = PROD_METRICS.filter(m => m.id !== 'd');
+                const evaluables = PROD_METRICS;
                 return `
                     <div class="panel-soft" style="max-width:760px; margin-top:16px;">
                         <h3 class="panel-title">Metas y áreas de mejora</h3>
@@ -4899,8 +4918,10 @@
                 $('prodContent').innerHTML = `
                     ${Scope.hasTeamView() ? Mejora.resumen(an, rows.length) : ''}
                     <div class="table-card">
-                        <div class="table-card-head" style="display:flex; align-items:center; gap:8px;"><h3>${esc(titulo)}</h3>${extraCtl}<span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
-                        <div class="table-scroll">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>${esc(titulo)}</h3>${extraCtl}
+                            <span class="prod-scroll-hint" id="prodScrollHint" style="display:none;">${vis.length} indicadores · desliza para ver todos <button type="button" onclick="this.closest('.table-card').querySelector('.table-scroll').scrollBy({left:-400,behavior:'smooth'})">‹</button><button type="button" onclick="this.closest('.table-card').querySelector('.table-scroll').scrollBy({left:400,behavior:'smooth'})">›</button></span>
+                            <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
+                        <div class="table-scroll prod-scroll">
                             <table class="prod-table">
                                 <thead><tr><th>Asesor</th><th>Áreas de mejora</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
                                 <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td><td class="mejora-cell">${Mejora.chips(an.porFila.get(r.nombre))}</td>${vis.map(m => `<td class="num-col ${an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 2, esc(vacio))}</tbody>
@@ -4908,6 +4929,8 @@
                             </table>
                         </div>
                     </div>`;
+                const sc = $('prodContent').querySelector('.table-scroll');
+                if (sc && sc.scrollWidth > sc.clientWidth + 4) $('prodScrollHint').style.display = '';
                 Prod.lastExport = { titulo, cols: vis, rows, team, an };
             },
 
@@ -4921,7 +4944,7 @@
                 $('prodContent').innerHTML = `
                     <div class="table-card">
                         <div class="table-card-head"><h3>${esc(m.lbl)} por semana</h3></div>
-                        <div class="table-scroll">
+                        <div class="table-scroll prod-scroll">
                             <table class="prod-table">
                                 <thead><tr><th>Asesor</th>${shown.map(w => `<th class="num-col">${esc(w)}</th>`).join('')}<th class="num-col">Año</th></tr></thead>
                                 <tbody>${rows.map(d => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(d.nombre)})">${esc(d.nombre)}</button></td>${shown.map(w => `<td class="num-col">${d.semanas?.[w] ? m.fmt(m.calc(d.semanas[w])) : '<span class="hint">—</span>'}</td>`).join('')}<td class="num-col"><strong>${m.fmt(m.calc(d.total || prodEmpty()))}</strong></td></tr>`).join('')}</tbody>
