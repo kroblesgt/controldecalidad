@@ -240,21 +240,48 @@
         .prod-table .num-col { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-main); }
         .prod-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
         .prod-table tbody tr:hover td { background: var(--surface-2); }
-        .prod-table td.prod-bad { color: #B42318; font-weight: 600; }
-        .prod-table td.prod-bad::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F04438; margin-right: 6px; vertical-align: 2px; }
+        .prod-table td.prod-bad { color: #B54708; font-weight: 600; }
+        .prod-table td.prod-best { color: #067647; font-weight: 700; }
+        .prod-table td.prod-best::before { content: "★"; font-size: 10px; margin-right: 5px; color: #12B76A; }
+        .prod-table td.prod-bad::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F79009; margin-right: 6px; vertical-align: 2px; }
         .prod-table td.prod-agent { white-space: normal; }
         .prod-table td.prod-agent .agent-link { max-width: 280px; }
         .mejora-line { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; }
-        .mejora-chip { display: inline-block; padding: 1px 7px; border-radius: 6px; background: #FEF3F2; color: #B42318; font-size: 10.5px; font-weight: 600; cursor: help; white-space: nowrap; line-height: 1.6; }
+        .mejora-chip { display: inline-block; padding: 1px 7px; border-radius: 6px; background: #FFFAEB; color: #B54708; font-size: 10.5px; font-weight: 600; cursor: help; white-space: nowrap; line-height: 1.6; }
         .mejora-ok { color: var(--ok); font-size: 10.5px; font-weight: 600; opacity: .85; }
         .mejora-resumen { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); font-size: 13px; margin-bottom: 14px; }
         .mejora-resumen-t { font-weight: 600; color: var(--text-main); }
-        .mejora-resumen-t i { color: #F04438; margin-right: 4px; }
+        .mejora-resumen-t i { color: #12B76A; margin-right: 4px; }
         .mejora-resumen-items { display: flex; flex-wrap: wrap; gap: 6px; }
         .mejora-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; border: 1px solid var(--border-strong); font-size: 12px; color: var(--text-main); cursor: help; }
-        .mejora-tag b { min-width: 20px; text-align: center; padding: 1px 6px; border-radius: 999px; background: #FEF3F2; color: #B42318; font-size: 11px; }
+        .mejora-tag b { min-width: 20px; text-align: center; padding: 1px 6px; border-radius: 999px; background: #FFFAEB; color: #B54708; font-size: 11px; }
         .mejora-resumen.ok { border-color: var(--primary-line); background: var(--primary-soft); color: var(--ok); }
         .prod-table tfoot td { position: sticky; bottom: 0; background: var(--surface-2); font-weight: 600; border-top: 1px solid var(--border-strong); border-bottom: 0; }
+        .mine-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 20px 22px; border-radius: 14px; margin-bottom: 16px; color: #fff; background: linear-gradient(120deg, #0B3B8C 0%, #1570EF 55%, #12B76A 130%); box-shadow: 0 8px 24px -12px rgba(21,112,239,.55); animation: fadeIn .35s ease both; }
+        .mine-hero-t { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+        .mine-hero-s { font-size: 14px; opacity: .92; margin-top: 4px; }
+        .mine-hero-p { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.18); white-space: nowrap; }
+        .mine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+        .mine-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; animation: fadeIn .4s ease both; transition: transform .15s, box-shadow .15s; }
+        .mine-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px -10px rgba(16,24,40,.35); }
+        .mine-card.is-good { border-color: #ABEFC6; background: linear-gradient(180deg, #F6FEF9 0%, var(--surface) 70%); }
+        .mine-card.is-good::after { content: "★"; position: absolute; top: 10px; right: 12px; color: #12B76A; font-size: 13px; }
+        .mine-lbl { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+        .mine-val { font-size: 26px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; color: var(--text-main); }
+        .mine-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+        .mine-trend { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .mine-trend span { font-weight: 500; opacity: .8; }
+        .mine-trend.good { background: #ECFDF3; color: #067647; } .mine-trend.bad { background: #FFFAEB; color: #B54708; } .mine-trend.flat { background: var(--surface-2); color: var(--text-muted); }
+        .mine-meta { margin-top: 10px; }
+        .mine-bar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+        .mine-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: #F79009; transition: width .9s cubic-bezier(.2,.8,.2,1); }
+        .mine-bar span.ok { background: #12B76A; }
+        .mine-meta-t { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; } .mine-meta-t i { color: #12B76A; }
+        .mine-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
+        .mine-list { border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); animation: fadeIn .45s ease both; }
+        .mine-list h4 { margin: 0 0 8px; font-size: 14px; } .mine-list.good h4 i { color: #12B76A; } .mine-list.opp h4 i { color: #F79009; }
+        .mine-list ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.7; } .mine-list li span { color: var(--text-muted); }
+        .mine-empty { display: flex; gap: 14px; align-items: center; padding: 24px; border-radius: 12px; border: 1px dashed var(--border-strong); color: var(--text-muted); } .mine-empty i { font-size: 26px; color: var(--primary); }
         .comp-table td { white-space: nowrap; }
         .comp-table .comp-prev { color: var(--text-muted, #6b7280); font-size: 11px; }
         .comp-table .comp-arrow { font-size: 9px; color: var(--text-muted, #6b7280); margin: 0 2px; }
@@ -4237,13 +4264,13 @@
             },
             chips: (arr) => arr?.length
                 ? arr.map(x => `<span class="mejora-chip" title="${esc(x.det + (x.accion ? '\n' + x.accion : ''))}">${esc(x.lbl)}</span>`).join('')
-                : '<span class="mejora-ok"><i class="fas fa-check"></i> Sin áreas de mejora</span>',
+                : '<span class="mejora-ok"><i class="fas fa-star"></i> ¡Todo en orden!</span>',
             resumen: (an, total) => {
                 const cuenta = new Map();
                 an.porFila.forEach(arr => arr.forEach(x => cuenta.set(x.lbl, { n: (cuenta.get(x.lbl)?.n || 0) + 1, accion: x.accion })));
                 if (!cuenta.size) return total ? `<div class="mejora-resumen ok"><i class="fas fa-circle-check"></i> Ningún asesor tiene áreas de mejora en este periodo.</div>` : '';
                 const items = [...cuenta.entries()].sort((a, b) => b[1].n - a[1].n);
-                return `<div class="mejora-resumen"><span class="mejora-resumen-t"><i class="fas fa-bullseye"></i> Áreas de mejora del equipo</span><span class="mejora-resumen-items">${items.map(([lbl, x]) => `<span class="mejora-tag" title="${esc(x.accion)}">${esc(lbl)}<b>${x.n}</b></span>`).join('')}</span></div>`;
+                return `<div class="mejora-resumen"><span class="mejora-resumen-t"><i class="fas fa-seedling"></i> Oportunidades del equipo</span><span class="mejora-resumen-items">${items.map(([lbl, x]) => `<span class="mejora-tag" title="${esc(x.accion)}">${esc(lbl)}<b>${x.n}</b></span>`).join('')}</span></div>`;
             },
 
             // ---- Ajustes: metas ----
@@ -5014,18 +5041,85 @@
                     const meses = await Prod.loadMonth(anio, ui.fecha.slice(5, 7));
                     const rows = meses.filter(m => docs.some(d => d.codigo === m.codigo)).map(m => ({ nombre: m.nombre, b: m.dias?.[ui.fecha] || null })).filter(r => r.b);
                     const titulo = new Date(ui.fecha + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                    return Prod.drawTable(rows, vis, '', titulo.charAt(0).toUpperCase() + titulo.slice(1), 'Sin datos ese día (fin de semana, feriado o aún no cargado).');
+                    const tituloDia = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+                    if (!Scope.hasTeamView()) {
+                        const mio = meses.find(m => docs.some(d => d.codigo === m.codigo));
+                        const prevF = Object.keys(mio?.dias || {}).filter(f => f < ui.fecha).sort().pop();
+                        return Prod.drawMine(rows[0]?.b || null, prevF ? mio.dias[prevF] : null, vis, tituloDia, prevF ? new Date(prevF + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric' }) : '', 'día');
+                    }
+                    return Prod.drawTable(rows, vis, '', tituloDia, 'Sin datos ese día (fin de semana, feriado o aún no cargado).');
                 }
                 const pick = (d) => ui.periodo === 'semana' ? d.semanas?.[ui.valor] : ui.periodo === 'mes' ? d.meses?.[ui.valor] : d.total;
                 const rows = docs.map(d => ({ nombre: d.nombre, b: pick(d) || null })).filter(r => r.b);
                 const titulo = ui.periodo === 'semana' ? `Semana ${weekNum(ui.valor)}` : ui.periodo === 'mes' ? MESES[Number(ui.valor) - 1] : `Año ${anio}`;
+                if (!Scope.hasTeamView()) {
+                    // Vista del asesor: tarjetas motivadoras comparadas con su periodo anterior
+                    const i = opts.findIndex(o => o.v === ui.valor), prevO = ui.periodo !== 'anio' ? opts[i + 1] : null;
+                    const prevPick = (d) => !prevO ? null : ui.periodo === 'semana' ? d.semanas?.[prevO.v] : d.meses?.[prevO.v];
+                    return Prod.drawMine(rows[0]?.b || null, docs[0] ? prevPick(docs[0]) || null : null, vis, titulo, prevO ? prevO.l.toLowerCase() : '', ui.periodo === 'semana' ? 'semana' : ui.periodo === 'mes' ? 'mes' : 'año');
+                }
                 Prod.drawTable(rows, vis, '', titulo);
+            },
+
+            /** Vista personal del asesor: tarjetas con su resultado, cómo va frente al periodo anterior y su meta. */
+            drawMine: (b, prev, vis, titulo, prevLbl, unidad) => {
+                const box = $('prodContent');
+                const nombre = String(State.user?.nombre || '').trim().split(/\s+/)[0] || '';
+                if (!b) { box.innerHTML = `<div class="mine-empty"><i class="fas fa-mug-hot"></i><div><strong>Aún no hay datos de ${esc(titulo)}.</strong><br>Cuando se carguen tus tiempos los verás aquí.</div></div>`; Prod.lastExport = null; return; }
+                const items = vis.map(m => {
+                    const { dir, meta } = Mejora.regla(m);
+                    const v = Mejora.valor(m, b), p = prev ? Mejora.valor(m, prev) : null;
+                    let trend = null;
+                    if (v !== null && p !== null && p !== 0 && dir) {
+                        const ch = (v - p) / Math.abs(p);
+                        trend = { ch, good: dir === 'alto' ? ch > 0.01 : ch < -0.01, bad: dir === 'alto' ? ch < -0.01 : ch > 0.01 };
+                    }
+                    let mt = null;
+                    if (meta !== null && meta !== undefined && meta !== '' && v !== null && dir) {
+                        const x = Number(meta), ok = dir === 'bajo' ? v <= x : v >= x;
+                        mt = { x, ok, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
+                    }
+                    return { m, v, trend, mt, dir };
+                });
+                const conDir = items.filter(x => x.dir && (x.trend || x.mt));
+                const bien = items.filter(x => x.trend?.good || (x.mt?.ok && !x.trend?.bad));
+                const opp = items.filter(x => x.trend?.bad || (x.mt && !x.mt.ok));
+                let titular, sub;
+                if (!prev && !conDir.length) { titular = `Hola${nombre ? ', ' + esc(nombre) : ''} 👋`; sub = `Este es tu resumen de ${esc(titulo.toLowerCase())}.`; }
+                else if (bien.length && bien.length >= opp.length) { titular = `¡Excelente${nombre ? ', ' + esc(nombre) : ''}! 🚀`; sub = `Vas mejorando en <strong>${bien.length} de ${conDir.length}</strong> indicadores${prevLbl ? ` frente a ${esc(prevLbl)}` : ''}. ¡Sigue así!`; }
+                else if (bien.length) { titular = `¡Vas por buen camino${nombre ? ', ' + esc(nombre) : ''}! 💪`; sub = `Mejoraste en <strong>${bien.length}</strong> indicador(es). Enfócate en tus oportunidades y lo lograrás.`; }
+                else { titular = `¡Ánimo${nombre ? ', ' + esc(nombre) : ''}! 💪`; sub = `Esta ${esc(unidad)} tienes oportunidades para crecer. Cada llamada cuenta, ¡tú puedes!`; }
+                const pctTxt = (ch) => `${Math.abs(ch * 100) >= 10 ? Math.round(Math.abs(ch * 100)) : (Math.abs(ch * 100)).toFixed(1)}%`;
+                const card = (x, i) => {
+                    const { m } = x, total = m.calc(b);
+                    const perDay = Mejora.esSuma(m) && b.d > 1 ? `<div class="mine-sub">${esc(m.fmt(x.v))} por día</div>` : '';
+                    const tr = x.trend ? `<div class="mine-trend ${x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}"><i class="fas fa-arrow-${x.trend.ch > 0 ? 'up' : x.trend.ch < 0 ? 'down' : 'right'}"></i> ${pctTxt(x.trend.ch)} <span>vs ${esc(prevLbl)}</span></div>` : '';
+                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div><div class="mine-meta-t">${x.mt.ok ? '<i class="fas fa-circle-check"></i> ¡Meta cumplida!' : `Meta: ${esc(Mejora.fmtValor(m, x.mt.x))}`}</div></div>` : '';
+                    return `<div class="mine-card ${x.trend?.good || x.mt?.ok ? 'is-good' : ''}" style="animation-delay:${i * 50}ms" ${m.hint ? `title="${esc(m.hint)}"` : ''}>
+                        <div class="mine-lbl">${esc(m.lbl)}</div><div class="mine-val">${esc(m.fmt(total))}</div>${perDay}${tr}${bar}</div>`;
+                };
+                const lista = (arr, cls, icon, txt) => arr.length ? `<div class="mine-list ${cls}"><h4><i class="fas ${icon}"></i> ${txt}</h4><ul>${arr.map(x => `<li><strong>${esc(x.m.lbl)}</strong>${cls === 'opp' && MEJORA_TXT[x.m.id]?.[1] ? ` <span>${esc(MEJORA_TXT[x.m.id][1])}</span>` : ''}</li>`).join('')}</ul></div>` : '';
+                box.innerHTML = `
+                    <div class="mine-hero"><div><div class="mine-hero-t">${titular}</div><div class="mine-hero-s">${sub}</div></div><div class="mine-hero-p">${esc(titulo)}</div></div>
+                    <div class="mine-grid">${items.map(card).join('')}</div>
+                    ${(bien.length || opp.length) ? `<div class="mine-lists">${lista(bien, 'good', 'fa-star', 'Lo que estás haciendo muy bien')}${lista(opp, 'opp', 'fa-seedling', 'Tus oportunidades para crecer')}</div>` : ''}`;
+                requestAnimationFrame(() => box.querySelectorAll('.mine-bar span').forEach(el => { el.style.width = el.dataset.w + '%'; }));
+                Prod.lastExport = { titulo, cols: vis, rows: [{ nombre: State.user?.nombre || '', b }], team: b, an: { porFila: new Map() } };
             },
 
             drawTable: (rows, vis, extraCtl, titulo, vacio = 'Sin datos en este periodo.') => {
                 rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
                 const team = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
                 const an = Mejora.analizar(rows, vis);
+                // Mejor resultado del periodo en cada indicador (se resalta en verde para reconocerlo)
+                const best = new Set();
+                if (rows.length >= 3) vis.forEach(m => {
+                    const { dir } = Mejora.regla(m); if (!dir) return;
+                    const vals = rows.map(r => [r.nombre, Mejora.valor(m, r.b)]).filter(([, v]) => v !== null && v > 0);
+                    if (vals.length < 3) return;
+                    const top = dir === 'alto' ? Math.max(...vals.map(x => x[1])) : Math.min(...vals.map(x => x[1]));
+                    vals.forEach(([n, v]) => { if (v === top) best.add(n + '|' + m.id); });
+                });
                 $('prodContent').innerHTML = `
                     ${Scope.hasTeamView() ? Mejora.resumen(an, rows.length) : ''}
                     <div class="table-card">
@@ -5034,8 +5128,8 @@
                             <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table">
-                                <thead><tr><th>Asesor <span class="th-sub">y áreas de mejora</span></th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
-                                <tbody>${rows.map(r => `<tr><td class="prod-agent"><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})" title="${esc(r.nombre)}">${esc(r.nombre)}</button><div class="mejora-line">${Mejora.chips(an.porFila.get(r.nombre))}</div></td>${vis.map(m => `<td class="num-col ${an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}">${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
+                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
+                                <tbody>${rows.map(r => `<tr><td class="prod-agent"><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})" title="${esc(r.nombre)}">${esc(r.nombre)}</button><div class="mejora-line">${Mejora.chips(an.porFila.get(r.nombre))}</div></td>${vis.map(m => `<td class="num-col ${best.has(r.nombre + '|' + m.id) ? 'prod-best' : an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}" ${best.has(r.nombre + '|' + m.id) ? 'title="Mejor resultado del equipo"' : ''}>${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
                                 ${rows.length ? `<tfoot><tr><td>Total del equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
                             </table>
                         </div>
