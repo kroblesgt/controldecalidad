@@ -6269,7 +6269,7 @@
                         const x = mm.x, ok = dir === 'bajo' ? v <= x : v >= x;
                         mt = { x, ok, tipo: mm.tipo, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
                     }
-                    return { m, v, trend, mt, dir };
+                    return { m, v, p, trend, mt, dir };
                 });
                 const conDir = items.filter(x => x.dir && (x.trend || x.mt));
                 const bien = items.filter(x => x.trend?.good || (x.mt?.ok && !x.trend?.bad));
@@ -6279,14 +6279,23 @@
                 else if (bien.length && bien.length >= opp.length) { titular = `¡Excelente${nombre ? ', ' + esc(nombre) : ''}! 🚀`; sub = `Vas mejorando en <strong>${bien.length} de ${conDir.length}</strong> indicadores${prevLbl ? ` frente a ${esc(prevLbl)}` : ''}. ¡Sigue así!`; }
                 else if (bien.length) { titular = `¡Vas por buen camino${nombre ? ', ' + esc(nombre) : ''}! 💪`; sub = `Mejoraste en <strong>${bien.length}</strong> indicador(es). Enfócate en tus oportunidades y lo lograrás.`; }
                 else { titular = `¡Ánimo${nombre ? ', ' + esc(nombre) : ''}! 💪`; sub = `Esta ${esc(unidad)} tienes oportunidades para crecer. Cada llamada cuenta, ¡tú puedes!`; }
-                const pctTxt = (ch) => `${Math.abs(ch * 100) >= 10 ? Math.round(Math.abs(ch * 100)) : (Math.abs(ch * 100)).toFixed(1)}%`;
+                // Diferencias en las unidades del indicador (no en % de cambio): puntos, minutos, llamadas…
+                const dif = (m, d) => {
+                    const a = Math.abs(d);
+                    if (PROD_PCT.has(m.id)) return `${(a * 100).toFixed(1)} ${Math.round(a * 1000) === 10 ? 'punto' : 'puntos'}`;
+                    if (m.fmt === fmtHora) return `${Math.round(a / 60)} min`;
+                    const t = m.fmt === fmtInt ? String(Math.max(1, Math.round(a))) : m.fmt(a);
+                    return Mejora.esSuma(m) ? `${t} por día` : t;
+                };
+                const igual = (m, d) => PROD_PCT.has(m.id) ? Math.abs(d) < 0.0005 : m.fmt === fmtInt ? Math.abs(d) < 0.5 : m.fmt === fmtDec ? Math.abs(d) < 0.05 : Math.abs(d) < 1;
                 const card = (x, i) => {
                     const { m } = x, total = m.calc(b);
                     const perDay = Mejora.esSuma(m) && b.d > 1 ? `<div class="mine-sub">${esc(m.fmt(x.v))} por día</div>` : '';
-                    const tr = x.trend ? `<div class="mine-trend ${x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}"><i class="fas fa-arrow-${x.trend.ch > 0 ? 'up' : x.trend.ch < 0 ? 'down' : 'right'}"></i> ${pctTxt(x.trend.ch)} <span>vs ${esc(prevLbl)}</span></div>` : '';
+                    const d = x.trend ? x.v - x.p : 0, eq = x.trend && igual(m, d);
+                    const tr = x.trend ? `<div class="mine-trend ${eq ? 'flat' : x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}" title="${esc(`${prevLbl}: ${Mejora.fmtValor(m, x.p)} → ahora: ${Mejora.fmtValor(m, x.v)}`)}"><i class="fas fa-arrow-${eq ? 'right' : d > 0 ? 'up' : 'down'}"></i> ${eq ? 'Igual' : `${d > 0 ? '+' : '−'}${esc(dif(m, d))}`} <span>vs ${esc(prevLbl)} (${esc(Mejora.fmtValor(m, x.p).replace(' por día', ''))})</span></div>` : '';
                     const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : x.mt.tipo === 'dinamica' ? 'Se calcula con las llamadas que recibió el equipo en este periodo y tus horas conectadas: si hay más llamadas o trabajas más horas, la meta sube; si hay menos, baja.' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : x.mt.tipo === 'dinamica' ? '<i class="fas fa-wand-magic-sparkles"></i> Meta dinámica' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}</span></div>
                         <div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div>
-                        <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'promedio' ? '¡Mejor que el promedio del equipo!' : '¡Meta cumplida!'}` : x.mt.tipo === 'dinamica' && Mejora.esSuma(m) ? `Te faltan ${Math.max(1, Math.round(x.mt.x - x.v))} por día para alcanzarla` : `Te falta ${Math.round((1 - x.mt.pct) * 100)}% para alcanzarla`}</div></div>` : '';
+                        <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'promedio' ? '¡Mejor que el promedio del equipo!' : '¡Meta cumplida!'}` : x.dir === 'bajo' ? `Te falta bajar ${esc(dif(m, x.v - x.mt.x))} para alcanzarla` : `Te ${m.fmt === fmtInt ? 'faltan' : 'falta'} ${esc(dif(m, x.mt.x - x.v))} para alcanzarla`}</div></div>` : '';
                     return `<div class="mine-card ${x.trend?.good || x.mt?.ok ? 'is-good' : ''}" style="animation-delay:${i * 50}ms" ${m.hint ? `title="${esc(m.hint)}"` : ''}>
                         <div class="mine-lbl">${esc(m.lbl)}</div><div class="mine-val">${esc(m.fmt(total))}</div>${perDay}${tr}${bar}</div>`;
                 };
