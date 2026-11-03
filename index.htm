@@ -257,6 +257,25 @@
         .mejora-tag b { min-width: 20px; text-align: center; padding: 1px 6px; border-radius: 999px; background: #FFFAEB; color: #B54708; font-size: 11px; }
         .mejora-resumen.ok { border-color: var(--primary-line); background: var(--primary-soft); color: var(--ok); }
         .prod-table tfoot td { position: sticky; bottom: 0; background: var(--surface-2); font-weight: 600; border-top: 1px solid var(--border-strong); border-bottom: 0; }
+        .hor-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; line-height: 1.6; font-variant-numeric: tabular-nums; cursor: default; }
+        .hor-chip b { font-weight: 700; }
+        .hor-chip.ok { background: #ECFDF3; color: #067647; }
+        .hor-chip.early { background: #EFF8FF; color: #175CD3; }
+        .hor-chip.late { background: #FEF3F2; color: #B42318; }
+        .hor-chip.miss { background: #FFFAEB; color: #B54708; }
+        .hor-chip.extra { background: #F4F3FF; color: #5925DC; }
+        .hor-chip.off { background: var(--surface-2); color: var(--text-muted); font-weight: 500; }
+        .hor-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #F79009; vertical-align: 1px; }
+        .hor-legend { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+        .hor-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .hor-kpi { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+        .hor-kpi b { font-size: 20px; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .hor-kpi span { font-size: 12px; color: var(--text-muted); }
+        .hor-kpi.ok b { color: #067647; } .hor-kpi.bad b { color: #B42318; }
+        .hor-d { font-size: 11px; padding: 0 5px; border-radius: 6px; }
+        .hor-d.ok { background: #ECFDF3; color: #067647; } .hor-d.early { background: #EFF8FF; color: #175CD3; } .hor-d.late { background: #FEF3F2; color: #B42318; }
+        .hor-table td.hor-hoy, .hor-table th.hor-hoy { background: var(--primary-soft) !important; }
+        .hor-table tr.hor-focus td { background: #FFFAEB !important; }
         .mine-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 20px 22px; border-radius: 14px; margin-bottom: 16px; color: #fff; background: linear-gradient(120deg, #0B3B8C 0%, #1570EF 55%, #12B76A 130%); box-shadow: 0 8px 24px -12px rgba(21,112,239,.55); animation: fadeIn .35s ease both; }
         .mine-hero-t { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
         .mine-hero-s { font-size: 14px; opacity: .92; margin-top: 4px; }
@@ -443,6 +462,7 @@
             <div class="nav-item" id="navFirmas" data-view="viewFirmas" style="display:none;" tabindex="0"><i class="fas fa-file-signature"></i> Firmas <span class="nav-count" id="navFirmasCount" style="display:none;"></span></div>
             <div class="nav-item" id="navNps" data-view="viewNps" style="display:none;" tabindex="0"><i class="fas fa-face-smile"></i> Satisfacción</div>
             <div class="nav-item" id="navProd" data-view="viewProd" style="display:none;" tabindex="0"><i class="fas fa-gauge-high"></i> Productividad</div>
+            <div class="nav-item" id="navHor" data-view="viewHor" style="display:none;" tabindex="0"><i class="fas fa-user-clock"></i> Horarios</div>
             <div class="nav-item" id="navBajas" data-view="viewBajas" style="display:none;" tabindex="0"><i class="fas fa-user-slash"></i> Asesores de baja <span class="nav-count" id="navBajasCount" style="display:none;"></span></div>
             <div class="nav-group" id="navGroupPersonal" style="display:none;">Personal</div>
             <div class="nav-item" id="navAgente" data-view="viewAgente" style="display:none;" tabindex="0"><i class="fas fa-user"></i> Mi desempeño</div>
@@ -639,6 +659,19 @@
                         </table>
                     </div>
                 </div>
+            </div>
+
+            <!-- VISTA: HORARIOS -->
+            <div id="viewHor" class="view-section">
+                <div class="prod-controls">
+                    <div class="form-group"><label>Vista</label>
+                        <select id="horVista" class="filter-select"><option value="puntualidad">Puntualidad</option><option value="horario">Horario semanal</option><option value="datos">Datos de los asesores</option></select></div>
+                    <div class="form-group" id="horPeriodoBox"><label>Periodo</label>
+                        <select id="horPeriodo" class="filter-select"><option value="dia">Día</option><option value="semana">Semana</option><option value="mes">Mes</option></select></div>
+                    <div class="form-group" id="horFechaBox"><label id="horFechaLbl">Semana del</label><input type="date" id="horFecha" class="filter-select" style="padding:7px 10px;"></div>
+                    <div class="form-group" id="horMesBox" style="display:none;"><label>Mes</label><input type="month" id="horMes" class="filter-select" style="padding:7px 10px;"></div>
+                </div>
+                <div id="horContent"></div>
             </div>
 
             <!-- VISTA: PRODUCTIVIDAD -->
@@ -887,6 +920,7 @@
                     <button class="tab-btn" data-tab="tabOperativas" style="color: var(--primary);">Reglas Operativas</button>
                     <button class="tab-btn" data-tab="tabSync"><i class="fas fa-rotate"></i> Fuente de resultados</button>
                     <button class="tab-btn" data-tab="tabProd"><i class="fas fa-gauge-high"></i> Productividad</button>
+                    <button class="tab-btn" data-tab="tabHorarios"><i class="fas fa-user-clock"></i> Horarios</button>
                     <button class="tab-btn" data-tab="tabMantenimiento" style="color: #b91c1c;"><i class="fas fa-broom"></i> Depuración</button>
                 </div>
 
@@ -1092,6 +1126,11 @@
                     <div id="prodPane"></div>
                 </div>
 
+                <!-- Horarios (Excel de horarios y datos de los asesores) -->
+                <div id="tabHorarios" class="settings-pane" style="display: none;">
+                    <div id="horPane"></div>
+                </div>
+
                 <!-- Depuración (solo Admin) -->
                 <div id="tabMantenimiento" class="settings-pane" style="display: none;">
                     <div class="panel-soft" style="margin-bottom:20px; border-color:#EED7A6; background:var(--amber-soft);">
@@ -1185,7 +1224,7 @@
         const ALL_PERMS = ['chk_ver_global', 'chk_ver_area', 'chk_ver_propio', 'chk_ver_nps', 'chk_ver_firmas', 'chk_subir_excel', 'chk_editar_notas', 'chk_cambiar_estado', 'chk_dar_baja', 'chk_reactivar_bajas', 'chk_ver_bajas', 'chk_ver_productividad', 'chk_add_feedback', 'chk_sync_resultados', 'chk_sync_productividad', 'chk_gestionar_sistema', 'chk_cfg_usuarios', 'chk_importar_usuarios', 'chk_exportar_usuarios', 'chk_cfg_roles', 'chk_cfg_areas', 'chk_cfg_estados', 'chk_cfg_escalas', 'chk_cfg_nps', 'chk_cfg_feedbacks'];
         const TEAM_PERMS = ['chk_ver_area', 'chk_ver_global', 'chk_ver_nps', 'chk_ver_firmas', 'chk_ver_bajas', 'chk_subir_excel', 'chk_cfg_usuarios'];
         /** Permiso requerido para abrir cada vista. */
-        const VIEW_PERM = { viewMatriz: 'chk_ver_area', viewGerencial: 'chk_ver_global', viewNps: 'chk_ver_nps', viewFirmas: 'chk_ver_firmas', viewBajas: 'chk_ver_bajas', viewProd: 'chk_ver_productividad' };
+        const VIEW_PERM = { viewMatriz: 'chk_ver_area', viewGerencial: 'chk_ver_global', viewNps: 'chk_ver_nps', viewFirmas: 'chk_ver_firmas', viewBajas: 'chk_ver_bajas', viewProd: 'chk_ver_productividad', viewHor: 'chk_ver_productividad' };
         const SETTINGS_TABS = [
             { id: 'tabUsuarios', perm: 'chk_cfg_usuarios' }, { id: 'tabEmpresas', perm: 'chk_cfg_areas' },
             { id: 'tabAreas', perm: 'chk_cfg_areas' }, { id: 'tabRoles', perm: 'chk_cfg_roles' },
@@ -1194,6 +1233,7 @@
             { id: 'tabOperativas', perm: 'chk_cfg_feedbacks' },
             { id: 'tabSync', perm: 'chk_sync_resultados', also: 'chk_subir_excel' },
             { id: 'tabProd', perm: 'chk_sync_productividad' },
+            { id: 'tabHorarios', perm: 'chk_sync_productividad' },
             { id: 'tabMantenimiento', adminOnly: true }
         ];
         /** Las pestañas marcadas adminOnly solo las ve el rol Admin, sin importar los permisos del rol. */
@@ -1557,12 +1597,13 @@
                 }
 
                 App.startDataSync();
-                setTimeout(() => ProdSync.init(), 1500);   // espera a que lleguen los usuarios (para los códigos Neotel)
+                setTimeout(() => { ProdSync.init(); HorSync.init(); }, 1500);   // espera a que lleguen los usuarios (para los códigos Neotel)
             },
 
             teardown: () => {
                 Sync.stop(); Sync.src = null; $('syncSidebar').style.display = 'none';
                 ProdSync.stop(); ProdSync.src = null; $('prodSyncStatus').style.display = 'none'; Prod.cache = { anio: null, docs: null, meses: {} };
+                HorSync.stop(); HorSync.src = null; Hor.meses = {};
                 Object.values(State.unsub).forEach(u => { if (typeof u === 'function') u(); });
                 Object.values(State.charts).forEach(c => { if (c) c.destroy(); });
                 Object.assign(State, defaultState());
@@ -1588,7 +1629,7 @@
         // =========================================================
         // APP
         // =========================================================
-        const VIEW_NAV = { viewMatriz: 'navMatriz', viewGerencial: 'navGerencial', viewNps: 'navNps', viewFirmas: 'navFirmas', viewBajas: 'navBajas', viewProd: 'navProd', viewAgente: 'navAgente' };
+        const VIEW_NAV = { viewMatriz: 'navMatriz', viewGerencial: 'navGerencial', viewNps: 'navNps', viewFirmas: 'navFirmas', viewBajas: 'navBajas', viewProd: 'navProd', viewHor: 'navHor', viewAgente: 'navAgente' };
         const VIEW_SUBTITLES = {
             viewMatriz: 'Notas por semana de cada asesor activo',
             viewGerencial: 'Resumen del equipo y comparación entre semanas',
@@ -1596,6 +1637,7 @@
             viewFirmas: 'Seguimiento de compromisos firmados',
             viewBajas: 'Historial de asesores inactivos o dados de baja',
             viewProd: 'Llamadas, TMO y tiempos por día, semana, mes o año',
+            viewHor: 'Puntualidad, horario semanal y datos de los asesores',
             viewAgente: 'Notas, feedback y compromisos'
         };
 
@@ -1623,6 +1665,7 @@
                 $('navAgente').style.display = UI.hasPerm('chk_ver_propio') ? 'flex' : 'none';
                 $('navBajas').style.display = UI.hasPerm('chk_ver_bajas') ? 'flex' : 'none';
                 $('navProd').style.display = UI.hasPerm('chk_ver_productividad') ? 'flex' : 'none';
+                $('navHor').style.display = UI.hasPerm('chk_ver_productividad') ? 'flex' : 'none';
                 $('navGroupPersonal').style.display = UI.hasPerm('chk_ver_propio') && Scope.hasTeamView() ? 'block' : 'none';
 
                 $('kpiPanel').style.display = Scope.hasTeamView() ? '' : 'none';
@@ -1654,6 +1697,7 @@
                     viewFirmas: 'Firmas',
                     viewBajas: 'Asesores de baja',
                     viewProd: 'Productividad',
+                    viewHor: 'Horarios',
                     viewAgente: State.viewingAgentName === State.user.nombre ? 'Mi desempeño' : State.viewingAgentName
                 };
                 $('mainTitle').innerText = titles[viewId];
@@ -1661,9 +1705,10 @@
                 $('mainSubtitle').innerText = [areasTxt, VIEW_SUBTITLES[viewId]].filter(Boolean).join(' — ');
                 // Filtros que no aplican en cada vista
                 $('statusFilter').style.display = ['viewMatriz', 'viewGerencial'].includes(viewId) ? '' : 'none';
-                $('weekFilter').style.display = ['viewBajas', 'viewAgente', 'viewProd'].includes(viewId) ? 'none' : '';
+                $('weekFilter').style.display = ['viewBajas', 'viewAgente', 'viewProd', 'viewHor'].includes(viewId) ? 'none' : '';
                 document.querySelector('.search-box').style.display = viewId === 'viewAgente' ? 'none' : '';
                 if (viewId === 'viewProd') Prod.cache = { anio: null, docs: null, meses: {} };   // al entrar siempre se lee lo último
+                if (viewId === 'viewHor') Hor.meses = {};
                 refreshActiveView();
             },
 
@@ -1687,7 +1732,8 @@
                     tabAlias: () => Admin.renderAlias(),
                     tabMantenimiento: () => { TestMode.render(); Maintenance.scan(); },
                     tabSync: () => Sync.renderSettings(),
-                    tabProd: () => ProdSync.renderSettings()
+                    tabProd: () => ProdSync.renderSettings(),
+                    tabHorarios: () => HorSync.renderSettings()
                 };
                 loaders[tabId]?.();
             },
@@ -1791,6 +1837,7 @@
                 const f = Filters.get();
                 const active = document.querySelector('.view-section.active')?.id;
                 if (active === 'viewProd') return Prod.exportRows();
+                if (active === 'viewHor') return Hor.exportar();
                 const isBajas = active === 'viewBajas' && UI.hasPerm('chk_ver_bajas');
                 const base = State.records.filter(r => isBajas
                     ? isInactiveEstado(r.estado) && Filters.match(r, f, { week: false, status: false, activeOnly: false })
@@ -2415,7 +2462,7 @@
         const refreshActiveView = () => {
             if (!State.user.nombre) return;
             const active = document.querySelector('.view-section.active')?.id;
-            const map = { viewMatriz: Renders.drawMatrix, viewGerencial: Renders.drawManager, viewNps: Renders.drawNps, viewFirmas: Renders.drawFirmas, viewBajas: Renders.drawBajas, viewProd: Prod.draw, viewAgente: Renders.drawAgent };
+            const map = { viewMatriz: Renders.drawMatrix, viewGerencial: Renders.drawManager, viewNps: Renders.drawNps, viewFirmas: Renders.drawFirmas, viewBajas: Renders.drawBajas, viewProd: Prod.draw, viewHor: Hor.draw, viewAgente: Renders.drawAgent };
             Renders.updateNavCounts();
             map[active]?.();
         };
@@ -4152,7 +4199,9 @@
         // Hora de ingreso y salida: se estiman con las filas por hora del archivo (primera y última hora con login).
         const PROD_TIMES = [
             { f: 'ini', lbl: 'Hora de ingreso', hint: 'Exacta (primer Login) con el archivo de conexiones; sin él, estimada con la primera hora con login. En semanas y meses: promedio de los días.' },
-            { f: 'fin', lbl: 'Hora de salida', hint: 'Exacta (último Logout) con el archivo de conexiones; sin él, estimada con la última hora con login. En semanas y meses: promedio de los días.' }
+            { f: 'fin', lbl: 'Hora de salida', hint: 'Exacta (último Logout) con el archivo de conexiones; sin él, estimada con la última hora con login. En semanas y meses: promedio de los días.' },
+            { f: 'almIni', lbl: 'Inicio de almuerzo', hint: 'Hora en que inició el almuerzo, según el archivo de conexiones. En semanas y meses: promedio de los días.' },
+            { f: 'brkIni', lbl: 'Inicio de break', hint: 'Hora en que inició el break (Descanso), según el archivo de conexiones. En semanas y meses: promedio de los días.' }
         ];
         /** Horas netas: login menos almuerzo y coaching (tiempo realmente disponible para atender). */
         const prodNetas = (b) => Math.max(0, v0(b, 'login') - v0(b, 'almuerzo') - v0(b, 'coaching'));
@@ -4177,7 +4226,7 @@
         const PROD_GROUPS = ['Llamadas', 'Asistencia', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
         const PROD_DEFAULT_VISIBLES = ['llam', 'tmo', 'login', 'pOcio', 'pAdmin', 'pAlm', 'pBano', 'pCoach'];
         const PROD_PCT = new Set(PROD_PCT_STATES.map(pctKey));
-        const PROD_FIELDS = ['d', 'tmo', 'llamG', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
+        const PROD_FIELDS = ['d', 'tmo', 'llamG', 'nx', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
         const prodEmpty = () => Object.fromEntries(PROD_FIELDS.map(f => [f, 0]));
         const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
         /** Redondea y omite los ceros (documentos más livianos en Firebase). */
@@ -4519,9 +4568,13 @@
                         }
                         const codigo = String(r[C.id] ?? '').trim() || (String(r[C.usr] ?? '').match(/^\s*(\d+)/) || [])[1] || '';
                         if (!/^\d+$/.test(codigo)) return;
-                        if (C.est >= 0 && !/login/i.test(String(r[C.est] ?? ''))) return;   // solo las sesiones de Login (los demás estados van dentro)
+                        const est = C.est >= 0 ? String(r[C.est] ?? '') : 'login';
                         const a = ConxSync.when(r[C.ini]), b = ConxSync.when(r[C.fin]);
                         if (!a || a.s === null) return;
+                        // Almuerzo y break: hora en que inició el primero del día
+                        const pausa = /almuerzo/i.test(est) ? 'a' : /descanso|break/i.test(est) ? 'b' : null;
+                        if (pausa) { const e = reg(codigo + '|' + a.f); e[pausa] = Math.min(e[pausa] ?? Infinity, a.s); return; }
+                        if (!/login/i.test(est)) return;   // solo las sesiones de Login (los demás estados van dentro)
                         const e = reg(codigo + '|' + a.f);
                         if (e.i === undefined) dias++;
                         e.i = Math.min(e.i ?? Infinity, a.s);
@@ -4592,6 +4645,629 @@
             }
         };
         window.ConxSync = ConxSync;
+
+        // =========================================================
+        // HORARIOS — Excel de horarios y datos de los asesores
+        // Hojas "Cuadro semanal" (conexión, break y almuerzo de cada día) y "Datos del personal" (correo, usuario Neotel,
+        // extensión, fecha de ingreso). Teléfonos y estudios NO se leen.
+        // Se guarda en configuracion/productividad.horarios; cada vigencia del horario queda como una versión,
+        // así la puntualidad de días anteriores se compara con el horario que estaba vigente ese día.
+        // =========================================================
+        const HOR_FIELD = MODO_PRUEBA ? 'horariosPrueba' : 'horarios';
+        const DIAS_SEM = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const sinTildes = (s) => norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const HorSync = {
+            KEY: MODO_PRUEBA ? 'fuente_horarios_prueba' : 'fuente_horarios',
+            CADA_MIN: 5,
+            src: null, timer: null, busy: false, needsPermission: false, lastResult: '', progress: '',
+            cfg: () => State.prodCfg?.[HOR_FIELD] || null,
+            allowed: () => UI.hasPerm('chk_sync_productividad'),
+            save: () => Idb.set(HorSync.KEY, HorSync.src),
+
+            init: async () => {
+                HorSync.stop(); HorSync.src = null; HorSync.needsPermission = false;
+                if (!HorSync.allowed() || !XlsxStream.supported()) return;
+                try { HorSync.src = await Idb.get(HorSync.KEY) || null; } catch (e) { console.warn(e); }
+                if (!HorSync.src) return;
+                if (HorSync.src.kind === 'file') {
+                    if (!HorSync.src.handle) { HorSync.src = null; return; }
+                    if ((await HorSync.src.handle.queryPermission({ mode: 'read' })) !== 'granted') { HorSync.needsPermission = true; return HorSync.renderSettings(); }
+                } else if (HorSync.src.provider === 'm365') {
+                    try { await Remote.token(false); } catch { HorSync.needsPermission = true; return HorSync.renderSettings(); }
+                }
+                HorSync.start();
+            },
+            /** Revisa el archivo al iniciar y luego cada 5 minutos: si se guardó una versión nueva, se actualiza solo. */
+            start: () => { HorSync.stop(); HorSync.check(false); HorSync.timer = setInterval(() => HorSync.check(false), HorSync.CADA_MIN * 60000); },
+            stop: () => { if (HorSync.timer) clearInterval(HorSync.timer); HorSync.timer = null; },
+
+            link: async (given = null) => {
+                if (!given && !ProdSync.localOk()) return alert("Para buscar en la PC abre la app en Google Chrome o Microsoft Edge.");
+                try {
+                    let handle = given;
+                    if (!handle) [handle] = await window.showOpenFilePicker({ startIn: HorSync.src?.handle || ProdSync.src?.handle || 'documents', types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] });
+                    if (handle.kind !== 'file' || !/\.xlsx$/i.test(handle.name)) return alert(`"${handle.name}" no es un archivo de Excel (.xlsx).`);
+                    if ((await handle.queryPermission({ mode: 'read' })) !== 'granted' && (await handle.requestPermission({ mode: 'read' })) !== 'granted') return;
+                    HorSync.src = { kind: 'file', handle, name: handle.name };
+                    HorSync.needsPermission = false; HorSync.lastResult = '';
+                    await HorSync.save();
+                    HorSync.renderSettings(); HorSync.start();
+                } catch (e) { if (e.name !== 'AbortError') { console.error(e); alert("No se pudo vincular: " + e.message); } }
+            },
+            linkUrl: async (raw) => {
+                const url = String(raw || '').trim();
+                if (!/^https?:\/\//i.test(url)) return alert("Pega un enlace que empiece con https://");
+                const provider = Remote.detect(url);
+                if (provider === 'gdrive') return alert("Los archivos de Google Drive no se pueden leer por enlace. Vincula el archivo sincronizado en la PC.");
+                const cand = { kind: 'url', url, provider, name: decodeURIComponent(url.split('?')[0].split('/').pop() || 'Excel en línea') };
+                try {
+                    if (provider === 'm365') { await Remote.token(true); cand.loc = await Remote.m365Locate(url); cand.name = cand.loc.name; }
+                    HorSync.src = cand; HorSync.needsPermission = false; HorSync.lastResult = '';
+                    await HorSync.save();
+                    HorSync.renderSettings(); HorSync.start();
+                } catch (e) { console.error(e); alert("No se pudo vincular el enlace.\n\n" + e.message); }
+            },
+            onDrop: async (ev) => {
+                ev.preventDefault(); $('horDrop')?.classList.remove('over');
+                const item = [...(ev.dataTransfer?.items || [])].find(i => i.kind === 'file');
+                if (!item || typeof item.getAsFileSystemHandle !== 'function') return alert("Arrastra el archivo desde el Explorador de Windows (Chrome o Edge).");
+                const h = await item.getAsFileSystemHandle();
+                if (h) await HorSync.link(h);
+            },
+            unlink: async () => {
+                if (!confirm("¿Desvincular el Excel de horarios? Los horarios y datos ya cargados se conservan; solo deja de actualizarse.")) return;
+                HorSync.stop(); HorSync.src = null; HorSync.needsPermission = false; HorSync.lastResult = '';
+                await Idb.del(HorSync.KEY).catch(() => {});
+                HorSync.renderSettings();
+            },
+            resume: async () => {
+                const s = HorSync.src; if (!s) return;
+                try {
+                    if (s.kind === 'url') await Remote.token(true);
+                    else if ((await s.handle.requestPermission({ mode: 'read' })) !== 'granted') return;
+                    HorSync.needsPermission = false; HorSync.start();
+                } catch (e) { UI.showToast(e.message, 'warning'); }
+                HorSync.renderSettings();
+            },
+
+            /** "8:00 – 17:00 (cita)" → { r: [inicio, fin] en segundos del día, t: texto tal como está }. */
+            rango: (v) => {
+                if (v === null || v === undefined || v === '') return null;
+                const t = String(v).replace(/\s+/g, ' ').trim();
+                if (!t || /^[—–-]$/.test(t)) return null;
+                const m = /(\d{1,2})[:.](\d{2})\s*(?:–|—|-|a)\s*(\d{1,2})[:.](\d{2})/.exec(t);
+                return { r: m ? [Number(m[1]) * 3600 + Number(m[2]) * 60, Number(m[3]) * 3600 + Number(m[4]) * 60] : null, t };
+            },
+            /** Hora suelta: fracción de día de Excel o texto "8:00". */
+            hora: (v) => {
+                if (typeof v === 'number' && v >= 0 && v < 1) return Math.round(v * 86400);
+                const m = /^(\d{1,2})[:.](\d{2})/.exec(String(v ?? '').trim());
+                return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 : null;
+            },
+            fecha: (v) => {
+                if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0, 10);
+                const w = ConxSync.when(v); return w?.f || null;
+            },
+
+            parse: async (file) => {
+                const book = await XlsxStream.open(file);
+                const hoja = (re) => book.sheetNames.find(n => re.test(sinTildes(n)));
+                const shS = hoja(/CUADRO\s*SEMANAL/), shD = hoja(/DATOS\s*DEL\s*PERSONAL/), shG = hoja(/CUADRO\s*GENERAL/);
+                if (!shS && !shG) throw new Error('El archivo no tiene la hoja "Cuadro semanal".');
+                const filasDe = async (sh) => { const out = []; await book.rows(sh, (r) => { out.push(r.map(x => typeof x === 'string' ? x.trim() : x)); }); return out; };
+                const lista = [];
+                const buscar = (nombre) => {
+                    const tk = new Set(ProdSync.tokens(nombre));
+                    let best = null, bs = 0;
+                    lista.forEach(a => { const s = ProdSync.tokens(a.nombreExcel).filter(t => tk.has(t)).length; if (s > bs) { best = a; bs = s; } });
+                    if (best && bs >= 2) return best;
+                    const a = { nombreExcel: String(nombre).replace(/\s+/g, ' ').trim(), semana: {} };
+                    lista.push(a); return a;
+                };
+                const vigDe = (txt) => { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(txt || '')); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : null; };
+                const txt = (v) => v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim();
+                let vigente = null;
+                const notas = [];
+
+                if (shS) {
+                    const R = await filasDe(shS);
+                    const hi = R.findIndex(r => r && r.some(v => sinTildes(v) === 'AGENTE') && r.some(v => sinTildes(v) === 'NEOTEL'));
+                    if (hi < 0) throw new Error('No se encontró el encabezado (Agente, Neotel…) en "Cuadro semanal".');
+                    R.slice(0, hi).forEach(r => { (r || []).forEach(v => { vigente = vigente || vigDe(v); }); });
+                    const H = R[hi].map(txt), S = (R[hi + 1] || []).map(txt);
+                    const ci = (n) => H.findIndex(h => sinTildes(h) === sinTildes(n));
+                    const C = { nombre: ci('Agente'), empresa: ci('Empresa'), estado: ci('Estado'), neotel: ci('Neotel'), ext: ci('Extensión') };
+                    const dias = {};   // 1..7 -> { con, brk, alm } índices de columna
+                    let dia = 0;
+                    for (let i = 0; i < Math.max(H.length, S.length); i++) {
+                        const d = DIAS_SEM.findIndex(x => sinTildes(x) === sinTildes(H[i]));
+                        if (d >= 0) dia = d + 1; else if (H[i]) dia = 0;   // otro encabezado: ya no es columna de día
+                        if (!dia) continue;
+                        const sub = sinTildes(S[i]);
+                        const k = /BREAK|DESCANSO/.test(sub) ? 'brk' : /ALMUERZO/.test(sub) ? 'alm' : 'con';
+                        (dias[dia] = dias[dia] || {})[k] = dias[dia][k] ?? i;
+                    }
+                    for (const r of R.slice(hi + 2)) {
+                        const nombre = txt(r[C.nombre]);
+                        if (!nombre) continue;
+                        const conDatos = Object.values(dias).some(c => txt(r[c.con]));
+                        if (!conDatos) { if (r.filter(v => txt(v)).length === 1) notas.push(nombre); continue; }   // filas de notas al pie
+                        const a = buscar(nombre);
+                        Object.assign(a, { empresa: txt(r[C.empresa]) || a.empresa || '', estado: txt(r[C.estado]) || a.estado || '', neotelExcel: txt(r[C.neotel]) || a.neotelExcel || '', extension: txt(r[C.ext]) || a.extension || '' });
+                        Object.entries(dias).forEach(([d, c]) => {
+                            const con = HorSync.rango(r[c.con]), brk = c.brk !== undefined ? HorSync.rango(r[c.brk]) : null, alm = c.alm !== undefined ? HorSync.rango(r[c.alm]) : null;
+                            a.semana[d] = { c: con?.r || null, ct: con?.t || '', b: brk?.r || null, bt: brk?.t || '', l: alm?.r || null, lt: alm?.t || '' };
+                        });
+                    }
+                } else {
+                    // Respaldo: "Cuadro general" (mismo horario de lunes a viernes)
+                    const R = await filasDe(shG);
+                    const hi = R.findIndex(r => r && r.some(v => sinTildes(v) === 'AGENTE') && r.some(v => sinTildes(v) === 'ENTRADA'));
+                    if (hi < 0) throw new Error('No se encontró el encabezado en "Cuadro general".');
+                    R.slice(0, hi).forEach(r => { (r || []).forEach(v => { vigente = vigente || vigDe(v); }); });
+                    const H = R[hi].map(txt), ci = (n) => H.findIndex(h => sinTildes(h) === sinTildes(n));
+                    const C = { nombre: ci('Agente'), empresa: ci('Empresa'), ent: ci('Entrada'), sal: ci('Salida'), brk: ci('Break'), alm: ci('Almuerzo') };
+                    for (const r of R.slice(hi + 1)) {
+                        const nombre = txt(r[C.nombre]), e = HorSync.hora(r[C.ent]), s = HorSync.hora(r[C.sal]);
+                        if (!nombre || e === null || s === null) { if (nombre) notas.push(nombre); continue; }
+                        const a = buscar(nombre); a.empresa = txt(r[C.empresa]);
+                        const brk = HorSync.rango(r[C.brk]), alm = HorSync.rango(r[C.alm]);
+                        for (let d = 1; d <= 5; d++) a.semana[d] = { c: [e, s], ct: `${fmtHora(e)} – ${fmtHora(s)}`, b: brk?.r || null, bt: brk?.t || '', l: alm?.r || null, lt: alm?.t || '' };
+                    }
+                }
+
+                if (shD) {
+                    const R = await filasDe(shD);
+                    const hi = R.findIndex(r => r && r.some(v => sinTildes(v) === 'ASESOR') && r.some(v => sinTildes(v) === 'CORREO'));
+                    if (hi >= 0) {
+                        const H = R[hi].map(txt), ci = (n) => H.findIndex(h => sinTildes(h) === sinTildes(n));
+                        // Solo estas columnas: teléfono, estudios y demás datos personales no se leen
+                        const C = { nombre: ci('Asesor'), estado: ci('Estado'), empresa: ci('Empresa'), neotel: ci('Neotel'), ext: ci('Extensión'), usuario: ci('Usuario'), correo: ci('Correo'), ingreso: ci('Ingreso') };
+                        for (const r of R.slice(hi + 1)) {
+                            const nombre = txt(r[C.nombre]);
+                            if (!nombre || !(txt(r[C.correo]) || txt(r[C.usuario]) || txt(r[C.neotel]))) continue;
+                            const a = buscar(nombre);
+                            const val = (k) => C[k] >= 0 ? txt(r[C[k]]) : '';
+                            a.estado = val('estado') || a.estado || '';
+                            a.empresa = val('empresa') || a.empresa || '';
+                            a.neotelDatos = val('neotel');
+                            a.extension = a.extension || val('ext');
+                            a.usuarioNeotel = val('usuario').replace(/\s*-\s*/, ' - ');
+                            a.correo = val('correo').toLowerCase();
+                            a.ingreso = C.ingreso >= 0 ? HorSync.fecha(r[C.ingreso]) : null;
+                        }
+                    }
+                }
+                return { lista, vigente, notas, hojas: [shS || shG, shD].filter(Boolean) };
+            },
+
+            /** Empareja cada fila del Excel con su usuario de la app; el código Neotel de la app (el que usa la productividad) manda. */
+            emparejar: (lista) => {
+                const users = Object.values(State.usersMap || {});
+                const usados = new Set();
+                return lista.map(a => {
+                    const tk = new Set(ProdSync.tokens(a.nombreExcel));
+                    const codUsr = (String(a.usuarioNeotel || '').match(/^\s*(\d+)/) || [])[1] || '';
+                    const codigosExcel = uniq([a.neotelExcel, a.neotelDatos, codUsr].map(c => String(c || '').trim()).filter(c => /^\d+$/.test(c)));
+                    let best = null, bs = 0, tie = false;
+                    users.forEach(u => {
+                        if (usados.has(u.nombre)) return;
+                        let s = ProdSync.tokens(u.nombre).filter(t => tk.has(t)).length;
+                        if (s && u.codigo_neotel && codigosExcel.includes(String(u.codigo_neotel))) s += 0.5;   // desempate por código
+                        if (s > bs) { best = u; bs = s; tie = false; } else if (s === bs && s > 0) tie = true;
+                    });
+                    const u = best && bs >= 2 && !tie ? best : null;
+                    if (u) usados.add(u.nombre);
+                    const codigo = u?.codigo_neotel ? String(u.codigo_neotel) : (codUsr || codigosExcel[0] || '');
+                    const obs = [];
+                    if (!u) obs.push('No se encontró su usuario en la app');
+                    if (u && !u.codigo_neotel) obs.push('Su usuario de la app no tiene código Neotel (se vincula en Productividad)');
+                    if (u?.codigo_neotel) codigosExcel.filter(c => c !== String(u.codigo_neotel)).forEach(c => obs.push(`En el Excel figura el código ${c}; en Neotel es ${u.codigo_neotel}`));
+                    return {
+                        nombre: u?.nombre || a.nombreExcel, nombreExcel: a.nombreExcel, enApp: !!u, codigo,
+                        empresa: a.empresa || '', estado: a.estado || '', extension: a.extension || '', correo: a.correo || '',
+                        usuarioNeotel: a.usuarioNeotel || '', ingreso: a.ingreso || null, semana: a.semana || {}, obs
+                    };
+                });
+            },
+
+            check: async (force = false) => {
+                if (HorSync.busy || !HorSync.src || HorSync.needsPermission || !HorSync.allowed()) return;
+                HorSync.busy = true; HorSync.progress = 'Revisando…'; HorSync.renderStatusLine();
+                let leyo = false;
+                try {
+                    const s = HorSync.src;
+                    let file, version;
+                    if (s.kind === 'url') {
+                        const meta = await Remote.fetchMeta(s);
+                        version = meta.version;
+                        if (!force && s.seen === version && HorSync.cfg()) return;
+                        file = new Blob([await meta.getBuffer()]);
+                    } else {
+                        file = await s.handle.getFile();
+                        version = `${s.name}|${file.lastModified}|${file.size}`;
+                        if (!force && s.seen === version && HorSync.cfg()) return;
+                    }
+                    HorSync.progress = 'Leyendo…'; HorSync.renderStatusLine(); leyo = true;
+                    const leido = await HorSync.parse(file);
+                    const asesores = HorSync.emparejar(leido.lista).sort((a, b) => a.nombre.localeCompare(b.nombre));
+                    const prev = HorSync.cfg() || {};
+                    const hoy = new Date().toLocaleDateString('en-CA');
+                    const vigente = leido.vigente || prev.vigente || hoy;
+                    const sem = {};
+                    asesores.filter(a => a.codigo && Object.keys(a.semana).length).forEach(a => { sem[a.codigo] = a.semana; });
+                    // Versiones por vigencia (las 40 más recientes)
+                    const versiones = Object.fromEntries(Object.entries({ ...(prev.versiones || {}), [vigente]: sem }).sort().slice(-40));
+                    const contenido = { asesores, vigente, notas: leido.notas, versiones };
+                    const igual = JSON.stringify(contenido) === JSON.stringify({ asesores: prev.asesores, vigente: prev.vigente, notas: prev.notas, versiones: prev.versiones });
+                    if (!igual) {
+                        const data = { ...contenido, tolerancia: prev.tolerancia || null, archivo: s.name, actualizado: new Date().toISOString(), por: State.user.nombre };
+                        await setDoc(doc(db, "configuracion", "productividad"), { [HOR_FIELD]: data }, { merge: true });
+                        State.prodCfg = { ...(State.prodCfg || {}), [HOR_FIELD]: data };
+                        if (prev.asesores) UI.showToast(`Horarios actualizados desde "${s.name}" (${asesores.length} asesores, vigente desde ${vigente.split('-').reverse().join('/')}).`, 'success', 7000);
+                        if (document.querySelector('#viewHor.active')) Hor.draw();
+                    }
+                    s.seen = version; s.lastRead = new Date().toISOString(); await HorSync.save().catch(() => {});
+                    const conObs = asesores.filter(a => a.obs.length).length;
+                    HorSync.lastResult = `${asesores.length} asesor(es) leídos de ${leido.hojas.map(h => `"${h}"`).join(' y ')}${igual ? ', sin cambios' : ''}.${conObs ? ` ${conObs} con observaciones.` : ''}`;
+                } catch (e) {
+                    console.error(e);
+                    if (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'AuthRequired') { HorSync.needsPermission = true; HorSync.stop(); }
+                    HorSync.lastResult = 'Error: ' + (e.name === 'NotFoundError' ? 'no se encontró el archivo (¿se movió?). Vincúlalo de nuevo.' : e.message);
+                    if (force) UI.showToast("No se pudo leer el Excel de horarios: " + HorSync.lastResult, 'error', 8000);
+                    leyo = true;
+                } finally {
+                    HorSync.busy = false; HorSync.progress = '';
+                    if (leyo || force) HorSync.renderSettings(); else HorSync.renderStatusLine();
+                }
+            },
+
+            tol: () => ({ entrada: 5, salida: 5, pausa: 5, ...(HorSync.cfg()?.tolerancia || {}) }),
+            saveTol: async () => {
+                const n = (id) => Math.max(0, Math.min(120, Math.round(Number($(id).value) || 0)));
+                const tolerancia = { entrada: n('horTolEnt'), salida: n('horTolSal'), pausa: n('horTolPau') };
+                const cfg = { ...(HorSync.cfg() || {}), tolerancia };
+                try {
+                    await setDoc(doc(db, "configuracion", "productividad"), { [HOR_FIELD]: { tolerancia } }, { merge: true });
+                    State.prodCfg = { ...(State.prodCfg || {}), [HOR_FIELD]: cfg };
+                    UI.showToast("Tolerancias guardadas.", 'success'); refreshActiveView();
+                } catch (e) { console.error(e); UI.showToast("No se pudieron guardar: " + e.message, 'error'); }
+            },
+
+            renderStatusLine: () => { const el = $('horEstado'); if (el) el.textContent = HorSync.busy ? HorSync.progress : HorSync.needsPermission ? 'esperando permiso de lectura' : HorSync.src ? `activo; revisa el archivo cada ${HorSync.CADA_MIN} minutos` : '—'; },
+            renderSettings: () => {
+                const pane = $('horPane'); if (!pane || pane.closest('.settings-pane')?.style.display === 'none') return;
+                const s = HorSync.src, cfg = HorSync.cfg(), t = HorSync.tol(), can = HorSync.allowed();
+                const fuente = !s ? `
+                    <div class="panel-soft" style="max-width:760px;">
+                        <h3 class="panel-title">Excel de horarios y datos de los asesores</h3>
+                        <p class="hint" style="margin-bottom:12px;">Se leen las hojas "Cuadro semanal" (conexión, break y almuerzo de cada día) y "Datos del personal" (correo, usuario Neotel, extensión y fecha de ingreso). <strong>Teléfonos y estudios no se leen.</strong> Cuando guardes cambios en el Excel, la app los toma sola en unos minutos.</p>
+                        ${ProdSync.localOk() ? `
+                        <div id="horDrop" class="sync-drop"><i class="fas fa-file-arrow-down"></i><strong>Arrastra aquí el Excel de horarios</strong><span>por ejemplo "1. Horarios y Datos Asesores ST.xlsx"</span></div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+                            <span class="hint" style="margin:0;">o bien</span>
+                            <button class="btn-action" onclick="HorSync.link()"><i class="fas fa-file-excel"></i> Buscar archivo</button>
+                        </div>` : `<div class="callout warn" style="margin-bottom:14px;">Para buscar archivos en la PC abre la app en Google Chrome o Microsoft Edge.</div>`}
+                        <div style="display:flex; gap:8px;">
+                            <input type="url" id="horUrl" placeholder="o un enlace de SharePoint / OneDrive" style="flex:1; padding:9px 12px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:13px;">
+                            <button class="btn-action" id="horUrlBtn"><i class="fas fa-link"></i> Vincular enlace</button>
+                        </div>
+                    </div>` : `
+                    <div class="panel-soft" style="max-width:760px;">
+                        <h3 class="panel-title">Horarios: ${esc(s.name)}</h3>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Estado:</strong> <span id="horEstado"></span></p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Última lectura:</strong> ${s.lastRead ? esc(new Date(s.lastRead).toLocaleString('es-GT')) : '—'}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(HorSync.lastResult || '—')}</p>
+                        ${cfg ? `<p style="font-size:13px; margin-bottom:6px;"><strong>Horario vigente desde:</strong> ${esc(String(cfg.vigente || '').split('-').reverse().join('/'))} · ${Object.keys(cfg.versiones || {}).length} versión(es) guardadas</p>` : ''}
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                            ${HorSync.needsPermission ? `<button class="btn-action btn-primary" onclick="HorSync.resume()"><i class="fas fa-rotate"></i> Dar permiso de lectura</button>` : `<button class="btn-action btn-primary" onclick="HorSync.check(true)" ${HorSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Leer ahora</button>`}
+                            ${ProdSync.localOk() ? `<button class="btn-action" onclick="HorSync.link()">Cambiar archivo</button>` : ''}
+                            <button class="btn-action btn-danger-soft" onclick="HorSync.unlink()">Desvincular</button>
+                        </div>
+                    </div>`;
+                const tolBox = `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Tolerancias para la puntualidad</h3>
+                        <p class="hint" style="margin-bottom:10px;">Minutos de margen antes de marcar algo. Con 5 en entrada, quien entra 8:04 queda a tiempo y 8:06 ya cuenta como tardanza. Con 0, cualquier minuto completo cuenta.</p>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px; align-items:center;">
+                            <label style="display:flex; gap:6px; align-items:center;">Entrada <input type="number" id="horTolEnt" min="0" max="120" value="${t.entrada}" style="width:70px; padding:5px 8px;" ${can ? '' : 'disabled'}> min</label>
+                            <label style="display:flex; gap:6px; align-items:center;">Salida anticipada <input type="number" id="horTolSal" min="0" max="120" value="${t.salida}" style="width:70px; padding:5px 8px;" ${can ? '' : 'disabled'}> min</label>
+                            <label style="display:flex; gap:6px; align-items:center;">Almuerzo y break excedidos <input type="number" id="horTolPau" min="0" max="120" value="${t.pausa}" style="width:70px; padding:5px 8px;" ${can ? '' : 'disabled'}> min</label>
+                        </div>
+                        ${can ? `<button class="btn-action" id="horTolSave" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar tolerancias</button>` : ''}
+                    </div>`;
+                const lista = cfg?.asesores || [];
+                const listaBox = lista.length ? `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Asesores leídos (${lista.length})</h3>
+                        ${lista.some(a => a.obs?.length) ? `<div class="callout warn" style="margin-bottom:10px;">Hay observaciones: corrígelas en el Excel. Mientras tanto la app usa el código Neotel real (el de Productividad), así que la puntualidad no se afecta.</div>` : ''}
+                        <div class="users-list" style="max-height:380px;">
+                            ${lista.map(a => `<div class="user-row" style="align-items:flex-start;">
+                                <div><div style="font-size:13px; font-weight:600;">${esc(a.nombre)}${a.enApp ? '' : ' <span class="hint">(no está en la app)</span>'}</div>
+                                <div class="hint" style="margin:0;">${esc([a.empresa, a.estado, a.codigo ? 'Neotel ' + a.codigo : '', a.extension, a.correo].filter(Boolean).join(' · '))}</div>
+                                ${(a.obs || []).map(o => `<div style="font-size:12px; color:#B54708; margin-top:2px;"><i class="fas fa-triangle-exclamation"></i> ${esc(o)}</div>`).join('')}</div>
+                            </div>`).join('')}
+                        </div>
+                        ${(cfg.notas || []).length ? `<details style="margin-top:10px;"><summary class="hint" style="cursor:pointer;">Notas del Excel (${cfg.notas.length})</summary><div class="hint" style="line-height:1.7;">${cfg.notas.map(esc).join('<br>')}</div></details>` : ''}
+                    </div>` : '';
+                pane.innerHTML = fuente + tolBox + listaBox;
+                HorSync.renderStatusLine();
+                const dz = $('horDrop');
+                if (dz) { dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over'); dz.ondrop = HorSync.onDrop; }
+                const ub = $('horUrlBtn'); if (ub) ub.onclick = () => HorSync.linkUrl($('horUrl').value);
+                const ts = $('horTolSave'); if (ts) ts.onclick = HorSync.saveTol;
+            }
+        };
+        window.HorSync = HorSync;
+
+        // =========================================================
+        // HORARIOS — vista: puntualidad, horario semanal y datos
+        // La hora real sale de la productividad (exacta con el archivo de conexiones).
+        // =========================================================
+        const Hor = {
+            ui: { vista: 'puntualidad', periodo: 'semana', fecha: '', mes: '' },
+            meses: {},
+            invalidate: () => { Hor.meses = {}; if (document.querySelector('#viewHor.active')) Hor.draw(); },
+            loadMonth: async (anio, mm) => {
+                const k = `${anio}-${mm}`;
+                if (Hor.meses[k]) return Hor.meses[k];
+                const q = query(collection(db, COL_PROD), where('tipo', '==', 'mes'), where('anio', '==', anio), where('mes', '==', mm), ...Prod.scopeFilter());
+                const snap = await getDocs(q);
+                return (Hor.meses[k] = snap.docs.map(d => d.data()));
+            },
+            hoy: () => new Date().toLocaleDateString('en-CA'),
+            diaSem: (f) => { const d = new Date(f + 'T12:00:00').getDay(); return d === 0 ? 7 : d; },
+            lunes: (f) => { const d = new Date(f + 'T12:00:00'); d.setDate(d.getDate() - (Hor.diaSem(f) - 1)); return d.toLocaleDateString('en-CA'); },
+            sumar: (f, n) => { const d = new Date(f + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toLocaleDateString('en-CA'); },
+            fmtF: (f, o = { weekday: 'short', day: 'numeric', month: 'short' }) => new Date(f + 'T12:00:00').toLocaleDateString('es-GT', o),
+            rng: (r) => r ? `${fmtHora(r[0])} – ${fmtHora(r[1])}` : '',
+            min: (n) => { const a = Math.abs(n); return a >= 60 ? `${Math.floor(a / 60)} h ${a % 60} min` : `${a} min`; },
+            asesores: () => HorSync.cfg()?.asesores || [],
+            /** Horario que estaba vigente para ese asesor en esa fecha. */
+            prog: (codigo, fecha) => {
+                const v = HorSync.cfg()?.versiones || {};
+                const k = Object.keys(v).filter(x => x <= fecha).sort().pop() || null;
+                if (!k) return null;
+                const sem = v[k]?.[codigo]; if (!sem) return null;
+                return { ...(sem[Hor.diaSem(fecha)] || {}), vigente: k };
+            },
+            /** Compara un día real (bucket de productividad) contra lo programado. */
+            evalDia: (b, p, tol) => {
+                const r = { flags: [] };
+                const val = (f) => b?.['n_' + f] ? b['a_' + f] / b['n_' + f] : null;
+                r.ini = val('ini'); r.fin = val('fin'); r.almIni = val('almIni'); r.brkIni = val('brkIni');
+                r.alm = v0(b, 'almuerzo'); r.brk = v0(b, 'descanso'); r.exacto = v0(b, 'nx') > 0; r.conDatos = !!b?.d;
+                r.sinProg = !p; r.descanso = p && !p.c;
+                if (!p || !p.c) { if (r.conDatos && p) r.flags.push({ k: 'extra', t: 'Trabajó en su día de descanso' }); return r; }
+                if (!r.conDatos || r.ini === null) { r.sinReg = true; return r; }
+                r.dIni = Math.floor((r.ini - p.c[0]) / 60);
+                r.dFin = r.fin !== null ? Math.ceil((r.fin - p.c[1]) / 60) : null;
+                if (r.dIni > tol.entrada) r.flags.push({ k: 'tarde', t: `Entró ${Hor.min(r.dIni)} tarde`, m: r.dIni });
+                if (r.dFin !== null && r.dFin < -tol.salida) r.flags.push({ k: 'antes', t: `Salió ${Hor.min(-r.dFin)} antes`, m: -r.dFin });
+                if (p.l && r.alm > 0) { const ex = Math.floor((r.alm - (p.l[1] - p.l[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'alm', t: `Almuerzo excedido ${Hor.min(ex)}`, m: ex }); }
+                if (p.b && r.brk > 0) { const ex = Math.floor((r.brk - (p.b[1] - p.b[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'brk', t: `Break excedido ${Hor.min(ex)}`, m: ex }); }
+                return r;
+            },
+            /** Filas por asesor: { nombre, codigo, dias: { fecha: {b, p, e} } } para las fechas dadas. */
+            filas: async (fechas) => {
+                const anioMes = uniq(fechas.map(f => f.slice(0, 7)));
+                const docs = (await Promise.all(anioMes.map(am => Hor.loadMonth(Number(am.slice(0, 4)), am.slice(5, 7))))).flat();
+                const fl = Filters.get(), tol = HorSync.tol();
+                const porCod = new Map();
+                docs.forEach(m => {
+                    if (!Scope.inView(m.area) || !Filters.matchArea(m.area, fl) || isInactiveEstado(normalizeEstado(State.estadosAgentes[m.nombre]))) return;
+                    const r = porCod.get(m.codigo) || { nombre: m.nombre, codigo: m.codigo, dias: {} };
+                    Object.entries(m.dias || {}).forEach(([f, b]) => { if (fechas.includes(f)) r.dias[f] = { b }; });
+                    porCod.set(m.codigo, r);
+                });
+                // Asesores con horario pero sin datos (p. ej. ausentes toda la semana): solo en la vista del equipo
+                if (Scope.hasTeamView()) Hor.asesores().forEach(a => {
+                    if (!a.codigo || porCod.has(a.codigo) || !a.enApp || /vacaci|baja|inactiv/i.test(a.estado)) return;
+                    const u = State.usersMap[a.nombre];
+                    if (!u || (u.areas?.[0] && !Scope.inView(u.areas[0]))) return;
+                    porCod.set(a.codigo, { nombre: a.nombre, codigo: a.codigo, dias: {} });
+                });
+                const ultimo = docs.flatMap(m => Object.keys(m.dias || {})).sort().pop() || '';
+                const rows = [...porCod.values()].filter(r => String(r.nombre).toLowerCase().includes(fl.search));
+                rows.forEach(r => fechas.forEach(f => {
+                    const d = r.dias[f] || (r.dias[f] = {});
+                    d.p = Hor.prog(r.codigo, f);
+                    d.e = f <= ultimo ? Hor.evalDia(d.b, d.p, tol) : null;   // días sin cargar aún: no se evalúan
+                }));
+                rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                return { rows, ultimo };
+            },
+            resumen: (r, fechas) => {
+                const s = { dias: 0, tarde: 0, minTarde: 0, antes: 0, alm: 0, brk: 0, sinReg: 0, puntual: 0 };
+                fechas.forEach(f => {
+                    const e = r.dias[f]?.e; if (!e) return;
+                    if (e.sinReg) { s.sinReg++; return; }
+                    if (e.dIni === undefined) return;
+                    s.dias++;
+                    e.flags.forEach(x => { if (x.k === 'tarde') { s.tarde++; s.minTarde += x.m; } else if (x.k in s) s[x.k]++; });
+                    if (!e.flags.some(x => x.k === 'tarde')) s.puntual++;
+                });
+                return s;
+            },
+            chip: (e, p) => {
+                if (!e) return `<span class="hor-chip off" title="Aún no hay datos de ese día">·</span>`;
+                if (e.sinProg) return e.ini !== null ? `<span class="hor-chip off" title="Sin horario cargado para ese día">${fmtHora(e.ini)}</span>` : '';
+                if (e.descanso) return e.conDatos ? `<span class="hor-chip extra" title="Trabajó en su día de descanso (${esc(p?.ct || 'Descanso')})">${fmtHora(e.ini)}</span>` : `<span class="hor-chip off">${esc(p?.ct || 'Descanso')}</span>`;
+                if (e.sinReg) return `<span class="hor-chip miss" title="Tenía turno ${esc(Hor.rng(p.c))} y no hay conexión registrada (ausencia, permiso o vacaciones)">Sin registro</span>`;
+                const tarde = e.flags.find(x => x.k === 'tarde');
+                const cls = tarde ? 'late' : e.dIni < 0 ? 'early' : 'ok';
+                const tip = [`Turno ${Hor.rng(p.c)}`, `Entró ${fmtHMS(e.ini)}`, e.fin !== null ? `Salió ${fmtHMS(e.fin)}` : '', ...e.flags.filter(x => x.k !== 'tarde').map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
+                const dTxt = e.dIni > 0 ? `+${e.dIni}` : e.dIni < 0 ? `${e.dIni}` : '✓';
+                const otros = e.flags.filter(x => x.k !== 'tarde').length;
+                return `<span class="hor-chip ${cls}" title="${esc(tip)}">${fmtHora(e.ini)} <b>${dTxt}</b>${otros ? `<i class="hor-dot" title="${esc(e.flags.filter(x => x.k !== 'tarde').map(x => x.t).join('\n'))}"></i>` : ''}</span>`;
+            },
+
+            draw: async () => {
+                const box = $('horContent'); if (!box) return;
+                const ui = Hor.ui;
+                if (!ui.fecha) ui.fecha = Hor.hoy();
+                if (!ui.mes) ui.mes = ui.fecha.slice(0, 7);
+                const team = Scope.hasTeamView();
+                $('horVista').value = ui.vista; $('horPeriodo').value = ui.periodo;
+                $('horPeriodoBox').style.display = ui.vista === 'puntualidad' ? '' : 'none';
+                $('horFechaBox').style.display = ui.vista === 'datos' || (ui.vista === 'puntualidad' && ui.periodo === 'mes') ? 'none' : '';
+                $('horFechaLbl').textContent = ui.vista === 'horario' ? 'Fecha' : ui.periodo === 'dia' ? 'Fecha' : 'Semana del';
+                $('horFecha').value = ui.fecha;
+                $('horMesBox').style.display = ui.vista === 'puntualidad' && ui.periodo === 'mes' ? '' : 'none';
+                $('horMes').value = ui.mes;
+                const cfg = HorSync.cfg();
+                if (!cfg?.asesores?.length) {
+                    box.innerHTML = HorSync.allowed()
+                        ? `<div class="callout warn"><strong>Todavía no hay horarios cargados.</strong> Vincula el Excel de horarios y datos de los asesores.<div style="margin-top:10px;"><button class="btn-action btn-primary" onclick="document.getElementById('btnSettings').click(); App.switchSettingsTab('tabHorarios')"><i class="fas fa-link"></i> Vincular Excel de horarios</button></div></div>`
+                        : `<div class="callout">Todavía no hay horarios cargados. Pide a tu líder que los cargue.</div>`;
+                    return;
+                }
+                if (ui.vista === 'datos') return Hor.drawDatos(box);
+                if (ui.vista === 'horario') return Hor.drawHorario(box);
+                box.innerHTML = '<p class="hint" style="padding:30px; text-align:center;">Cargando puntualidad…</p>';
+                try {
+                    if (ui.periodo === 'dia') return await Hor.drawDia(box, ui.fecha);
+                    if (ui.periodo === 'mes') { const [y, m] = ui.mes.split('-').map(Number); const n = new Date(y, m, 0).getDate(); return await Hor.drawPeriodo(box, [...Array(n)].map((_, i) => `${ui.mes}-${String(i + 1).padStart(2, '0')}`), `${MESES[m - 1]} ${y}`, false); }
+                    const lun = Hor.lunes(ui.fecha), fechas = [...Array(7)].map((_, i) => Hor.sumar(lun, i));
+                    return await Hor.drawPeriodo(box, fechas, `Semana del ${Hor.fmtF(fechas[0], { day: 'numeric', month: 'long' })} al ${Hor.fmtF(fechas[6], { day: 'numeric', month: 'long', year: 'numeric' })}`, true);
+                } catch (e) { console.error(e); box.innerHTML = `<div class="callout warn">No se pudo cargar la puntualidad (${esc(e.message)}).</div>`; }
+            },
+
+            leyenda: () => `<div class="hor-legend"><span class="hor-chip early">Temprano</span><span class="hor-chip ok">A tiempo</span><span class="hor-chip late">Tarde</span><span class="hor-chip miss">Sin registro</span><span class="hor-chip extra">Día de descanso trabajado</span><span><i class="hor-dot"></i> salida anticipada o pausa excedida</span><span class="hint" style="margin:0;">El número es la diferencia en minutos con su hora de entrada. Pasa el cursor para ver el detalle.</span></div>`,
+            heroMio: (s, titulo) => {
+                const nombre = String(State.user.nombre || '').split(' ')[0];
+                const head = !s.dias ? `Aún no hay días para evaluar` : s.tarde === 0 ? `¡Excelente, ${esc(nombre)}! Puntual todos los días ⏰` : s.tarde === 1 ? `¡Muy bien, ${esc(nombre)}! Solo un día tarde` : `Puedes mejorar tu puntualidad, ${esc(nombre)}`;
+                return `<div class="mine-hero"><div><div class="mine-hero-t">${head}</div><div class="mine-hero-s">${esc(titulo)} · ${s.puntual} de ${s.dias} día(s) a tiempo${s.minTarde ? ` · ${Hor.min(s.minTarde)} de tardanza` : ''}</div></div></div>`;
+            },
+            drawPeriodo: async (box, fechas, titulo, conDias) => {
+                const { rows } = await Hor.filas(fechas);
+                const team = Scope.hasTeamView();
+                const res = new Map(rows.map(r => [r.codigo, Hor.resumen(r, fechas)]));
+                const tot = [...res.values()].reduce((a, s) => { Object.keys(s).forEach(k => a[k] = (a[k] || 0) + s[k]); return a; }, {});
+                const kpi = (lbl, v, cls = '') => `<div class="hor-kpi ${cls}"><b>${v}</b><span>${lbl}</span></div>`;
+                const cabDias = conDias ? fechas.map(f => `<th style="text-align:center;">${esc(Hor.fmtF(f, { weekday: 'short', day: 'numeric' }))}</th>`).join('') : '';
+                const tabla = `
+                    <div class="table-card">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>${esc(titulo)}</h3><span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
+                        <div class="table-scroll prod-scroll">
+                            <table class="prod-table hor-table">
+                                <thead><tr><th>Asesor</th>${cabDias}<th class="num-col" title="Días con turno y conexión">Días</th><th class="num-col">A tiempo</th><th class="num-col">Tardanzas</th><th class="num-col">Min. tarde</th><th class="num-col">Salidas antes</th><th class="num-col">Almuerzo excedido</th><th class="num-col">Break excedido</th><th class="num-col" title="Días con turno sin conexión registrada">Sin registro</th></tr></thead>
+                                <tbody>${rows.map(r => { const s = res.get(r.codigo); return `<tr>
+                                    <td class="prod-agent">${team ? `<button class="agent-link" onclick="Hor.verDia(${js(r.codigo)})" title="Ver su detalle">${esc(r.nombre)}</button>` : esc(r.nombre)}</td>
+                                    ${conDias ? fechas.map(f => `<td style="text-align:center;">${Hor.chip(r.dias[f]?.e, r.dias[f]?.p)}</td>`).join('') : ''}
+                                    <td class="num-col">${s.dias}</td><td class="num-col">${s.puntual}</td>
+                                    <td class="num-col ${s.tarde ? 'prod-bad' : ''}">${s.tarde}</td><td class="num-col">${s.minTarde ? Hor.min(s.minTarde) : '—'}</td>
+                                    <td class="num-col ${s.antes ? 'prod-bad' : ''}">${s.antes}</td><td class="num-col ${s.alm ? 'prod-bad' : ''}">${s.alm}</td><td class="num-col ${s.brk ? 'prod-bad' : ''}">${s.brk}</td>
+                                    <td class="num-col">${s.sinReg || '—'}</td></tr>`; }).join('') || UI.emptyRow(9 + (conDias ? 7 : 0), 'Sin datos en este periodo.')}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                box.innerHTML = `
+                    ${team ? `<div class="hor-kpis">${kpi('Días evaluados', tot.dias || 0)}${kpi('A tiempo', tot.dias ? Math.round(tot.puntual / tot.dias * 100) + '%' : '—', 'ok')}${kpi('Tardanzas', tot.tarde || 0, tot.tarde ? 'bad' : '')}${kpi('Minutos tarde', tot.minTarde ? Hor.min(tot.minTarde) : '0', tot.minTarde ? 'bad' : '')}${kpi('Salidas antes', tot.antes || 0)}${kpi('Pausas excedidas', (tot.alm || 0) + (tot.brk || 0))}</div>` : Hor.heroMio(res.get(rows[0]?.codigo) || { dias: 0, tarde: 0, puntual: 0, minTarde: 0 }, titulo)}
+                    ${conDias ? Hor.leyenda() : ''}
+                    ${tabla}
+                    <p class="hint" style="margin-top:10px;">Se compara con el horario vigente de cada día (Excel de horarios). Tolerancias: entrada ${HorSync.tol().entrada} min, salida ${HorSync.tol().salida} min, pausas ${HorSync.tol().pausa} min. Los permisos, vacaciones y reposiciones autorizadas no están en este archivo: valídalos antes de tomar una tardanza.</p>`;
+                Hor.lastExport = { titulo, rows, fechas, res };
+            },
+            verDia: (codigo) => { Hor.ui.periodo = 'dia'; Hor.ui.soloCodigo = codigo; Hor.draw(); },
+            drawDia: async (box, fecha) => {
+                const { rows, ultimo } = await Hor.filas([fecha]);
+                const solo = Hor.ui.soloCodigo; Hor.ui.soloCodigo = null;
+                const tit = Hor.fmtF(fecha, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                const det = (prog, real, d, extra = '') => `<div>${esc(prog || '—')}</div><div class="hint" style="margin:0;">${real}${d}${extra}</div>`;
+                const badge = (n, malo) => n === null || n === undefined ? '' : ` <b class="hor-d ${malo ? 'late' : n < 0 ? 'early' : 'ok'}">${n > 0 ? '+' : ''}${n === 0 ? '✓' : n}</b>`;
+                const body = rows.map(r => {
+                    const { b, p, e } = r.dias[fecha] || {};
+                    const ent = e && !e.sinProg && !e.descanso && !e.sinReg ? e : null;
+                    const flags = e?.flags || [];
+                    const est = !e ? 'Aún sin datos' : e.sinProg ? 'Sin horario cargado' : e.descanso ? (e.conDatos ? 'Trabajó en su día de descanso' : 'Descanso') : e.sinReg ? 'Sin conexión registrada' : flags.length ? flags.map(x => x.t).join(' · ') : 'Todo en orden';
+                    return `<tr ${solo && r.codigo === solo ? 'class="hor-focus"' : ''}>
+                        <td class="prod-agent">${esc(r.nombre)}</td>
+                        <td>${det(p?.ct || (p ? 'Descanso' : ''), e?.ini !== null && e?.ini !== undefined ? 'Entró ' + fmtHMS(e.ini) : '', ent ? badge(e.dIni, flags.some(x => x.k === 'tarde')) : '')}</td>
+                        <td>${det(p?.c ? fmtHora(p.c[1]) : '', e?.fin !== null && e?.fin !== undefined ? 'Salió ' + fmtHMS(e.fin) : '', ent && e.dFin !== null ? badge(e.dFin, flags.some(x => x.k === 'antes')) : '')}</td>
+                        <td>${det(p?.lt || '', e?.almIni !== null && e?.almIni !== undefined ? 'Salió ' + fmtHora(e.almIni) : '', '', e?.alm ? ` · ${Math.round(e.alm / 60)} min` : '')}</td>
+                        <td>${det(p?.bt || '', e?.brkIni !== null && e?.brkIni !== undefined ? 'Salió ' + fmtHora(e.brkIni) : '', '', e?.brk ? ` · ${Math.round(e.brk / 60)} min` : '')}</td>
+                        <td style="white-space:normal; min-width:180px;">${flags.length || e?.sinReg ? `<span style="color:#B54708; font-weight:600;">${esc(est)}</span>` : `<span class="hint" style="margin:0;">${esc(est)}</span>`}${e && !e.exacto && e.ini !== null ? '<div class="hint" style="margin:0;">Hora estimada</div>' : ''}</td></tr>`;
+                }).join('');
+                box.innerHTML = `${!Scope.hasTeamView() ? Hor.heroMio(Hor.resumen(rows[0] || { dias: {} }, [fecha]), tit) : ''}
+                    <div class="table-card">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>${esc(tit.charAt(0).toUpperCase() + tit.slice(1))}</h3>${fecha > ultimo ? '<span class="hint" style="margin:0;">Este día aún no está en los reportes cargados.</span>' : ''}<span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
+                        <div class="table-scroll prod-scroll">
+                            <table class="prod-table hor-table">
+                                <thead><tr><th>Asesor</th><th>Entrada <span class="th-sub">programada · real</span></th><th>Salida</th><th>Almuerzo <span class="th-sub">inicio · duración</span></th><th>Break</th><th>Observación</th></tr></thead>
+                                <tbody>${body || UI.emptyRow(6, 'Sin datos ese día.')}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                if (solo) box.querySelector('.hor-focus')?.scrollIntoView({ block: 'center' });
+            },
+            drawHorario: (box) => {
+                const fecha = Hor.ui.fecha, lun = Hor.lunes(fecha), fechas = [...Array(7)].map((_, i) => Hor.sumar(lun, i));
+                const hoy = Hor.hoy();
+                const lista = Hor.lista();
+                const celda = (p) => !p ? '<span class="hint" style="margin:0;">—</span>' : !p.c ? `<span class="hor-chip off">${esc(p.ct || 'Descanso')}</span>`
+                    : `<div style="font-weight:600;">${esc(Hor.rng(p.c))}</div>${p.bt ? `<div class="hint" style="margin:0;">Break ${esc(p.bt)}</div>` : ''}${p.lt ? `<div class="hint" style="margin:0;">Almuerzo ${esc(p.lt)}</div>` : ''}`;
+                box.innerHTML = `
+                    <div class="table-card">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>Horario de la semana del ${esc(Hor.fmtF(fechas[0], { day: 'numeric', month: 'long' }))}</h3><span class="hint" style="margin:0 0 0 auto;">Vigente desde ${esc(String(Hor.prog(lista[0]?.codigo, fechas[6])?.vigente || HorSync.cfg()?.vigente || '').split('-').reverse().join('/'))}</span></div>
+                        <div class="table-scroll prod-scroll">
+                            <table class="prod-table hor-table">
+                                <thead><tr><th>Asesor</th>${fechas.map(f => `<th ${f === hoy ? 'class="hor-hoy"' : ''}>${esc(Hor.fmtF(f, { weekday: 'long', day: 'numeric' }))}</th>`).join('')}</tr></thead>
+                                <tbody>${lista.map(a => `<tr><td class="prod-agent"><div style="font-weight:600;">${esc(a.nombre)}</div><div class="hint" style="margin:0;">${esc([a.empresa, a.estado && !/activo/i.test(a.estado) ? a.estado : ''].filter(Boolean).join(' · '))}</div></td>${fechas.map(f => `<td class="${f === hoy ? 'hor-hoy' : ''}" style="vertical-align:top;">${celda(a.codigo ? Hor.prog(a.codigo, f) : a.semana?.[Hor.diaSem(f)])}</td>`).join('')}</tr>`).join('') || UI.emptyRow(8, 'Sin asesores.')}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            },
+            /** Asesores visibles para quien mira: el equipo según su alcance, o solo él mismo. */
+            lista: () => {
+                const fl = Filters.get();
+                return Hor.asesores().filter(a => {
+                    if (!Scope.hasTeamView()) { const cod = State.usersMap[State.user.nombre]?.codigo_neotel; return a.nombre === State.user.nombre || (!!cod && String(cod) === a.codigo); }
+                    const u = State.usersMap[a.nombre];
+                    if (u?.areas?.[0] && !Scope.inView(u.areas[0])) return false;
+                    return String(a.nombre).toLowerCase().includes(fl.search);
+                });
+            },
+            antig: (f) => {
+                if (!f) return '';
+                const a = new Date(f + 'T12:00:00'), h = new Date();
+                let m = (h.getFullYear() - a.getFullYear()) * 12 + h.getMonth() - a.getMonth(); if (h.getDate() < a.getDate()) m--;
+                const y = Math.floor(m / 12); m %= 12;
+                return [y ? `${y} año${y > 1 ? 's' : ''}` : '', m ? `${m} mes${m > 1 ? 'es' : ''}` : ''].filter(Boolean).join(' y ') || 'menos de un mes';
+            },
+            drawDatos: (box) => {
+                const lista = Hor.lista(), hoy = Hor.hoy();
+                box.innerHTML = `
+                    <div class="table-card">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>Datos de los asesores</h3><span class="hint" style="margin:0 0 0 auto;">${lista.length} asesor(es) · actualizado ${esc(HorSync.cfg()?.actualizado ? new Date(HorSync.cfg().actualizado).toLocaleString('es-GT') : '—')}</span></div>
+                        <div class="table-scroll prod-scroll">
+                            <table class="prod-table hor-table">
+                                <thead><tr><th>Asesor</th><th>Empresa</th><th>Estado</th><th>Neotel</th><th>Extensión</th><th>Correo</th><th>Ingreso</th><th>Antigüedad</th><th>Hoy</th></tr></thead>
+                                <tbody>${lista.map(a => { const p = a.codigo ? Hor.prog(a.codigo, hoy) : a.semana?.[Hor.diaSem(hoy)]; return `<tr>
+                                    <td class="prod-agent"><div style="font-weight:600;">${esc(a.nombre)}</div>${(a.obs || []).length && Scope.hasTeamView() ? `<div style="font-size:11px; color:#B54708;" title="${esc(a.obs.join('\n'))}"><i class="fas fa-triangle-exclamation"></i> ${esc(a.obs[0])}</div>` : ''}</td>
+                                    <td>${esc(a.empresa || '—')}</td><td><span class="hor-chip ${/activo/i.test(a.estado) ? 'ok' : 'off'}">${esc(a.estado || '—')}</span></td>
+                                    <td>${esc(a.codigo || '—')}</td><td>${esc(a.extension || '—')}</td>
+                                    <td>${a.correo ? `<a href="mailto:${esc(a.correo)}">${esc(a.correo)}</a>` : '—'}</td>
+                                    <td>${a.ingreso ? esc(a.ingreso.split('-').reverse().join('/')) : '—'}</td><td>${esc(Hor.antig(a.ingreso) || '—')}</td>
+                                    <td>${!p ? '—' : !p.c ? esc(p.ct || 'Descanso') : `${esc(Hor.rng(p.c))}${p.lt ? `<div class="hint" style="margin:0;">Almuerzo ${esc(p.lt)}</div>` : ''}`}</td></tr>`; }).join('') || UI.emptyRow(9, 'Sin asesores.')}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            },
+            exportar: () => {
+                const ex = Hor.lastExport;
+                if (!ex || Hor.ui.vista !== 'puntualidad' || Hor.ui.periodo === 'dia') return alert("Para exportar, elige Puntualidad por semana o por mes.");
+                const rows = ex.rows.map(r => {
+                    const s = ex.res.get(r.codigo), o = { Asesor: r.nombre };
+                    if (ex.fechas.length <= 7) ex.fechas.forEach(f => { const e = r.dias[f]?.e; o[Hor.fmtF(f, { weekday: 'short', day: 'numeric' })] = !e ? '' : e.sinProg ? '' : e.descanso ? (e.conDatos ? 'Descanso (trabajó)' : 'Descanso') : e.sinReg ? 'Sin registro' : `${fmtHora(e.ini)} (${e.dIni > 0 ? '+' : ''}${e.dIni} min)${e.flags.filter(x => x.k !== 'tarde').map(x => ' · ' + x.t).join('')}`; });
+                    return { ...o, 'Días': s.dias, 'A tiempo': s.puntual, 'Tardanzas': s.tarde, 'Minutos tarde': s.minTarde, 'Salidas antes': s.antes, 'Almuerzo excedido': s.alm, 'Break excedido': s.brk, 'Sin registro': s.sinReg };
+                });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Puntualidad");
+                XLSX.writeFile(wb, `Puntualidad_${ex.titulo.replace(/\s+/g, '_')}.xlsx`);
+            }
+        };
+        window.Hor = Hor;
 
         // =========================================================
         // PRODUCTIVIDAD — sincronización con el Excel
@@ -4977,6 +5653,9 @@
                         const [codigo, fecha] = k.split('|'), p = per.get(codigo), info = diaInfo.get(fecha);
                         if (!p || !info || !p.dias[info.mm]?.[fecha]) continue;
                         if (x.i !== undefined && x.i !== null) { horas.set(k, { ini: x.i, fin: x.o ?? x.i }); nExactos++; }
+                        // Inicio de almuerzo y de break; nx marca los días con ingreso y salida exactos
+                        const extra = { ...(isFinite(x.a) ? { a_almIni: x.a, n_almIni: 1 } : {}), ...(isFinite(x.b) ? { a_brkIni: x.b, n_brkIni: 1 } : {}), ...(x.i !== undefined && x.i !== null ? { nx: 1 } : {}) };
+                        if (Object.keys(extra).length) [p.dias[info.mm][fecha], p.semanas[info.wk], p.meses[info.mm], p.total].forEach(b => { if (b) Object.entries(extra).forEach(([f, v]) => b[f] += v); });
                         if (x.g) { [p.dias[info.mm][fecha], p.semanas[info.wk], p.meses[info.mm], p.total].forEach(b => { if (b) b.llamG += x.g; }); nGest += x.g; }
                     }
                     // Hora de ingreso y salida: se suman al día, la semana, el mes y el año (en promedio por día)
@@ -5244,7 +5923,7 @@
         const Prod = {
             cache: { anio: null, docs: null, meses: {} },
             ui: { periodo: 'semana', valor: '', vista: 'tabla', metrica: 'pOcio', comp: '', corte: true },
-            invalidate: () => { Prod.cache = { anio: null, docs: null, meses: {} }; if (document.querySelector('#viewProd.active')) Prod.draw(); },
+            invalidate: () => { Prod.cache = { anio: null, docs: null, meses: {} }; if (document.querySelector('#viewProd.active')) Prod.draw(); Hor.invalidate(); },
 
             /** Igual que las notas: global sin filtro de área; líder por sus áreas (máx. 30); asesor solo lo suyo. */
             scopeFilter: () => {
@@ -5820,6 +6499,10 @@
         $('btnPurgeRun').addEventListener('click', Maintenance.run);
         $('btnTestCopy').addEventListener('click', TestMode.copyReal);
         $('btnTestClear').addEventListener('click', TestMode.clear);
+        $('horVista').addEventListener('change', (e) => { Hor.ui.vista = e.target.value; Hor.draw(); });
+        $('horPeriodo').addEventListener('change', (e) => { Hor.ui.periodo = e.target.value; Hor.draw(); });
+        $('horFecha').addEventListener('change', (e) => { if (e.target.value) { Hor.ui.fecha = e.target.value; Hor.ui.mes = e.target.value.slice(0, 7); } Hor.draw(); });
+        $('horMes').addEventListener('change', (e) => { if (e.target.value) Hor.ui.mes = e.target.value; Hor.draw(); });
         $('prodPeriodo').addEventListener('change', (e) => { Prod.ui.periodo = e.target.value; Prod.ui.valor = ''; if (e.target.value === 'dia') Prod.ui.vista = 'tabla'; Prod.draw(); });
         $('prodFecha').addEventListener('change', (e) => { if (e.target.value) { Prod.ui.fecha = e.target.value; Prod.draw(); } });
         $('prodValor').addEventListener('change', (e) => { Prod.ui.valor = e.target.value; Prod.draw(); });
