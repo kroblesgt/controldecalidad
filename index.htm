@@ -279,10 +279,10 @@
         .mine-meta-t { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; } .mine-meta-t i { color: #12B76A; }
         .mine-meta-h { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 5px; font-size: 11.5px; }
         .mine-meta-k { font-weight: 600; padding: 1px 7px; border-radius: 999px; }
-        .mine-meta-k.fija { background: #EFF8FF; color: #175CD3; } .mine-meta-k.promedio { background: #F4F3FF; color: #5925DC; }
+        .mine-meta-k.fija { background: #EFF8FF; color: #175CD3; } .mine-meta-k.promedio { background: #F4F3FF; color: #5925DC; } .mine-meta-k.dinamica { background: #FDF2FA; color: #C11574; cursor: help; }
         .mine-meta-v { font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
         .prod-table th .th-meta { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: 0; }
-        .prod-table th .th-meta.fija { color: #175CD3; } .prod-table th .th-meta.promedio { color: #5925DC; }
+        .prod-table th .th-meta.fija { color: #175CD3; } .prod-table th .th-meta.promedio { color: #5925DC; } .prod-table th .th-meta.dinamica { color: #C11574; }
         .mine-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
         .mine-list { border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); animation: fadeIn .45s ease both; }
         .mine-list h4 { margin: 0 0 8px; font-size: 14px; } .mine-list.good h4 i { color: #12B76A; } .mine-list.opp h4 i { color: #F79009; }
@@ -4156,6 +4156,10 @@
         ];
         /** Horas netas: login menos almuerzo y coaching (tiempo realmente disponible para atender). */
         const prodNetas = (b) => Math.max(0, v0(b, 'login') - v0(b, 'almuerzo') - v0(b, 'coaching'));
+        // Meta dinámica de llamadas: llamadas que atendió el equipo por cada hora neta × las horas netas del asesor.
+        // Se ajusta sola a días y semanas con más o menos llamadas, y a las horas que trabajó cada quien.
+        const PROD_DYN = new Set(['llam', 'llamE', 'llamS']);
+        const prodRate = (teamB, f) => { const n = prodNetas(teamB); return n > 0 ? v0(teamB, f) / n : null; };
         const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
         const PROD_METRICS = [
             ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
@@ -4233,14 +4237,21 @@
             esSuma: (m) => m.id !== 'd' && (m.fmt === fmtInt || m.fmt === fmtHMS),
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
             /** Meta de un indicador: fija (definida por el líder) o promedio del equipo (bucket del equipo). */
-            meta: (m, teamB) => {
+            meta: (m, teamB, b = null) => {
                 const { dir, meta } = Mejora.regla(m);
                 if (!dir) return null;
                 if (meta !== null && meta !== undefined && meta !== '') return { x: Number(meta), tipo: 'fija', dir };
-                if (Mejora.cfg().auto && teamB?.d) { const x = Mejora.valor(m, teamB); if (x !== null && x > 0) return { x, tipo: 'promedio', dir }; }
-                return null;
+                if (!Mejora.cfg().auto || !teamB?.d) return null;
+                if (PROD_DYN.has(m.id)) {
+                    const rate = prodRate(teamB, m.id);
+                    if (!rate) return null;
+                    // x: llamadas esperadas por día según las horas netas del asesor (sin asesor: solo la tasa por hora)
+                    return { x: b?.d ? rate * prodNetas(b) / b.d : null, total: b ? rate * prodNetas(b) : null, rate, tipo: 'dinamica', dir };
+                }
+                const x = Mejora.valor(m, teamB);
+                return x !== null && x > 0 ? { x, tipo: 'promedio', dir } : null;
             },
-            metaTxt: (m, mt) => mt ? `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}` : '',
+            metaTxt: (m, mt) => !mt ? '' : mt.tipo === 'dinamica' ? `Meta dinámica ${(mt.rate * 3600).toFixed(1)} por hora` : `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}`,
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
@@ -4259,9 +4270,21 @@
                     else if (c.auto && conEquipo && prom > 0) { ref = dir === 'bajo' ? prom * (1 + c.margen / 100) : prom * (1 - c.margen / 100); tipo = 'equipo'; }
                     if (ref === null) return;
                     const minAbs = PROD_PCT.has(m.id) ? 0.01 : m.fmt === fmtInt ? 1 : m.fmt === fmtDec ? 0.1 : 30;   // diferencias mínimas que vale la pena señalar
+                    const dyn = tipo === 'equipo' && PROD_DYN.has(m.id) ? prodRate(rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty()), m.id) : null;
                     rows.forEach(r => {
                         const v = Mejora.valor(m, r.b);
                         if (v === null) return;
+                        if (dyn) {
+                            // Meta dinámica: según las horas netas de este asesor
+                            const esp = r.b?.d ? dyn * prodNetas(r.b) / r.b.d : null;
+                            if (!esp || !(v < esp * (1 - c.margen / 100) && esp - v >= minAbs)) return;
+                            malas.add(r.nombre + '|' + m.id);
+                            const [lbl, accion] = MEJORA_TXT[m.id] || [`${m.lbl} bajo`, ''];
+                            const arr = porFila.get(r.nombre) || [];
+                            if (!arr.some(x => x.lbl === lbl)) arr.push({ id: m.id, lbl, accion, det: `${Mejora.fmtValor(m, v)} · meta dinámica ${Mejora.fmtValor(m, esp)} (según sus horas y el volumen del periodo)`, desvio: (esp - v) / esp });
+                            porFila.set(r.nombre, arr);
+                            return;
+                        }
                         const mal = dir === 'bajo' ? v > ref && (tipo === 'meta' || v - prom >= minAbs) : v < ref && (tipo === 'meta' || prom - v >= minAbs);
                         if (!mal) return;
                         malas.add(r.nombre + '|' + m.id);
@@ -4305,7 +4328,7 @@
                 return `
                     <div class="panel-soft" style="max-width:760px; margin-top:16px;">
                         <h3 class="panel-title">Metas y áreas de mejora</h3>
-                        <p class="hint" style="margin-bottom:10px;">Cada asesor recibe automáticamente sus áreas de mejora del periodo que se esté viendo, solo de los indicadores marcados como visibles. Si un indicador tiene meta, se compara con la meta; si no, con el promedio del equipo.</p>
+                        <p class="hint" style="margin-bottom:10px;">Cada asesor recibe automáticamente sus áreas de mejora del periodo que se esté viendo, solo de los indicadores marcados como visibles. Si un indicador tiene meta fija, se compara con esa meta; si no, con el promedio del equipo. Las llamadas usan una <strong>meta dinámica</strong>: llamadas del equipo por hora neta × las horas netas de cada asesor, así se ajusta a días y semanas con más o menos volumen.</p>
                         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-size:13px;">
                             <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="mejoraAuto" ${c.auto ? 'checked' : ''} ${can ? '' : 'disabled'}> Sin meta: comparar con el promedio del equipo</label>
                             <label style="display:flex; gap:6px; align-items:center;">Margen <input type="number" id="mejoraMargen" min="0" max="100" value="${esc(c.margen)}" style="width:70px; padding:5px 8px;" ${can ? '' : 'disabled'}> %</label>
@@ -4316,7 +4339,7 @@
                                 <tbody>${evaluables.map(m => { const r = Mejora.regla(m); return `<tr>
                                     <td>${esc(m.lbl)}</td>
                                     <td><select class="mejora-dir" data-id="${m.id}" ${can ? '' : 'disabled'} style="padding:4px 6px; font-size:12px;"><option value="" ${!r.dir ? 'selected' : ''}>No evaluar</option><option value="bajo" ${r.dir === 'bajo' ? 'selected' : ''}>Menos es mejor</option><option value="alto" ${r.dir === 'alto' ? 'selected' : ''}>Más es mejor</option></select></td>
-                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="sin meta" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td></tr>`; }).join('')}</tbody>
+                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="${PROD_DYN.has(m.id) ? 'dinámica' : 'promedio'}" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td></tr>`; }).join('')}</tbody>
                             </table>
                         </div>
                         ${can ? `<button class="btn-action" id="mejoraSave" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar metas</button>` : ''}
@@ -4773,10 +4796,17 @@
                             prodAdd(e.total, p.total);
                             Object.entries(p.semanas).forEach(([k, v]) => prodAdd(e.semanas[k] || (e.semanas[k] = prodEmpty()), v));
                             Object.entries(p.meses).forEach(([k, v]) => prodAdd(e.meses[k] || (e.meses[k] = prodEmpty()), v));
+                            // Por día solo lo necesario para la meta dinámica de llamadas
+                            e.dias = e.dias || {};
+                            Object.values(p.dias).forEach(dm => Object.entries(dm).forEach(([f, b]) => {
+                                const t = e.dias[f] || (e.dias[f] = { d: 0, llam: 0, llamE: 0, llamS: 0, login: 0, almuerzo: 0, coaching: 0 });
+                                Object.keys(t).forEach(k => t[k] += Number(b[k] || 0));
+                            }));
                         }
                         const rnd = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, prodRound(v)]));
                         const equipo = { ...(State.prodCfg?.[ProdSync.EQ_FIELD] || {}) };
-                        Object.entries(eq).forEach(([area, e]) => { equipo[area] = { anio, total: prodRound(e.total), semanas: rnd(e.semanas), meses: rnd(e.meses) }; });
+                        Object.entries(eq).forEach(([area, e]) => { equipo[area] = { anio, total: prodRound(e.total), semanas: rnd(e.semanas), meses: rnd(e.meses),
+                            dias: Object.fromEntries(Object.entries(e.dias || {}).map(([f, t]) => [f, Object.fromEntries(Object.entries(t).map(([k, v]) => [k, Math.round(v)]))])) }; });
                         if (Object.keys(eq).length) {
                             await setDoc(doc(db, "configuracion", "productividad"), { [ProdSync.EQ_FIELD]: equipo }, { merge: true });
                             State.prodCfg = { ...(State.prodCfg || {}), [ProdSync.EQ_FIELD]: equipo };
@@ -5079,7 +5109,9 @@
                     if (!Scope.hasTeamView()) {
                         const mio = meses.find(m => docs.some(d => d.codigo === m.codigo));
                         const prevF = Object.keys(mio?.dias || {}).filter(f => f < ui.fecha).sort().pop();
-                        return Prod.drawMine(rows[0]?.b || null, prevF ? mio.dias[prevF] : null, vis, tituloDia, prevF ? new Date(prevF + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric' }) : '', 'día');
+                        const eqD = State.prodCfg?.[ProdSync.EQ_FIELD]?.[docs[0]?.area];
+                        const teamDia = eqD && Number(eqD.anio) === anio ? eqD.dias?.[ui.fecha] || null : null;
+                        return Prod.drawMine(rows[0]?.b || null, prevF ? mio.dias[prevF] : null, vis, tituloDia, prevF ? new Date(prevF + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric' }) : '', 'día', teamDia);
                     }
                     return Prod.drawTable(rows, vis, '', tituloDia, 'Sin datos ese día (fin de semana, feriado o aún no cargado).');
                 }
@@ -5111,8 +5143,8 @@
                         trend = { ch, good: dir === 'alto' ? ch > 0.01 : ch < -0.01, bad: dir === 'alto' ? ch < -0.01 : ch > 0.01 };
                     }
                     let mt = null;
-                    const mm = v !== null ? Mejora.meta(m, teamB) : null;
-                    if (mm) {
+                    const mm = v !== null ? Mejora.meta(m, teamB, b) : null;
+                    if (mm && mm.x !== null) {
                         const x = mm.x, ok = dir === 'bajo' ? v <= x : v >= x;
                         mt = { x, ok, tipo: mm.tipo, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
                     }
@@ -5131,9 +5163,9 @@
                     const { m } = x, total = m.calc(b);
                     const perDay = Mejora.esSuma(m) && b.d > 1 ? `<div class="mine-sub">${esc(m.fmt(x.v))} por día</div>` : '';
                     const tr = x.trend ? `<div class="mine-trend ${x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}"><i class="fas fa-arrow-${x.trend.ch > 0 ? 'up' : x.trend.ch < 0 ? 'down' : 'right'}"></i> ${pctTxt(x.trend.ch)} <span>vs ${esc(prevLbl)}</span></div>` : '';
-                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}</span></div>
+                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : x.mt.tipo === 'dinamica' ? 'Se calcula con las llamadas que recibió el equipo en este periodo y tus horas conectadas: si hay más llamadas o trabajas más horas, la meta sube; si hay menos, baja.' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : x.mt.tipo === 'dinamica' ? '<i class="fas fa-wand-magic-sparkles"></i> Meta dinámica' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}</span></div>
                         <div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div>
-                        <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'fija' ? '¡Meta cumplida!' : '¡Mejor que el promedio del equipo!'}` : `Te falta ${Math.round((1 - x.mt.pct) * 100)}% para alcanzarla`}</div></div>` : '';
+                        <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'promedio' ? '¡Mejor que el promedio del equipo!' : '¡Meta cumplida!'}` : x.mt.tipo === 'dinamica' && Mejora.esSuma(m) ? `Te faltan ${Math.max(1, Math.round(x.mt.x - x.v))} por día para alcanzarla` : `Te falta ${Math.round((1 - x.mt.pct) * 100)}% para alcanzarla`}</div></div>` : '';
                     return `<div class="mine-card ${x.trend?.good || x.mt?.ok ? 'is-good' : ''}" style="animation-delay:${i * 50}ms" ${m.hint ? `title="${esc(m.hint)}"` : ''}>
                         <div class="mine-lbl">${esc(m.lbl)}</div><div class="mine-val">${esc(m.fmt(total))}</div>${perDay}${tr}${bar}</div>`;
                 };
@@ -5167,7 +5199,7 @@
                             <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table">
-                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => { const mt = Mejora.meta(m, team); return `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}${mt ? `<span class="th-meta ${mt.tipo}" title="${mt.tipo === 'fija' ? 'Meta fija definida en Ajustes' : 'Promedio del equipo en este periodo'}">${esc(Mejora.metaTxt(m, mt))}</span>` : ''}</th>`; }).join('')}</tr></thead>
+                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => { const mt = Mejora.meta(m, team); return `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}${mt ? `<span class="th-meta ${mt.tipo}" title="${mt.tipo === 'fija' ? 'Meta fija definida en Ajustes' : mt.tipo === 'dinamica' ? 'Llamadas que atendió el equipo por cada hora neta en este periodo. La meta de cada asesor = esta tasa × sus horas netas.' : 'Promedio del equipo en este periodo'}">${esc(Mejora.metaTxt(m, mt))}</span>` : ''}</th>`; }).join('')}</tr></thead>
                                 <tbody>${rows.map(r => `<tr><td class="prod-agent"><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})" title="${esc(r.nombre)}">${esc(r.nombre)}</button><div class="mejora-line">${Mejora.chips(an.porFila.get(r.nombre))}</div></td>${vis.map(m => `<td class="num-col ${best.has(r.nombre + '|' + m.id) ? 'prod-best' : an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}" ${best.has(r.nombre + '|' + m.id) ? 'title="Mejor resultado del equipo"' : ''}>${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
                                 ${rows.length ? `<tfoot><tr><td>Total del equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
                             </table>
