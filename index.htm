@@ -263,7 +263,8 @@
         .hor-chip.early { background: #EFF8FF; color: #175CD3; }
         .hor-chip.late { background: #FEF3F2; color: #B42318; }
         .hor-chip.miss { background: #FFFAEB; color: #B54708; }
-        .hor-chip.extra { background: #F4F3FF; color: #5925DC; }
+        .hor-chip.extra { background: #F0F9FF; color: #026AA2; }
+        .hor-chip.just { background: #F4F3FF; color: #5925DC; }
         .hor-chip.off { background: var(--surface-2); color: var(--text-muted); font-weight: 500; }
         .hor-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #F79009; vertical-align: 1px; }
         .hor-legend { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
@@ -4841,7 +4842,24 @@
                         }
                     }
                 }
-                return { lista, vigente, notas, hojas: [shS || shG, shD].filter(Boolean) };
+                // Novedades de la Mesa de trabajo: solo las aprobadas que justifican (no se leen Detalle ni Horas)
+                const shN = hoja(/NOVEDADES/);
+                const novedades = [];
+                if (shN) {
+                    const R = await filasDe(shN);
+                    const hi = R.findIndex(r => r && r.some(v => sinTildes(v) === 'DESDE') && r.some(v => sinTildes(v) === 'CODIGO'));
+                    if (hi >= 0) {
+                        const H = R[hi].map(txt), ci = (n) => H.findIndex(h => sinTildes(h) === sinTildes(n));
+                        const C = { desde: ci('Desde'), hasta: ci('Hasta'), neotel: ci('Neotel'), cod: ci('Código'), tipo: ci('Tipo'), jornada: ci('Jornada'), hi: ci('Hora inicio'), hf: ci('Hora fin'), estado: ci('Estado'), just: ci('Justifica') };
+                        for (const r of R.slice(hi + 1)) {
+                            const d = HorSync.fecha(r[C.desde]), n = txt(r[C.neotel]);
+                            if (!d || !/^\d+$/.test(n) || !/^aprobad/i.test(txt(r[C.estado])) || (C.just >= 0 && !/^s/i.test(sinTildes(r[C.just])))) continue;
+                            const hm = (v) => { const x = HorSync.hora(v); return x === null ? '' : fmtHora(x); };
+                            novedades.push({ n, d, h: HorSync.fecha(r[C.hasta]) || d, c: txt(r[C.cod]), t: txt(r[C.tipo]) || txt(r[C.cod]), j: txt(r[C.jornada]), hi: hm(r[C.hi]), hf: hm(r[C.hf]) });
+                        }
+                    }
+                }
+                return { lista, vigente, notas, novedades, hojas: [shS || shG, shD, shN].filter(Boolean) };
             },
 
             /** Empareja cada fila del Excel con su usuario de la app; el código Neotel de la app (el que usa la productividad) manda. */
@@ -4901,8 +4919,8 @@
                     asesores.filter(a => a.codigo && Object.keys(a.semana).length).forEach(a => { sem[a.codigo] = a.semana; });
                     // Versiones por vigencia (las 40 más recientes)
                     const versiones = Object.fromEntries(Object.entries({ ...(prev.versiones || {}), [vigente]: sem }).sort().slice(-40));
-                    const contenido = { asesores, vigente, notas: leido.notas, versiones };
-                    const igual = JSON.stringify(contenido) === JSON.stringify({ asesores: prev.asesores, vigente: prev.vigente, notas: prev.notas, versiones: prev.versiones });
+                    const contenido = { asesores, vigente, notas: leido.notas, versiones, novedades: leido.novedades };
+                    const igual = JSON.stringify(contenido) === JSON.stringify({ asesores: prev.asesores, vigente: prev.vigente, notas: prev.notas, versiones: prev.versiones, novedades: prev.novedades });
                     if (!igual) {
                         const data = { ...contenido, tolerancia: prev.tolerancia || null, archivo: s.name, actualizado: new Date().toISOString(), por: State.user.nombre };
                         await setDoc(doc(db, "configuracion", "productividad"), { [HOR_FIELD]: data }, { merge: true });
@@ -4944,7 +4962,7 @@
                 const fuente = !s ? `
                     <div class="panel-soft" style="max-width:760px;">
                         <h3 class="panel-title">Excel de horarios y datos de los asesores</h3>
-                        <p class="hint" style="margin-bottom:12px;">Se leen las hojas "Cuadro semanal" (conexión, break y almuerzo de cada día) y "Datos del personal" (correo, usuario Neotel, extensión y fecha de ingreso). <strong>Teléfonos y estudios no se leen.</strong> Cuando guardes cambios en el Excel, la app los toma sola en unos minutos.</p>
+                        <p class="hint" style="margin-bottom:12px;">Se leen las hojas "Cuadro semanal" (conexión, break y almuerzo de cada día), "Datos del personal" (correo, usuario Neotel, extensión y fecha de ingreso) y "Novedades (Mesa)" (permisos, vacaciones y cambios aprobados, que justifican la puntualidad). <strong>Teléfonos y estudios no se leen.</strong> Cuando guardes cambios en el Excel, la app los toma sola en unos minutos.</p>
                         ${ProdSync.localOk() ? `
                         <div id="horDrop" class="sync-drop"><i class="fas fa-file-arrow-down"></i><strong>Arrastra aquí el Excel de horarios</strong><span>por ejemplo "1. Horarios y Datos Asesores ST.xlsx"</span></div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
@@ -4961,7 +4979,7 @@
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Estado:</strong> <span id="horEstado"></span></p>
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Última lectura:</strong> ${s.lastRead ? esc(new Date(s.lastRead).toLocaleString('es-GT')) : '—'}</p>
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(HorSync.lastResult || '—')}</p>
-                        ${cfg ? `<p style="font-size:13px; margin-bottom:6px;"><strong>Horario vigente desde:</strong> ${esc(String(cfg.vigente || '').split('-').reverse().join('/'))} · ${Object.keys(cfg.versiones || {}).length} versión(es) guardadas</p>` : ''}
+                        ${cfg ? `<p style="font-size:13px; margin-bottom:6px;"><strong>Horario vigente desde:</strong> ${esc(String(cfg.vigente || '').split('-').reverse().join('/'))} · ${Object.keys(cfg.versiones || {}).length} versión(es) guardadas · ${(cfg.novedades || []).length} novedad(es) aprobadas que justifican</p>` : ''}
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
                             ${HorSync.needsPermission ? `<button class="btn-action btn-primary" onclick="HorSync.resume()"><i class="fas fa-rotate"></i> Dar permiso de lectura</button>` : `<button class="btn-action btn-primary" onclick="HorSync.check(true)" ${HorSync.busy ? 'disabled' : ''}><i class="fas fa-rotate"></i> Leer ahora</button>`}
                             ${ProdSync.localOk() ? `<button class="btn-action" onclick="HorSync.link()">Cambiar archivo</button>` : ''}
@@ -5035,7 +5053,17 @@
                 return { ...(sem[Hor.diaSem(fecha)] || {}), vigente: k };
             },
             /** Compara un día real (bucket de productividad) contra lo programado. */
-            evalDia: (b, p, tol) => {
+            /** Novedades aprobadas de la Mesa de trabajo que cubren ese día. */
+            novDe: (codigo, f) => (HorSync.cfg()?.novedades || []).filter(x => x.n === codigo && x.d <= f && f <= x.h),
+            novTxt: (x) => `${x.t}${x.hi ? ` ${x.hi}${x.hf ? '–' + x.hf : ''}` : x.j && !/completo/i.test(x.j) ? ` (${x.j})` : ''}`,
+            /** Si el día tiene algo que marcar y hay una novedad aprobada, queda justificado. */
+            evalDia: (b, p, tol, nov = []) => {
+                const r = Hor.evalBase(b, p, tol);
+                r.nov = nov;
+                if (nov.length && (r.flags.length || r.sinReg)) r.just = nov.map(Hor.novTxt).join(' · ');
+                return r;
+            },
+            evalBase: (b, p, tol) => {
                 const r = { flags: [] };
                 const val = (f) => b?.['n_' + f] ? b['a_' + f] / b['n_' + f] : null;
                 r.ini = val('ini'); r.fin = val('fin'); r.almIni = val('almIni'); r.brkIni = val('brkIni');
@@ -5078,15 +5106,17 @@
                 rows.forEach(r => fechas.forEach(f => {
                     const d = r.dias[f] || (r.dias[f] = {});
                     d.p = Hor.prog(r.codigo, f);
-                    d.e = f <= ultimo ? Hor.evalDia(d.b, d.p, tol) : null;   // días sin cargar aún: no se evalúan
+                    d.nov = Hor.novDe(r.codigo, f);
+                    d.e = f <= ultimo ? Hor.evalDia(d.b, d.p, tol, d.nov) : null;   // días sin cargar aún: no se evalúan
                 }));
                 rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
                 return { rows, ultimo };
             },
             resumen: (r, fechas) => {
-                const s = { dias: 0, tarde: 0, minTarde: 0, antes: 0, alm: 0, brk: 0, sinReg: 0, puntual: 0 };
+                const s = { dias: 0, tarde: 0, minTarde: 0, antes: 0, alm: 0, brk: 0, sinReg: 0, puntual: 0, just: 0 };
                 fechas.forEach(f => {
                     const e = r.dias[f]?.e; if (!e) return;
+                    if (e.just) { s.just++; if (!e.sinReg && e.dIni !== undefined) { s.dias++; s.puntual++; } return; }   // justificado por una novedad aprobada
                     if (e.sinReg) { s.sinReg++; return; }
                     if (e.dIni === undefined) return;
                     s.dias++;
@@ -5099,11 +5129,13 @@
                 if (!e) return `<span class="hor-chip off" title="Aún no hay datos de ese día">·</span>`;
                 if (e.sinProg) return e.ini !== null ? `<span class="hor-chip off" title="Sin horario cargado para ese día">${fmtHora(e.ini)}</span>` : '';
                 if (e.descanso) return e.conDatos ? `<span class="hor-chip extra" title="Trabajó en su día de descanso (${esc(p?.ct || 'Descanso')})">${fmtHora(e.ini)}</span>` : `<span class="hor-chip off">${esc(p?.ct || 'Descanso')}</span>`;
+                if (e.just) return `<span class="hor-chip just" title="${esc(['Justificado (Mesa de trabajo): ' + e.just, p?.c ? `Turno ${Hor.rng(p.c)}` : '', e.ini !== null && e.ini !== undefined ? `Entró ${fmtHMS(e.ini)}` : 'Sin conexión', e.fin !== null && e.fin !== undefined ? `Salió ${fmtHMS(e.fin)}` : ''].filter(Boolean).join('\n'))}">${e.sinReg ? esc(e.nov[0]?.t || 'Justificado') : fmtHora(e.ini) + ' <b>✓</b>'}</span>`;
                 if (e.sinReg) return `<span class="hor-chip miss" title="Tenía turno ${esc(Hor.rng(p.c))} y no hay conexión registrada (ausencia, permiso o vacaciones)">Sin registro</span>`;
                 const tarde = e.flags.find(x => x.k === 'tarde');
                 const cls = tarde ? 'late' : e.dIni < 0 ? 'early' : 'ok';
-                const tip = [`Turno ${Hor.rng(p.c)}`, p.f ? `Con ${Hor.min(Math.round(p.f / 60))} flexible al inicio o al final${e.usadoIni ? ` (usó ${Hor.min(Math.round(e.usadoIni / 60))} al inicio)` : ''}` : '', `Entró ${fmtHMS(e.ini)}`, e.fin !== null ? `Salió ${fmtHMS(e.fin)}` : '', ...e.flags.filter(x => x.k !== 'tarde').map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
-                const dTxt = e.dIni > 0 ? `+${e.dIni}` : e.dIni < 0 ? `${e.dIni}` : '✓';
+                const tip = [cls === 'early' ? 'Entró temprano' : cls === 'ok' ? 'A tiempo' : `Tarde: ${Hor.min(e.dIni)}`, `Turno ${Hor.rng(p.c)}`, p.f ? `Con ${Hor.min(Math.round(p.f / 60))} flexible al inicio o al final${e.usadoIni ? ` (usó ${Hor.min(Math.round(e.usadoIni / 60))} al inicio)` : ''}` : '', `Entró ${fmtHMS(e.ini)}`, e.fin !== null ? `Salió ${fmtHMS(e.fin)}` : '', ...e.flags.filter(x => x.k !== 'tarde').map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
+                // Solo se cuentan minutos de tardanza; entrar antes o salir después no suma minutos (no es tiempo a favor)
+                const dTxt = tarde ? `+${e.dIni}` : '✓';
                 const otros = e.flags.filter(x => x.k !== 'tarde').length;
                 return `<span class="hor-chip ${cls}" title="${esc(tip)}">${fmtHora(e.ini)} <b>${dTxt}</b>${otros ? `<i class="hor-dot" title="${esc(e.flags.filter(x => x.k !== 'tarde').map(x => x.t).join('\n'))}"></i>` : ''}</span>`;
             },
@@ -5139,7 +5171,7 @@
                 } catch (e) { console.error(e); box.innerHTML = `<div class="callout warn">No se pudo cargar la puntualidad (${esc(e.message)}).</div>`; }
             },
 
-            leyenda: () => `<div class="hor-legend"><span class="hor-chip early">Temprano</span><span class="hor-chip ok">A tiempo</span><span class="hor-chip late">Tarde</span><span class="hor-chip miss">Sin registro</span><span class="hor-chip extra">Día de descanso trabajado</span><span><i class="hor-dot"></i> salida anticipada o pausa excedida</span><span class="hint" style="margin:0;">El número es la diferencia en minutos con su hora de entrada. Pasa el cursor para ver el detalle.</span></div>`,
+            leyenda: () => `<div class="hor-legend"><span class="hor-chip early">Temprano</span><span class="hor-chip ok">A tiempo</span><span class="hor-chip late">Tarde</span><span class="hor-chip miss">Sin registro</span><span class="hor-chip just">Justificado</span><span class="hor-chip extra">Día de descanso trabajado</span><span><i class="hor-dot"></i> salida anticipada o pausa excedida</span><span class="hint" style="margin:0;">El número son los minutos de tardanza. Entrar antes o salir después no suma minutos. Pasa el cursor para ver el detalle.</span></div>`,
             heroMio: (s, titulo) => {
                 const nombre = String(State.user.nombre || '').split(' ')[0];
                 const head = !s.dias ? `Aún no hay días para evaluar` : s.tarde === 0 ? `¡Excelente, ${esc(nombre)}! Puntual todos los días ⏰` : s.tarde === 1 ? `¡Muy bien, ${esc(nombre)}! Solo un día tarde` : `Puedes mejorar tu puntualidad, ${esc(nombre)}`;
@@ -5157,22 +5189,22 @@
                         <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>${esc(titulo)}</h3><span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table hor-table">
-                                <thead><tr><th>Asesor</th>${cabDias}<th class="num-col" title="Días con turno y conexión">Días</th><th class="num-col">A tiempo</th><th class="num-col">Tardanzas</th><th class="num-col">Min. tarde</th><th class="num-col">Salidas antes</th><th class="num-col">Almuerzo excedido</th><th class="num-col">Break excedido</th><th class="num-col" title="Días con turno sin conexión registrada">Sin registro</th></tr></thead>
+                                <thead><tr><th>Asesor</th>${cabDias}<th class="num-col" title="Días con turno y conexión">Días</th><th class="num-col">A tiempo</th><th class="num-col">Tardanzas</th><th class="num-col">Min. tarde</th><th class="num-col">Salidas antes</th><th class="num-col">Almuerzo excedido</th><th class="num-col">Break excedido</th><th class="num-col" title="Días con turno sin conexión registrada">Sin registro</th><th class="num-col" title="Días con algo que marcar, cubiertos por una novedad aprobada de la Mesa de trabajo">Justificados</th></tr></thead>
                                 <tbody>${rows.map(r => { const s = res.get(r.codigo); return `<tr>
                                     <td class="prod-agent">${team ? `<button class="agent-link" onclick="Hor.verDia(${js(r.codigo)})" title="Ver su detalle">${esc(r.nombre)}</button>` : esc(r.nombre)}</td>
                                     ${conDias ? fechas.map(f => `<td style="text-align:center;">${Hor.chip(r.dias[f]?.e, r.dias[f]?.p)}</td>`).join('') : ''}
                                     <td class="num-col">${s.dias}</td><td class="num-col">${s.puntual}</td>
                                     <td class="num-col ${s.tarde ? 'prod-bad' : ''}">${s.tarde}</td><td class="num-col">${s.minTarde ? Hor.min(s.minTarde) : '—'}</td>
                                     <td class="num-col ${s.antes ? 'prod-bad' : ''}">${s.antes}</td><td class="num-col ${s.alm ? 'prod-bad' : ''}">${s.alm}</td><td class="num-col ${s.brk ? 'prod-bad' : ''}">${s.brk}</td>
-                                    <td class="num-col">${s.sinReg || '—'}</td></tr>`; }).join('') || UI.emptyRow(9 + (conDias ? 7 : 0), 'Sin datos en este periodo.')}</tbody>
+                                    <td class="num-col ${s.sinReg ? 'prod-bad' : ''}">${s.sinReg || '—'}</td><td class="num-col">${s.just || '—'}</td></tr>`; }).join('') || UI.emptyRow(10 + (conDias ? 7 : 0), 'Sin datos en este periodo.')}</tbody>
                             </table>
                         </div>
                     </div>`;
                 box.innerHTML = `
-                    ${team ? `<div class="hor-kpis">${kpi('Días evaluados', tot.dias || 0)}${kpi('A tiempo', tot.dias ? Math.round(tot.puntual / tot.dias * 100) + '%' : '—', 'ok')}${kpi('Tardanzas', tot.tarde || 0, tot.tarde ? 'bad' : '')}${kpi('Minutos tarde', tot.minTarde ? Hor.min(tot.minTarde) : '0', tot.minTarde ? 'bad' : '')}${kpi('Salidas antes', tot.antes || 0)}${kpi('Pausas excedidas', (tot.alm || 0) + (tot.brk || 0))}</div>` : Hor.heroMio(res.get(rows[0]?.codigo) || { dias: 0, tarde: 0, puntual: 0, minTarde: 0 }, titulo)}
+                    ${team ? `<div class="hor-kpis">${kpi('Días evaluados', tot.dias || 0)}${kpi('A tiempo', tot.dias ? Math.round(tot.puntual / tot.dias * 100) + '%' : '—', 'ok')}${kpi('Tardanzas', tot.tarde || 0, tot.tarde ? 'bad' : '')}${kpi('Minutos tarde', tot.minTarde ? Hor.min(tot.minTarde) : '0', tot.minTarde ? 'bad' : '')}${kpi('Salidas antes', tot.antes || 0)}${kpi('Pausas excedidas', (tot.alm || 0) + (tot.brk || 0))}${kpi('Justificados', tot.just || 0)}</div>` : Hor.heroMio(res.get(rows[0]?.codigo) || { dias: 0, tarde: 0, puntual: 0, minTarde: 0 }, titulo)}
                     ${conDias ? Hor.leyenda() : ''}
                     ${tabla}
-                    <p class="hint" style="margin-top:10px;">Se compara con el horario vigente de cada día (Excel de horarios). Tolerancias: entrada ${HorSync.tol().entrada} min, salida ${HorSync.tol().salida} min, pausas ${HorSync.tol().pausa} min. Los permisos, vacaciones y reposiciones autorizadas no están en este archivo: valídalos antes de tomar una tardanza.</p>`;
+                    <p class="hint" style="margin-top:10px;">Se compara con el horario vigente de cada día (Excel de horarios). Tolerancias: entrada ${HorSync.tol().entrada} min, salida ${HorSync.tol().salida} min, pausas ${HorSync.tol().pausa} min. Los días con una novedad aprobada en la hoja "Novedades (Mesa)" del Excel salen como justificados.</p>`;
                 Hor.lastExport = { titulo, rows, fechas, res };
             },
             verDia: (codigo) => { Hor.ui.periodo = 'dia'; Hor.ui.soloCodigo = codigo; Hor.draw(); },
@@ -5181,19 +5213,20 @@
                 const solo = Hor.ui.soloCodigo; Hor.ui.soloCodigo = null;
                 const tit = Hor.fmtF(fecha, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                 const det = (prog, real, d, extra = '') => `<div>${esc(prog || '—')}</div><div class="hint" style="margin:0;">${real}${d}${extra}</div>`;
-                const badge = (n, malo) => n === null || n === undefined ? '' : ` <b class="hor-d ${malo ? 'late' : n < 0 ? 'early' : 'ok'}">${n > 0 ? '+' : ''}${n === 0 ? '✓' : n}</b>`;
+                // Solo se muestran minutos cuando cuentan en contra (tardanza o salida anticipada); lo demás es ✓ o "Temprano"
+                const badge = (n, malo, temprano) => n === null || n === undefined ? '' : malo ? ` <b class="hor-d late">${n > 0 ? '+' + n : n} min</b>` : temprano ? ` <b class="hor-d early">Temprano</b>` : ` <b class="hor-d ok">✓</b>`;
                 const body = rows.map(r => {
                     const { b, p, e } = r.dias[fecha] || {};
                     const ent = e && !e.sinProg && !e.descanso && !e.sinReg ? e : null;
                     const flags = e?.flags || [];
-                    const est = !e ? 'Aún sin datos' : e.sinProg ? 'Sin horario cargado' : e.descanso ? (e.conDatos ? 'Trabajó en su día de descanso' : 'Descanso') : e.sinReg ? 'Sin conexión registrada' : flags.length ? flags.map(x => x.t).join(' · ') : 'Todo en orden';
+                    const est = !e ? 'Aún sin datos' : e.just ? `Justificado: ${e.just}` : e.sinProg ? 'Sin horario cargado' : e.descanso ? (e.conDatos ? 'Trabajó en su día de descanso' : 'Descanso') : e.sinReg ? 'Sin conexión registrada' : flags.length ? flags.map(x => x.t).join(' · ') : 'Todo en orden';
                     return `<tr ${solo && r.codigo === solo ? 'class="hor-focus"' : ''}>
                         <td class="prod-agent">${esc(r.nombre)}</td>
-                        <td>${det(p?.ct || (p ? 'Descanso' : ''), e?.ini !== null && e?.ini !== undefined ? 'Entró ' + fmtHMS(e.ini) : '', ent ? badge(e.dIni, flags.some(x => x.k === 'tarde')) : '')}</td>
-                        <td>${det(p?.c ? fmtHora(p.c[1]) : '', e?.fin !== null && e?.fin !== undefined ? 'Salió ' + fmtHMS(e.fin) : '', ent && e.dFin !== null ? badge(e.dFin, flags.some(x => x.k === 'antes')) : '')}</td>
+                        <td>${det(p?.ct || (p ? 'Descanso' : ''), e?.ini !== null && e?.ini !== undefined ? 'Entró ' + fmtHMS(e.ini) : '', ent ? badge(e.dIni, !e.just && flags.some(x => x.k === 'tarde'), e.dIni < 0) : '')}</td>
+                        <td>${det(p?.c ? fmtHora(p.c[1]) : '', e?.fin !== null && e?.fin !== undefined ? 'Salió ' + fmtHMS(e.fin) : '', ent && e.dFin !== null ? badge(e.dFin, !e.just && flags.some(x => x.k === 'antes'), false) : '')}</td>
                         <td>${det(p?.lt || '', e?.almIni !== null && e?.almIni !== undefined ? 'Salió ' + fmtHora(e.almIni) : '', '', e?.alm ? ` · ${Math.round(e.alm / 60)} min` : '')}</td>
                         <td>${det(p?.bt || '', e?.brkIni !== null && e?.brkIni !== undefined ? 'Salió ' + fmtHora(e.brkIni) : '', '', e?.brk ? ` · ${Math.round(e.brk / 60)} min` : '')}</td>
-                        <td style="white-space:normal; min-width:180px;">${flags.length || e?.sinReg ? `<span style="color:#B54708; font-weight:600;">${esc(est)}</span>` : `<span class="hint" style="margin:0;">${esc(est)}</span>`}${e && !e.exacto && e.ini !== null ? '<div class="hint" style="margin:0;">Hora estimada</div>' : ''}</td></tr>`;
+                        <td style="white-space:normal; min-width:180px;">${e?.just ? `<span style="color:#5925DC; font-weight:600;">${esc(est)}</span>` : flags.length || e?.sinReg ? `<span style="color:#B54708; font-weight:600;">${esc(est)}</span>` : `<span class="hint" style="margin:0;">${esc(est)}</span>`}${e && !e.exacto && e.ini !== null ? '<div class="hint" style="margin:0;">Hora estimada</div>' : ''}</td></tr>`;
                 }).join('');
                 box.innerHTML = `${!Scope.hasTeamView() ? Hor.heroMio(Hor.resumen(rows[0] || { dias: {} }, [fecha]), tit) : ''}
                     <div class="table-card">
@@ -5265,8 +5298,8 @@
                 if (!ex || Hor.ui.vista !== 'puntualidad' || Hor.ui.periodo === 'dia') return alert("Para exportar, elige Puntualidad por semana o por mes.");
                 const rows = ex.rows.map(r => {
                     const s = ex.res.get(r.codigo), o = { Asesor: r.nombre };
-                    if (ex.fechas.length <= 7) ex.fechas.forEach(f => { const e = r.dias[f]?.e; o[Hor.fmtF(f, { weekday: 'short', day: 'numeric' })] = !e ? '' : e.sinProg ? '' : e.descanso ? (e.conDatos ? 'Descanso (trabajó)' : 'Descanso') : e.sinReg ? 'Sin registro' : `${fmtHora(e.ini)} (${e.dIni > 0 ? '+' : ''}${e.dIni} min)${e.flags.filter(x => x.k !== 'tarde').map(x => ' · ' + x.t).join('')}`; });
-                    return { ...o, 'Días': s.dias, 'A tiempo': s.puntual, 'Tardanzas': s.tarde, 'Minutos tarde': s.minTarde, 'Salidas antes': s.antes, 'Almuerzo excedido': s.alm, 'Break excedido': s.brk, 'Sin registro': s.sinReg };
+                    if (ex.fechas.length <= 7) ex.fechas.forEach(f => { const e = r.dias[f]?.e; o[Hor.fmtF(f, { weekday: 'short', day: 'numeric' })] = !e ? '' : e.sinProg ? '' : e.descanso ? (e.conDatos ? 'Descanso (trabajó)' : 'Descanso') : e.just ? `Justificado: ${e.just}` : e.sinReg ? 'Sin registro' : `${fmtHora(e.ini)} · ${e.flags.find(x => x.k === 'tarde') ? `tarde ${e.dIni} min` : e.dIni < 0 ? 'temprano' : 'a tiempo'}${e.flags.filter(x => x.k !== 'tarde').map(x => ' · ' + x.t).join('')}`; });
+                    return { ...o, 'Días': s.dias, 'A tiempo': s.puntual, 'Tardanzas': s.tarde, 'Minutos tarde': s.minTarde, 'Salidas antes': s.antes, 'Almuerzo excedido': s.alm, 'Break excedido': s.brk, 'Sin registro': s.sinReg, 'Justificados': s.just };
                 });
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Puntualidad");
