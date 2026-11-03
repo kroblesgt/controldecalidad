@@ -4227,6 +4227,7 @@
         const PROD_DYN = new Set(['llam', 'llamE', 'llamS', 'llamG']);
         const prodRate = (teamB, f) => { const n = prodNetas(teamB); return n > 0 ? v0(teamB, f) / n : null; };
         const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
+        const PROD_PROM_DIA = new Set(['almuerzo', 'bano', 'descanso']);
         const PROD_METRICS = [
             ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
             { id: 'llamG', grupo: 'Llamadas', lbl: 'Llamadas gestionadas', calc: b => v0(b, 'llamG'), fmt: fmtInt, hint: 'Llamadas que el asesor atendió según el archivo de conexiones y llamadas' },
@@ -4237,7 +4238,10 @@
             { id: 'holdLlam', grupo: 'Llamadas', lbl: 'Hold por llamada', calc: b => v0(b, 'llamE') ? v0(b, 'holdE') / v0(b, 'llamE') : null, fmt: fmtMS, hint: 'Hold entrante ÷ llamadas entrantes del periodo' },
             ...PROD_TIMES.map(t => ({ id: t.f, grupo: 'Asistencia', lbl: t.lbl, calc: b => v0(b, 'n_' + t.f) ? v0(b, 'a_' + t.f) / v0(b, 'n_' + t.f) : null, fmt: fmtHora, hint: t.hint })),
             ...PROD_PCT_STATES.map(st => ({ id: pctKey(st), grupo: 'Porcentaje del login', lbl: '% ' + st.lbl, calc: b => b?.d ? v0(b, pctKey(st)) / b.d : null, fmt: fmtPct, hint: 'Promedio de los días' })),
-            ...PROD_STATES.map(st => ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS })),
+            // Pausas con norma diaria (almuerzo 1 h, break, baño): se muestran como promedio por día, no como total del periodo
+            ...PROD_STATES.map(st => PROD_PROM_DIA.has(st.f)
+                ? ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: `${st.lbl} (prom. por día)`, calc: b => b?.d ? v0(b, st.f) / b.d : null, fmt: fmtHMS, prom: true, hint: 'Promedio por día del periodo' })
+                : ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS })),
             ...PROD_AVGS.map(a => ({ id: a.f, grupo: 'Promedios por llamada', lbl: a.lbl, calc: b => v0(b, 'n_' + a.f) ? v0(b, 'a_' + a.f) / v0(b, 'n_' + a.f) : null, fmt: fmtMS, hint: 'Promedio de los días con valor' }))
         ];
         const PROD_GROUPS = ['Llamadas', 'Asistencia', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
@@ -4311,7 +4315,7 @@
                 if (MEJORA_REF.has(m.id) && dir === 'bajo' && !r.conMeta) dir = 'ref';   // Baño: por indicación de RRHH no lleva meta salvo que se elija expresamente
                 return { dir, meta: dir === 'ref' ? null : (r.meta ?? null) };
             },
-            esSuma: (m) => m.id !== 'd' && (m.fmt === fmtInt || m.fmt === fmtHMS),
+            esSuma: (m) => m.id !== 'd' && !m.prom && (m.fmt === fmtInt || m.fmt === fmtHMS),
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
             /** Meta de un indicador: fija (definida por el líder) o promedio del equipo (bucket del equipo). */
             meta: (m, teamB, b = null) => {
