@@ -239,6 +239,15 @@
         .prod-table .num-col { text-align: right; font-variant-numeric: tabular-nums; }
         .prod-table tbody tr:hover td { background: var(--surface-2); }
         .prod-table td.prod-bad { color: #B42318; background: #FEF3F2; font-weight: 600; }
+        .comp-table td { white-space: nowrap; }
+        .comp-table .comp-prev { color: var(--text-muted, #6b7280); font-size: 11px; }
+        .comp-table .comp-arrow { font-size: 9px; color: var(--text-muted, #6b7280); }
+        .comp-table td.comp-ok { background: #ECFDF3; color: #067647; }
+        .comp-table td.comp-mid { background: #FFFAEB; color: #B54708; }
+        .comp-table td.comp-bad { background: #FEF3F2; color: #B42318; }
+        .comp-legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 11px; margin: 0 0 10px; }
+        .comp-legend span[class^="comp-"] { padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+        .comp-legend .comp-ok { background: #ECFDF3; color: #067647; } .comp-legend .comp-mid { background: #FFFAEB; color: #B54708; } .comp-legend .comp-bad { background: #FEF3F2; color: #B42318; }
         .prod-table td.mejora-cell { white-space: normal; width: 340px; min-width: 340px; max-width: 340px; padding-top: 6px; padding-bottom: 6px; }
         .mejora-chip { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 8px; border-radius: 999px; background: #FEF3F2; color: #B42318; border: 1px solid #FECDCA; font-size: 11px; font-weight: 600; cursor: help; white-space: nowrap; }
         .mejora-ok { color: var(--ok); font-size: 11px; font-weight: 600; }
@@ -597,7 +606,9 @@
                     <div class="form-group" id="prodValorBox"><label>&nbsp;</label><select id="prodValor" class="filter-select"></select></div>
                     <div class="form-group" id="prodFechaBox" style="display:none;"><label>&nbsp;</label><input type="date" id="prodFecha" class="filter-select" style="padding:7px 10px;"></div>
                     <div class="form-group"><label>Vista</label>
-                        <select id="prodVista" class="filter-select"><option value="tabla">Tabla del periodo</option><option value="tendencia">Tendencia por semana</option></select></div>
+                        <select id="prodVista" class="filter-select"><option value="tabla">Tabla del periodo</option><option value="comparativo">Comparativo entre semanas</option><option value="tendencia">Tendencia por semana</option></select></div>
+                    <div class="form-group" id="prodCompBox" style="display:none;"><label>Comparar con</label><select id="prodComp" class="filter-select"></select></div>
+                    <div class="form-group" id="prodCorteBox" style="display:none;"><label>&nbsp;</label><label style="display:flex; gap:6px; align-items:center; font-size:13px; padding-top:8px;"><input type="checkbox" id="prodCorte" checked> Mismo corte de días</label></div>
                     <div class="form-group" id="prodMetricaBox" style="display:none;"><label>Indicador</label><select id="prodMetrica" class="filter-select"></select></div>
                 </div>
                 <div id="prodContent"></div>
@@ -3966,12 +3977,16 @@
                      * Recorre las filas de una hoja. onRow(valores[], numeroFila).
                      * quick: { col, values:Set<string> } → solo se procesan filas cuya columna `col` sea uno de esos textos
                      * (la fila 1 siempre se entrega: son los encabezados).
+                     * quick.light: { cols:number[], fn(valores[], numeroFila, valorCol) } → para las filas que NO pasan el filtro,
+                     * entrega solo esas columnas (lectura ligera; `cols` se puede llenar al leer los encabezados).
                      */
                     rows: async (sheetName, onRow, { quick = null, onProgress = null } = {}) => {
                         const sh = sheets.find(s => s.name === sheetName);
                         if (!sh || !entries[sh.path]) throw new Error(`No existe la hoja "${sheetName}".`);
                         const ss = await loadShared();
-                        let quickRe = null, quickIdx = null;
+                        let quickRe = null, quickIdx = null, lightRes = null;
+                        const cellVal = (m) => !m ? undefined : /\bt="s"/.test(m[1]) ? ss[Number(m[2])] : /\bt="(str|e)"/.test(m[1]) ? XlsxStream.unesc(m[2]) : Number(m[2]);
+                        const cellReFor = (i) => new RegExp(`<c r="${XlsxStream.colLetters(i)}\\d+"([^>]*?)>(?:<f[^>]*>[\\s\\S]*?<\\/f>|<f[^>]*\\/>)?<v>([^<]*)<\\/v>`);
                         if (quick) {
                             quickIdx = new Set(); ss.forEach((v, i) => { if (quick.values.has(String(v).trim())) quickIdx.add(String(i)); });
                             quickRe = new RegExp(`<c r="${XlsxStream.colLetters(quick.col)}\\d+"([^>]*?)>(?:<f[^>]*>[\\s\\S]*?<\\/f>|<f[^>]*\\/>)?<v>([^<]*)<\\/v>`);
@@ -4012,7 +4027,14 @@
                                 const n = rAttr ? Number(rAttr[1]) : rowNum;
                                 if (n !== 1 && quickRe) {
                                     const q = xml.match(quickRe);
-                                    if (!q || !/\bt="s"/.test(q[1]) || !quickIdx.has(q[2])) continue;
+                                    if (!q || !/\bt="s"/.test(q[1]) || !quickIdx.has(q[2])) {
+                                        const L = quick.light;
+                                        if (L?.cols?.length) {
+                                            if (!lightRes) lightRes = L.cols.map(cellReFor);
+                                            L.fn(lightRes.map(re => cellVal(xml.match(re))), n, cellVal(q));
+                                        }
+                                        continue;
+                                    }
                                 }
                                 if (onRow(parseRow(xml), n) === false) { reader.cancel().catch(() => {}); return; }
                             }
@@ -4034,6 +4056,8 @@
         const fmtMS = (s) => { if (s === null || s === undefined || isNaN(s)) return '—'; s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
         const fmtPct = (v) => (v === null || v === undefined || isNaN(v)) ? '—' : (v * 100).toFixed(1) + '%';
         const fmtInt = (v) => (v === null || v === undefined || isNaN(v)) ? '—' : Math.round(v).toLocaleString('es-GT');
+        const fmtHora = (s) => { if (s === null || s === undefined || isNaN(s)) return '—'; s = Math.round(s / 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+        const fmtDec = (v) => (v === null || v === undefined || isNaN(v) || !isFinite(v)) ? '—' : v.toFixed(2);
         const v0 = (b, f) => Number(b?.[f] || 0);
         // Columnas del Excel que se leen. last: tomar la última columna con ese nombre (las calculadas del reporte).
         const PROD_CALLS = [
@@ -4082,19 +4106,30 @@
             { f: 'avgRingS', lbl: 'Prom. ringing saliente', col: 'Promedio de Ringing Saliente' },
             { f: 'avgDiscado', lbl: 'Prom. tiempo de discado', col: 'Promedio de Tiempo de Discado' }
         ];
+        // Hora de ingreso y salida: se estiman con las filas por hora del archivo (primera y última hora con login).
+        const PROD_TIMES = [
+            { f: 'ini', lbl: 'Hora de ingreso', hint: 'Estimada con la primera hora con login del día. En semanas y meses: promedio de los días.' },
+            { f: 'fin', lbl: 'Hora de salida', hint: 'Estimada con la última hora con login del día. En semanas y meses: promedio de los días.' }
+        ];
+        /** Horas netas: login menos almuerzo y coaching (tiempo realmente disponible para atender). */
+        const prodNetas = (b) => Math.max(0, v0(b, 'login') - v0(b, 'almuerzo') - v0(b, 'coaching'));
         const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
         const PROD_METRICS = [
             ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
             { id: 'tmo', grupo: 'Llamadas', lbl: 'TMO', calc: b => b?.d ? v0(b, 'tmo') / b.d : null, fmt: fmtMS, hint: 'Promedio diario del tiempo medio de operación' },
             { id: 'd', grupo: 'Llamadas', lbl: 'Días conectado', calc: b => v0(b, 'd'), fmt: fmtInt },
+            { id: 'hNetas', grupo: 'Llamadas', lbl: 'Horas netas', calc: b => b?.d ? prodNetas(b) : null, fmt: fmtHMS, hint: 'Login menos almuerzo y coaching' },
+            { id: 'lph', grupo: 'Llamadas', lbl: 'Llamadas por hora', calc: b => prodNetas(b) > 0 ? v0(b, 'llam') / (prodNetas(b) / 3600) : null, fmt: fmtDec, hint: 'Llamadas conectadas ÷ horas netas' },
+            { id: 'holdLlam', grupo: 'Llamadas', lbl: 'Hold por llamada', calc: b => v0(b, 'llamE') ? v0(b, 'holdE') / v0(b, 'llamE') : null, fmt: fmtMS, hint: 'Hold entrante ÷ llamadas entrantes del periodo' },
+            ...PROD_TIMES.map(t => ({ id: t.f, grupo: 'Asistencia', lbl: t.lbl, calc: b => v0(b, 'n_' + t.f) ? v0(b, 'a_' + t.f) / v0(b, 'n_' + t.f) : null, fmt: fmtHora, hint: t.hint })),
             ...PROD_PCT_STATES.map(st => ({ id: pctKey(st), grupo: 'Porcentaje del login', lbl: '% ' + st.lbl, calc: b => b?.d ? v0(b, pctKey(st)) / b.d : null, fmt: fmtPct, hint: 'Promedio de los días' })),
             ...PROD_STATES.map(st => ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS })),
             ...PROD_AVGS.map(a => ({ id: a.f, grupo: 'Promedios por llamada', lbl: a.lbl, calc: b => v0(b, 'n_' + a.f) ? v0(b, 'a_' + a.f) / v0(b, 'n_' + a.f) : null, fmt: fmtMS, hint: 'Promedio de los días con valor' }))
         ];
-        const PROD_GROUPS = ['Llamadas', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
+        const PROD_GROUPS = ['Llamadas', 'Asistencia', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
         const PROD_DEFAULT_VISIBLES = ['llam', 'tmo', 'login', 'pOcio', 'pAdmin', 'pAlm', 'pBano', 'pCoach'];
         const PROD_PCT = new Set(PROD_PCT_STATES.map(pctKey));
-        const PROD_FIELDS = ['d', 'tmo', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f])];
+        const PROD_FIELDS = ['d', 'tmo', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
         const prodEmpty = () => Object.fromEntries(PROD_FIELDS.map(f => [f, 0]));
         const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
         /** Redondea y omite los ceros (documentos más livianos en Firebase). */
@@ -4107,8 +4142,8 @@
         const MEJORA_DIR = {   // bajo: menos es mejor · alto: más es mejor
             bajo: ['tmo', 'ocio', 'pOcio', 'admin', 'pAdmin', 'almuerzo', 'pAlm', 'bano', 'pBano', 'descanso', 'p_descanso', 'holdE', 'p_holdE', 'holdS', 'p_holdS', 'perdE', 'perdS', 'noConS',
                 'coaching', 'pCoach', 'testear', 'p_testear', 'rrss', 'p_rrss', 'rrss2', 'p_rrss2', 'marcado', 'p_marcado', 'atenE', 'p_atenE', 'atenS', 'p_atenS',
-                'preview', 'p_preview', 'postview', 'p_postview', 'otrosCrm', 'p_otrosCrm'],
-            alto: ['llam', 'llamE', 'llamS', 'login', 'convE', 'p_convE', 'convS', 'p_convS', 'd']
+                'preview', 'p_preview', 'postview', 'p_postview', 'otrosCrm', 'p_otrosCrm', 'holdLlam'],
+            alto: ['llam', 'llamE', 'llamS', 'login', 'convE', 'p_convE', 'convS', 'p_convS', 'd', 'lph', 'hNetas']
         };
         PROD_AVGS.forEach(a => MEJORA_DIR.bajo.push(a.f));
         const MEJORA_TXT = {
@@ -4143,13 +4178,17 @@
             avgMarcado: ['Marcado lento', 'Agilizar el marcado.'], avgPreview: ['Preview CRM lento', 'Agilizar la revisión del CRM antes de la llamada.'],
             avgPostview: ['Postview CRM lento', 'Agilizar el registro en CRM después de la llamada.'], avgHoldE: ['Hold promedio alto', 'Preparar la información antes de poner en espera.'],
             avgHoldS: ['Hold saliente promedio alto', 'Reducir esperas en salientes.'], avgRingS: ['Ringing saliente alto', 'Revisar horarios y números de contacto.'],
-            avgDiscado: ['Discado lento', 'Revisar el proceso de discado.']
+            avgDiscado: ['Discado lento', 'Revisar el proceso de discado.'],
+            lph: ['Pocas llamadas por hora', 'Agilizar la llamada y el registro para atender más clientes por hora.'],
+            holdLlam: ['Hold por llamada alto', 'Preparar la información antes de poner al cliente en espera.'],
+            hNetas: ['Pocas horas netas', 'Cumplir el horario y cuidar las pausas.']
         };
         const Mejora = {
             cfg: () => ({ auto: true, margen: 20, reglas: {}, ...(State.prodCfg?.mejora || {}) }),
             dirDefault: (id) => MEJORA_DIR.bajo.includes(id) ? 'bajo' : MEJORA_DIR.alto.includes(id) ? 'alto' : '',
             regla: (m) => { const r = Mejora.cfg().reglas[m.id] || {}; return { dir: r.dir ?? Mejora.dirDefault(m.id), meta: r.meta ?? null }; },
             esSuma: (m) => m.id !== 'd' && (m.fmt === fmtInt || m.fmt === fmtHMS),
+            esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
@@ -4167,7 +4206,7 @@
                     if (meta !== null && meta !== '') { ref = Number(meta); tipo = 'meta'; }
                     else if (c.auto && conEquipo && prom > 0) { ref = dir === 'bajo' ? prom * (1 + c.margen / 100) : prom * (1 - c.margen / 100); tipo = 'equipo'; }
                     if (ref === null) return;
-                    const minAbs = PROD_PCT.has(m.id) ? 0.01 : m.fmt === fmtInt ? 1 : 30;   // diferencias mínimas que vale la pena señalar
+                    const minAbs = PROD_PCT.has(m.id) ? 0.01 : m.fmt === fmtInt ? 1 : m.fmt === fmtDec ? 0.1 : 30;   // diferencias mínimas que vale la pena señalar
                     rows.forEach(r => {
                         const v = Mejora.valor(m, r.b);
                         if (v === null) return;
@@ -4202,12 +4241,12 @@
                 txt = String(txt || '').trim().replace(',', '.');
                 if (!txt) return null;
                 if (PROD_PCT.has(m.id)) { const n = Number(txt.replace('%', '')); return isNaN(n) ? NaN : n / 100; }
-                if (txt.includes(':')) { const p = txt.split(':').map(Number); if (p.some(isNaN)) return NaN; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1]; }
+                if (txt.includes(':')) { const p = txt.split(':').map(Number); if (p.some(isNaN)) return NaN; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : m.fmt === fmtHora ? p[0] * 3600 + p[1] * 60 : p[0] * 60 + p[1]; }
                 const n = Number(txt);
-                return isNaN(n) ? NaN : (m.fmt === fmtInt ? n : n * 60);   // tiempos sin ":" se leen en minutos
+                return isNaN(n) ? NaN : (Mejora.esNum(m) ? n : m.fmt === fmtHora ? n * 3600 : n * 60);   // tiempos sin ":" se leen en minutos
             },
-            show: (m, v) => v === null || v === undefined ? '' : PROD_PCT.has(m.id) ? String(Math.round(v * 1000) / 10) : m.fmt === fmtInt ? String(v) : (m.fmt === fmtMS ? fmtMS(v) : fmtHMS(v)),
-            unidad: (m) => PROD_PCT.has(m.id) ? '%' : m.fmt === fmtInt ? 'por día' : m.fmt === fmtMS ? 'm:ss' : 'h:mm:ss por día',
+            show: (m, v) => v === null || v === undefined ? '' : PROD_PCT.has(m.id) ? String(Math.round(v * 1000) / 10) : Mejora.esNum(m) ? String(v) : m.fmt === fmtHora ? fmtHora(v) : (m.fmt === fmtMS ? fmtMS(v) : fmtHMS(v)),
+            unidad: (m) => PROD_PCT.has(m.id) ? '%' : m.fmt === fmtInt ? 'por día' : m.fmt === fmtDec ? 'por hora' : m.fmt === fmtHora ? 'h:mm' : m.fmt === fmtMS ? 'm:ss' : 'h:mm:ss por día',
             box: () => {
                 const can = UI.hasPerm('chk_sync_productividad'), c = Mejora.cfg();
                 const evaluables = PROD_METRICS;
@@ -4547,6 +4586,26 @@
                     const lastIdx = (name) => { let k = -1; H.forEach((h, i) => { if (norm(h) === norm(name)) k = i; }); return k; };
                     const firstIdx = (name) => H.findIndex(h => norm(h) === norm(name));
                     const CI = {}, SI = {}, PI = {}, AI = {};
+                    // Filas por hora (lectura ligera): primera y última hora con login de cada asesor y día
+                    const horas = new Map();                   // 'codigo|fecha' -> { ini, fin } en segundos del día
+                    const diaInfo = new Map();                 // fecha -> { wk, mm } (tomado de las filas de total)
+                    const serialToIso = (v) => { const x = Number(v); return isNaN(x) || !x ? null : new Date(Math.round((x - 25569) * 86400000)).toISOString().slice(0, 10); };
+                    const light = { cols: [], fn: (v, n, rango) => {
+                        const hm = /^(\d{1,2}):(\d{2})/.exec(String(rango ?? '').trim());
+                        if (!hm) return;
+                        // Respaldo con las columnas originales de Neotel por si las columnas calculadas vienen vacías en las filas por hora
+                        const codigo = String(v[0] ?? '').trim() || (String(v[4] ?? '').match(/^\s*(\d+)/) || [])[1] || '';
+                        if (!byCode.has(codigo)) return;
+                        let fecha = serialToIso(v[1]);
+                        if (!fecha) { const t = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(v[5] ?? '')); if (t) fecha = `${t[3]}-${t[2].padStart(2, '0')}-${t[1].padStart(2, '0')}`; else if (typeof v[5] === 'number') fecha = serialToIso(v[5]); }
+                        if (!fecha || Number(fecha.slice(0, 4)) !== anio) return;
+                        const login = ProdSync.secs(v[6] ?? v[3]); if (login <= 0) return;
+                        const h0 = Number(hm[1]) * 3600 + Number(hm[2]) * 60;
+                        const k = codigo + '|' + fecha, e = horas.get(k) || { ini: Infinity, fin: -Infinity };
+                        e.ini = Math.min(e.ini, h0 + Math.max(0, 3600 - login));
+                        e.fin = Math.max(e.fin, h0 + Math.min(3600, login));
+                        horas.set(k, e);
+                    } };
 
                     await book.rows(ProdSync.SHEET, (r, n) => {
                         if (n === 1) {
@@ -4561,6 +4620,7 @@
                             const falta = [...Object.entries(C).filter(([k, v]) => v === -1 && k !== 'usuario').map(([k]) => k),
                                 ...(CI.llam === -1 ? ['Llamadas Conectadas'] : []), ...(SI.login === -1 ? ['Login'] : [])];
                             if (falta.length) throw new Error(`Faltan columnas en "${ProdSync.SHEET}": ${falta.join(', ')}.`);
+                            { const fb = (i, alt) => i < 0 ? alt : i; light.cols = [C.codigo, C.fecha, C.anio, SI.login, fb(C.usuario, C.codigo), fb(firstIdx('Fecha'), C.fecha), fb(firstIdx('Tiempo de Login'), SI.login)]; }
                             ProdSync.src.columnasFaltantes = [...PROD_CALLS.filter(c => CI[c.f] === -1).map(c => c.col), ...PROD_STATES.filter(st => SI[st.f] === -1).map(st => st.col), ...PROD_AVGS.filter(a => AI[a.f] === -1).map(a => a.col)];
                             return;
                         }
@@ -4588,8 +4648,9 @@
                             b[st.f] = t;
                             if (st.f !== 'login') b[pctKey(st)] = st.pcol ? ProdSync.num(r[PI[st.f]]) : (loginDia ? t / loginDia : 0);
                         });
-                        const p = per.get(codigo) || { user: u, total: prodEmpty(), semanas: {}, meses: {}, dias: {} };
+                        const p = per.get(codigo) || { user: u, total: prodEmpty(), semanas: {}, meses: {}, dias: {}, wk: {} };
                         const wk = 'S' + Number(r[C.semana]), mm = String(Number(r[C.mes])).padStart(2, '0');
+                        diaInfo.set(fecha, { wk, mm }); p.wk[fecha] = wk;
                         prodAdd(p.total, b);
                         prodAdd(p.semanas[wk] || (p.semanas[wk] = prodEmpty()), b);
                         prodAdd(p.meses[mm] || (p.meses[mm] = prodEmpty()), b);
@@ -4597,10 +4658,18 @@
                         prodAdd(dm[fecha] || (dm[fecha] = prodEmpty()), b);
                         per.set(codigo, p);
                     }, {
-                        quick: { col: 2, values: new Set(['Total']) },   // solo las filas de total diario ("Rango Horario" = Total)
+                        quick: { col: 2, values: new Set(['Total']), light },   // filas de total diario completas; las de cada hora, solo login
                         onProgress: async (pct) => { ProdSync.progress = `Leyendo ${pct}%…`; ProdSync.renderStatus(); await new Promise(r => setTimeout(r, 0)); }
                     });
                     if (C.rango !== 2) console.warn('La columna "Rango Horario" no está en C; el filtro rápido usa la columna C.');
+                    // Hora de ingreso y salida: se suman al día, la semana, el mes y el año (en promedio por día)
+                    for (const [k, e] of horas) {
+                        const [codigo, fecha] = k.split('|'), p = per.get(codigo), info = diaInfo.get(fecha);
+                        if (!p || !info || !isFinite(e.ini)) continue;
+                        const dia = p.dias[info.mm]?.[fecha]; if (!dia) continue;
+                        const add = { a_ini: e.ini, n_ini: 1, a_fin: e.fin, n_fin: 1 };
+                        [dia, p.semanas[info.wk], p.meses[info.mm], p.total].forEach(b => { if (b) Object.entries(add).forEach(([f, v]) => b[f] += v); });
+                    }
 
                     // Documentos a escribir (solo si cambiaron)
                     ProdSync.progress = 'Guardando…'; ProdSync.renderStatus();
@@ -4614,7 +4683,8 @@
                         const docs = [[`${codigo}_${anio}`, { ...base, tipo: 'anio', total: prodRound(p.total),
                             semanas: Object.fromEntries(Object.entries(p.semanas).map(([k, v]) => [k, prodRound(v)])),
                             meses: Object.fromEntries(Object.entries(p.meses).map(([k, v]) => [k, prodRound(v)])) }]];
-                        Object.entries(p.dias).forEach(([mm, dias]) => docs.push([`${codigo}_${anio}_${mm}`, { ...base, tipo: 'mes', mes: mm, dias: Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, prodRound(v)])) }]));
+                        Object.entries(p.dias).forEach(([mm, dias]) => docs.push([`${codigo}_${anio}_${mm}`, { ...base, tipo: 'mes', mes: mm, dias: Object.fromEntries(Object.entries(dias).map(([k, v]) => [k, prodRound(v)])),
+                            semanaDe: Object.fromEntries(Object.keys(dias).map(f => [f, p.wk[f]]).filter(([, w]) => w)) }]));
                         for (const [id, data] of docs) {
                             const h = await hash(data);
                             todos.push({ id, data: { ...data, h, actualizado: ahora } });
@@ -4829,7 +4899,7 @@
         // =========================================================
         const Prod = {
             cache: { anio: null, docs: null, meses: {} },
-            ui: { periodo: 'semana', valor: '', vista: 'tabla', metrica: 'pOcio' },
+            ui: { periodo: 'semana', valor: '', vista: 'tabla', metrica: 'pOcio', comp: '', corte: true },
             invalidate: () => { Prod.cache = { anio: null, docs: null, meses: {} }; if (document.querySelector('#viewProd.active')) Prod.draw(); },
 
             /** Igual que las notas: global sin filtro de área; líder por sus áreas (máx. 30); asesor solo lo suyo. */
@@ -4903,6 +4973,10 @@
                 $('prodMetrica').innerHTML = vis.map(m => `<option value="${m.id}" ${m.id === ui.metrica ? 'selected' : ''}>${esc(m.lbl)}</option>`).join('');
                 if (!vis.some(m => m.id === ui.metrica)) ui.metrica = vis[0]?.id;
                 $('prodMetricaBox').style.display = ui.vista === 'tendencia' ? '' : 'none';
+                const esComp = ui.vista === 'comparativo';
+                $('prodCompBox').style.display = esComp ? '' : 'none';
+                $('prodCorteBox').style.display = esComp ? '' : 'none';
+                if (esComp && ui.periodo !== 'semana') { ui.periodo = 'semana'; return Prod.draw(); }
 
                 if (!docs.length) {
                     let msg;
@@ -4914,6 +4988,7 @@
                     return;
                 }
                 if (ui.vista === 'tendencia') return Prod.drawTrend(docs, vis);
+                if (ui.vista === 'comparativo') return Prod.drawComp(docs, vis, anio, opts);
 
                 // Filas del periodo elegido
                 let filas;
@@ -4960,6 +5035,87 @@
                 Prod.lastExport = { titulo, cols: vis, rows, team, an };
             },
 
+            /** Lunes a domingo de la semana ISO n del año (las semanas del reporte de Neotel empiezan el lunes). */
+            isoWeekDates: (anio, n) => {
+                const j4 = new Date(Date.UTC(anio, 0, 4)), mon = new Date(j4); mon.setUTCDate(j4.getUTCDate() - ((j4.getUTCDay() + 6) % 7) + (n - 1) * 7);
+                return [...Array(7)].map((_, i) => { const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i); return d.toISOString().slice(0, 10); });
+            },
+            /** Días con datos de una semana por asesor: { codigo: { fecha: bucket } }. Usa la semana guardada al sincronizar o, si no está, la semana ISO. */
+            weekDays: async (anio, wk) => {
+                const n = weekNum(wk), fechas = Prod.isoWeekDates(anio, n).filter(f => Number(f.slice(0, 4)) === anio);
+                const meses = uniq(fechas.map(f => f.slice(5, 7)));
+                const out = {};
+                for (const mm of meses) for (const m of await Prod.loadMonth(anio, mm)) {
+                    Object.entries(m.dias || {}).forEach(([f, b]) => {
+                        const w = m.semanaDe?.[f];
+                        if (w ? w !== wk : !fechas.includes(f)) return;
+                        (out[m.codigo] || (out[m.codigo] = {}))[f] = b;
+                    });
+                }
+                return out;
+            },
+            drawComp: async (docs, vis, anio, opts) => {
+                const ui = Prod.ui, box = $('prodContent');
+                const idx = opts.findIndex(o => o.v === ui.valor);
+                const prevs = opts.slice(idx + 1);
+                if (!prevs.length) { $('prodComp').innerHTML = ''; box.innerHTML = '<div class="callout">No hay una semana anterior para comparar. Elige otra semana.</div>'; return; }
+                if (!prevs.some(o => o.v === ui.comp)) ui.comp = prevs[0].v;
+                $('prodComp').innerHTML = prevs.map(o => `<option value="${esc(o.v)}" ${o.v === ui.comp ? 'selected' : ''}>${esc(o.l)}</option>`).join('');
+                $('prodCorte').checked = ui.corte;
+                box.innerHTML = '<p class="hint" style="padding:30px; text-align:center;">Preparando el comparativo…</p>';
+                const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+                const dow = (f) => (new Date(f + 'T12:00:00').getDay() + 6) % 7;
+                let A, B, corteTxt = '';   // A: semana actual · B: semana con la que se compara
+                const codigos = new Set(docs.map(d => d.codigo));
+                if (ui.corte) {
+                    let dA, dB;
+                    try { [dA, dB] = await Promise.all([Prod.weekDays(anio, ui.valor), Prod.weekDays(anio, ui.comp)]); }
+                    catch (e) { console.error(e); box.innerHTML = `<div class="callout warn">No se pudieron leer los días (${esc(e.message)}).</div>`; return; }
+                    const maxDow = Math.max(-1, ...Object.values(dA).flatMap(x => Object.keys(x).map(dow)));
+                    const sum = (dd, lim) => Object.fromEntries(Object.entries(dd).filter(([c]) => codigos.has(c)).map(([c, x]) => [c, Object.entries(x).filter(([f]) => dow(f) <= lim).reduce((acc, [, b]) => prodAdd(acc, b), prodEmpty())]));
+                    A = sum(dA, 6); B = sum(dB, maxDow);
+                    corteTxt = maxDow >= 0 && maxDow < 6 ? `Mismo corte en las dos semanas: lunes a ${DIAS[maxDow]}.` : 'Semanas completas.';
+                } else {
+                    A = Object.fromEntries(docs.filter(d => d.semanas?.[ui.valor]).map(d => [d.codigo, prodAdd(prodEmpty(), d.semanas[ui.valor])]));
+                    B = Object.fromEntries(docs.filter(d => d.semanas?.[ui.comp]).map(d => [d.codigo, prodAdd(prodEmpty(), d.semanas[ui.comp])]));
+                    corteTxt = 'Semanas completas (sin igualar los días).';
+                }
+                const rows = docs.filter(d => A[d.codigo]?.d || B[d.codigo]?.d).map(d => ({ nombre: d.nombre, a: A[d.codigo] || null, b: B[d.codigo] || null })).sort((x, y) => x.nombre.localeCompare(y.nombre));
+                const tA = rows.reduce((acc, r) => prodAdd(acc, r.a), prodEmpty()), tB = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
+                // Valor comparable (por día en los indicadores que se suman) y lectura contra el equipo y la semana anterior
+                const val = (m, b) => b?.d ? Mejora.valor(m, b) : null;
+                const lectura = (m, va, vb, team) => {
+                    const { dir } = Mejora.regla(m);
+                    if (!dir || va === null) return '';
+                    const mejorQueEquipo = team !== null && (dir === 'bajo' ? va <= team : va >= team);
+                    if (mejorQueEquipo) return 'ok';
+                    const cambio = vb ? (va - vb) / Math.abs(vb) : 0;
+                    return (dir === 'bajo' ? cambio < -0.05 : cambio > 0.05) ? 'mid' : 'bad';
+                };
+                const cell = (m, ra, rb, team) => {
+                    const va = val(m, ra), vb = val(m, rb), cls = lectura(m, va, vb, team);
+                    const arrow = va === null || vb === null ? '' : va > vb ? '▲' : va < vb ? '▼' : '=';
+                    return `<td class="num-col comp-${cls || 'n'}" title="${esc(`${ui.comp}: ${m.fmt(vb)} · ${ui.valor}: ${m.fmt(va)}`)}"><span class="comp-prev">${m.fmt(vb)}</span> <span class="comp-arrow">${arrow}</span> <strong>${m.fmt(va)}</strong></td>`;
+                };
+                const lbl = (m) => Mejora.esSuma(m) ? `${m.lbl} por día` : m.lbl;
+                box.innerHTML = `
+                    <div class="table-card">
+                        <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <h3>Semana ${weekNum(ui.comp)} → Semana ${weekNum(ui.valor)}</h3>
+                            <span class="hint" style="margin:0;">${esc(corteTxt)}</span>
+                            <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
+                        <div class="comp-legend"><span class="comp-ok">Mejor que el equipo</span><span class="comp-mid">Mejorando, aún sin alcanzar al equipo</span><span class="comp-bad">Por mejorar</span><span class="hint">Cada celda: semana anterior ▲▼ semana actual. Llamadas y tiempos, por día.</span></div>
+                        <div class="table-scroll prod-scroll">
+                            <table class="prod-table comp-table">
+                                <thead><tr><th>Asesor</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(lbl(m))}</th>`).join('')}</tr></thead>
+                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td>${vis.map(m => cell(m, r.a, r.b, val(m, tA))).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, 'Sin datos en estas semanas.')}</tbody>
+                                ${rows.length ? `<tfoot><tr><td>Equipo</td>${vis.map(m => `<td class="num-col"><span class="comp-prev">${m.fmt(val(m, tB))}</span> → <strong>${m.fmt(val(m, tA))}</strong></td>`).join('')}</tr></tfoot>` : ''}
+                            </table>
+                        </div>
+                    </div>`;
+                Prod.lastExport = { titulo: `Comparativo S${weekNum(ui.comp)} vs S${weekNum(ui.valor)}`, comp: { vis, rows, tA, tB, val, lbl, ant: ui.comp, act: ui.valor, corteTxt } };
+            },
+
             drawTrend: (docs, vis) => {
                 const m = PROD_METRICS.find(x => x.id === Prod.ui.metrica) || vis[0];
                 const weeks = uniq(docs.flatMap(d => Object.keys(d.semanas || {}))).sort((a, b) => weekNum(a) - weekNum(b));
@@ -4987,7 +5143,17 @@
                 const ex = Prod.lastExport;
                 if (!ex) return alert("No hay datos de productividad en pantalla.");
                 let rows;
-                if (ex.trend) rows = ex.trend.rows.map(d => ({ Asesor: d.nombre, ...Object.fromEntries(ex.trend.shown.map(w => [w, d.semanas?.[w] ? ex.trend.m.fmt(ex.trend.m.calc(d.semanas[w])) : ''])), 'Año': ex.trend.m.fmt(ex.trend.m.calc(d.total || prodEmpty())) }));
+                if (ex.comp) {
+                    const c = ex.comp;
+                    rows = [...c.rows.map(r => ({ Asesor: r.nombre })), { Asesor: 'Equipo' }];
+                    c.vis.forEach(m => {
+                        rows.forEach((row, i) => {
+                            const r = c.rows[i], b = r ? r.b : c.tB, a = r ? r.a : c.tA;
+                            row[`${c.lbl(m)} · ${c.ant}`] = m.fmt(c.val(m, b)); row[`${c.lbl(m)} · ${c.act}`] = m.fmt(c.val(m, a));
+                        });
+                    });
+                    rows.push({ Asesor: c.corteTxt });
+                } else if (ex.trend) rows = ex.trend.rows.map(d => ({ Asesor: d.nombre, ...Object.fromEntries(ex.trend.shown.map(w => [w, d.semanas?.[w] ? ex.trend.m.fmt(ex.trend.m.calc(d.semanas[w])) : ''])), 'Año': ex.trend.m.fmt(ex.trend.m.calc(d.total || prodEmpty())) }));
                 else rows = [...ex.rows.map(r => ({ Asesor: r.nombre, ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(r.b))])),
                         'Áreas de mejora': (ex.an?.porFila.get(r.nombre) || []).map(x => `${x.lbl} (${x.det})`).join('; '),
                         'Acciones sugeridas': (ex.an?.porFila.get(r.nombre) || []).map(x => x.accion).filter(Boolean).join(' ') })), { Asesor: 'Equipo', ...Object.fromEntries(ex.cols.map(m => [m.lbl, m.fmt(m.calc(ex.team))])) }];
@@ -5241,6 +5407,8 @@
         $('prodValor').addEventListener('change', (e) => { Prod.ui.valor = e.target.value; Prod.draw(); });
         $('prodVista').addEventListener('change', (e) => { Prod.ui.vista = e.target.value; Prod.draw(); });
         $('prodMetrica').addEventListener('change', (e) => { Prod.ui.metrica = e.target.value; Prod.draw(); });
+        $('prodComp').addEventListener('change', (e) => { Prod.ui.comp = e.target.value; Prod.draw(); });
+        $('prodCorte').addEventListener('change', (e) => { Prod.ui.corte = e.target.checked; Prod.draw(); });
     </script>
 </body>
 </html>
