@@ -293,6 +293,14 @@
         .hor-d.ok { background: #ECFDF3; color: #067647; } .hor-d.early { background: #EFF8FF; color: #175CD3; } .hor-d.late { background: #FEF3F2; color: #B42318; }
         .hor-table td.hor-hoy, .hor-table th.hor-hoy { background: var(--primary-soft) !important; }
         .hor-table tr.hor-focus td { background: #FFFAEB !important; }
+        .mine-meta-k.ref { background: #EEF4FF; color: #3538CD; cursor: help; }
+        .mine-ref-t { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
+        .mine-ref-t.alto { color: #3538CD; }
+        .mine-list.ref h4 i { color: #6172F3; }
+        .mejora-chip.ref { background: #EEF4FF; color: #3538CD; }
+        .mejora-tag.ref b { background: #EEF4FF; color: #3538CD; }
+        .prod-table td.prod-ref { color: #3538CD; }
+        .prod-table th .th-meta.ref { color: #3538CD; }
         .mine-meta-n { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.35; }
         .mine-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 20px 22px; border-radius: 14px; margin-bottom: 16px; color: #fff; background: linear-gradient(120deg, #0B3B8C 0%, #1570EF 55%, #12B76A 130%); box-shadow: 0 8px 24px -12px rgba(21,112,239,.55); animation: fadeIn .35s ease both; }
         .mine-hero-t { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
@@ -4290,10 +4298,19 @@
             holdLlam: ['Hold por llamada alto', 'Preparar la información antes de poner al cliente en espera.'],
             hNetas: ['Pocas horas netas', 'Cumplir el horario y cuidar las pausas.']
         };
+        // Indicadores que no llevan meta (indicación de RRHH: el baño es libre), solo referencia del equipo
+        const MEJORA_REF = new Set(['bano', 'pBano']);
+        const MEJORA_REF_TXT = ['Pausas de baño altas', 'Llamado a la conciencia: el baño es libre, pero cada minuto disponible ayuda al equipo y a nuestros clientes.'];
         const Mejora = {
             cfg: () => ({ auto: true, margen: 20, reglas: {}, ...(State.prodCfg?.mejora || {}) }),
-            dirDefault: (id) => MEJORA_DIR.bajo.includes(id) ? 'bajo' : MEJORA_DIR.alto.includes(id) ? 'alto' : '',
-            regla: (m) => { const r = Mejora.cfg().reglas[m.id] || {}; return { dir: r.dir ?? Mejora.dirDefault(m.id), meta: r.meta ?? null }; },
+            dirDefault: (id) => MEJORA_REF.has(id) ? 'ref' : MEJORA_DIR.bajo.includes(id) ? 'bajo' : MEJORA_DIR.alto.includes(id) ? 'alto' : '',
+            /** 'ref': solo referencia (sin meta): se compara con el promedio del equipo como llamado a la conciencia, sin contar como oportunidad. */
+            regla: (m) => {
+                const r = Mejora.cfg().reglas[m.id] || {};
+                let dir = r.dir ?? Mejora.dirDefault(m.id);
+                if (MEJORA_REF.has(m.id) && dir === 'bajo' && !r.conMeta) dir = 'ref';   // Baño: por indicación de RRHH no lleva meta salvo que se elija expresamente
+                return { dir, meta: dir === 'ref' ? null : (r.meta ?? null) };
+            },
             esSuma: (m) => m.id !== 'd' && (m.fmt === fmtInt || m.fmt === fmtHMS),
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
             /** Meta de un indicador: fija (definida por el líder) o promedio del equipo (bucket del equipo). */
@@ -4301,6 +4318,7 @@
                 if (teamB && (teamB.dyn || teamB.prom)) teamB = PROD_DYN.has(m.id) ? teamB.dyn : teamB.prom;   // vista del día: volumen del día / promedio de la semana
                 const { dir, meta } = Mejora.regla(m);
                 if (!dir) return null;
+                if (dir === 'ref') { if (!teamB?.d) return null; const x = Mejora.valor(m, teamB); return x !== null && x > 0 ? { x, tipo: 'ref', dir: 'bajo' } : null; }
                 if (meta !== null && meta !== undefined && meta !== '') return { x: Number(meta), tipo: 'fija', dir };
                 if (!Mejora.cfg().auto || !teamB?.d) return null;
                 if (PROD_DYN.has(m.id)) {
@@ -4312,17 +4330,18 @@
                 const x = Mejora.valor(m, teamB);
                 return x !== null && x > 0 ? { x, tipo: 'promedio', dir } : null;
             },
-            metaTxt: (m, mt) => !mt ? '' : mt.tipo === 'dinamica' ? `Meta dinámica ${(mt.rate * 3600).toFixed(1)} por hora` : `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}`,
+            metaTxt: (m, mt) => !mt ? '' : mt.tipo === 'ref' ? `Referencia del equipo ${Mejora.fmtValor(m, mt.x)}` : mt.tipo === 'dinamica' ? `Meta dinámica ${(mt.rate * 3600).toFixed(1)} por hora` : `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}`,
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
             /** Analiza las filas, solo con los indicadores visibles: devuelve { porFila: Map(nombre -> [hallazgos]), malas: Set('nombre|id') }. */
             analizar: (rows, metricas = Prod.visibles()) => {
-                const c = Mejora.cfg(), porFila = new Map(), malas = new Set();
+                const c = Mejora.cfg(), porFila = new Map(), malas = new Set(), refs = new Set();
                 const conEquipo = rows.length >= 3 && Scope.hasTeamView();   // comparar con el equipo solo si hay equipo
                 metricas.forEach(m => {
-                    const { dir, meta } = Mejora.regla(m);
-                    if (!dir) return;
+                    const { dir: dir0, meta } = Mejora.regla(m);
+                    if (!dir0) return;
+                    const esRef = dir0 === 'ref', dir = esRef ? 'bajo' : dir0;
                     const vals = rows.map(r => Mejora.valor(m, r.b)).filter(v => v !== null);
                     if (!vals.length) return;
                     const prom = vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -4348,28 +4367,28 @@
                         }
                         const mal = dir === 'bajo' ? v > ref && (tipo === 'meta' || v - prom >= minAbs) : v < ref && (tipo === 'meta' || prom - v >= minAbs);
                         if (!mal) return;
-                        malas.add(r.nombre + '|' + m.id);
-                        const [lbl, accion] = MEJORA_TXT[m.id] || [`${m.lbl} ${dir === 'bajo' ? 'alto' : 'bajo'}`, ''];
+                        (esRef ? refs : malas).add(r.nombre + '|' + m.id);
+                        const [lbl, accion] = esRef ? MEJORA_REF_TXT : MEJORA_TXT[m.id] || [`${m.lbl} ${dir === 'bajo' ? 'alto' : 'bajo'}`, ''];
                         const det = `${Mejora.fmtValor(m, v)} · ${tipo === 'meta' ? 'meta' : 'promedio del equipo'} ${Mejora.fmtValor(m, tipo === 'meta' ? ref : prom)}`;
                         const desvio = Math.abs(v - (tipo === 'meta' ? ref : prom)) / Math.max(Math.abs(tipo === 'meta' ? ref : prom), 1e-9);
                         const arr = porFila.get(r.nombre) || [];
                         // Un mismo tema (p. ej. "Ocio alto" en tiempo y en %) se muestra una sola vez
-                        if (!arr.some(x => x.lbl === lbl)) arr.push({ id: m.id, lbl, accion, det, desvio });
+                        if (!arr.some(x => x.lbl === lbl)) arr.push({ id: m.id, lbl, accion, det, desvio: esRef ? -1 : desvio, ref: esRef });
                         porFila.set(r.nombre, arr);
                     });
                 });
                 porFila.forEach(arr => arr.sort((a, b) => b.desvio - a.desvio));
-                return { porFila, malas };
+                return { porFila, malas, refs };
             },
             chips: (arr) => arr?.length
-                ? arr.map(x => `<span class="mejora-chip" title="${esc(x.det + (x.accion ? '\n' + x.accion : ''))}">${esc(x.lbl)}</span>`).join('')
+                ? arr.map(x => `<span class="mejora-chip ${x.ref ? 'ref' : ''}" title="${esc(x.det + (x.accion ? '\n' + x.accion : ''))}">${x.ref ? '<i class="fas fa-heart"></i> ' : ''}${esc(x.lbl)}</span>`).join('') + (arr.every(x => x.ref) ? ' <span class="mejora-ok"><i class="fas fa-star"></i> Sin oportunidades</span>' : '')
                 : '<span class="mejora-ok"><i class="fas fa-star"></i> ¡Todo en orden!</span>',
             resumen: (an, total) => {
                 const cuenta = new Map();
-                an.porFila.forEach(arr => arr.forEach(x => cuenta.set(x.lbl, { n: (cuenta.get(x.lbl)?.n || 0) + 1, accion: x.accion })));
+                an.porFila.forEach(arr => arr.forEach(x => cuenta.set(x.lbl, { n: (cuenta.get(x.lbl)?.n || 0) + 1, accion: x.accion, ref: x.ref })));
                 if (!cuenta.size) return total ? `<div class="mejora-resumen ok"><i class="fas fa-circle-check"></i> Ningún asesor tiene áreas de mejora en este periodo.</div>` : '';
                 const items = [...cuenta.entries()].sort((a, b) => b[1].n - a[1].n);
-                return `<div class="mejora-resumen"><span class="mejora-resumen-t"><i class="fas fa-seedling"></i> Oportunidades del equipo</span><span class="mejora-resumen-items">${items.map(([lbl, x]) => `<span class="mejora-tag" title="${esc(x.accion)}">${esc(lbl)}<b>${x.n}</b></span>`).join('')}</span></div>`;
+                return `<div class="mejora-resumen"><span class="mejora-resumen-t"><i class="fas fa-seedling"></i> Oportunidades del equipo</span><span class="mejora-resumen-items">${items.map(([lbl, x]) => `<span class="mejora-tag ${x.ref ? 'ref' : ''}" title="${esc(x.accion)}">${x.ref ? '<i class="fas fa-heart"></i> ' : ''}${esc(lbl)}<b>${x.n}</b></span>`).join('')}</span></div>`;
             },
 
             // ---- Ajustes: metas ----
@@ -4399,8 +4418,8 @@
                                 <thead><tr><th>Indicador</th><th>Se evalúa</th><th>Meta</th></tr></thead>
                                 <tbody>${evaluables.map(m => { const r = Mejora.regla(m); return `<tr>
                                     <td>${esc(m.lbl)}</td>
-                                    <td><select class="mejora-dir" data-id="${m.id}" ${can ? '' : 'disabled'} style="padding:4px 6px; font-size:12px;"><option value="" ${!r.dir ? 'selected' : ''}>No evaluar</option><option value="bajo" ${r.dir === 'bajo' ? 'selected' : ''}>Menos es mejor</option><option value="alto" ${r.dir === 'alto' ? 'selected' : ''}>Más es mejor</option></select></td>
-                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="${PROD_DYN.has(m.id) ? 'dinámica' : 'promedio'}" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td></tr>`; }).join('')}</tbody>
+                                    <td><select class="mejora-dir" data-id="${m.id}" ${can ? '' : 'disabled'} style="padding:4px 6px; font-size:12px;"><option value="" ${!r.dir ? 'selected' : ''}>No evaluar</option><option value="bajo" ${r.dir === 'bajo' ? 'selected' : ''}>Menos es mejor</option><option value="alto" ${r.dir === 'alto' ? 'selected' : ''}>Más es mejor</option><option value="ref" ${r.dir === 'ref' ? 'selected' : ''}>Solo referencia (sin meta)</option></select></td>
+                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="${r.dir === 'ref' ? 'referencia' : PROD_DYN.has(m.id) ? 'dinámica' : 'promedio'}" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td></tr>`; }).join('')}</tbody>
                             </table>
                         </div>
                         ${can ? `<button class="btn-action" id="mejoraSave" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar metas</button>` : ''}
@@ -4413,7 +4432,8 @@
                     const raw = document.querySelector(`.mejora-meta[data-id="${m.id}"]`).value;
                     const meta = Mejora.parse(m, raw);
                     if (Number.isNaN(meta)) return alert(`La meta de "${m.lbl}" no es válida (${Mejora.unidad(m)}).`);
-                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null) reglas[m.id] = { dir: sel.value, meta };
+                    if (sel.value === 'ref') { if (!MEJORA_REF.has(m.id)) reglas[m.id] = { dir: 'ref', meta: null }; continue; }
+                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null) reglas[m.id] = { dir: sel.value, meta, ...(MEJORA_REF.has(m.id) && sel.value === 'bajo' ? { conMeta: true } : {}) };
                 }
                 const margen = Math.max(0, Math.min(100, Number($('mejoraMargen').value) || 0));
                 const mejora = { auto: $('mejoraAuto').checked, margen, reglas };
@@ -6275,20 +6295,23 @@
                         const ch = (v - p) / Math.abs(p);
                         trend = { ch, good: dir === 'alto' ? ch > 0.01 : ch < -0.01, bad: dir === 'alto' ? ch < -0.01 : ch > 0.01 };
                     }
-                    let mt = null;
+                    let mt = null, ref = null;
                     const mm = v !== null ? Mejora.meta(m, teamB, b) : null;
-                    if (mm && mm.x !== null) {
+                    if (mm?.tipo === 'ref') ref = { x: mm.x, alto: v > mm.x * (1 + Mejora.cfg().margen / 100) && v - mm.x >= (PROD_PCT.has(m.id) ? 0.01 : 30) };
+                    else if (mm && mm.x !== null) {
                         // Conteos (llamadas) se comparan redondeados: 35 contra una meta de 35.4 ya es meta cumplida
                         const x = m.fmt === fmtInt ? Math.round(mm.x) : mm.x, vv = m.fmt === fmtInt ? Math.round(v) : v;
                         const ok = dir === 'bajo' ? vv <= x : vv >= x;
                         mt = { x, ok, tipo: mm.tipo, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
                     }
-                    return { m, v, p, trend, mt, dir };
+                    if (dir === 'ref') trend = null;   // sin meta ni flechas de bien/mal: solo referencia
+                    return { m, v, p, trend, mt, ref, dir };
                 });
-                const conDir = items.filter(x => x.dir && (x.mt || x.trend));
+                const conDir = items.filter(x => x.dir && x.dir !== 'ref' && (x.mt || x.trend));
                 // Con meta, manda la meta; sin meta, la comparación con el periodo anterior
                 const bien = items.filter(x => x.mt ? x.mt.ok : x.trend?.good);
                 const opp = items.filter(x => x.mt ? !x.mt.ok : x.trend?.bad);
+                const conciencia = items.filter(x => x.ref?.alto);
                 let titular, sub;
                 if (!prev && !conDir.length) { titular = `Hola${nombre ? ', ' + esc(nombre) : ''} 👋`; sub = `Este es tu resumen de ${esc(titulo.toLowerCase())}.`; }
                 else if (bien.length && bien.length >= opp.length) { titular = `¡Excelente${nombre ? ', ' + esc(nombre) : ''}! 🚀`; sub = `Vas mejorando en <strong>${bien.length} de ${conDir.length}</strong> indicadores${prevLbl ? ` frente a ${esc(prevLbl)}` : ''}. ¡Sigue así!`; }
@@ -6308,18 +6331,20 @@
                     const perDay = Mejora.esSuma(m) && b.d > 1 ? `<div class="mine-sub">${esc(m.fmt(x.v))} por día</div>` : '';
                     const d = x.trend ? x.v - x.p : 0, eq = x.trend && igual(m, d);
                     const tr = x.trend && !x.mt ? `<div class="mine-trend ${eq ? 'flat' : x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}" title="${esc(`${prevLbl}: ${Mejora.fmtValor(m, x.p)} → ahora: ${Mejora.fmtValor(m, x.v)}`)}"><i class="fas fa-arrow-${eq ? 'right' : d > 0 ? 'up' : 'down'}"></i> ${eq ? 'Igual' : `${d > 0 ? '+' : '−'}${esc(dif(m, d))}`} <span>vs ${esc(prevLbl)} (${esc(Mejora.fmtValor(m, x.p).replace(' por día', ''))})</span></div>` : '';
+                    const refBox = x.ref ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ref" title="Sin meta: el baño es libre. Es solo una referencia del equipo."><i class="fas fa-heart"></i> Referencia del equipo</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.ref.x))}</span></div>
+                        <div class="mine-ref-t ${x.ref.alto ? 'alto' : ''}">${x.ref.alto ? 'Tus pausas están por encima del promedio del equipo. Úsalas con conciencia: cada minuto disponible ayuda a tus compañeros y a nuestros clientes. 💙' : 'Dentro del promedio del equipo. ¡Gracias por cuidar tu tiempo disponible! 💙'}</div></div>` : '';
                     const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : x.mt.tipo === 'dinamica' ? 'Se calcula con las llamadas que recibió el equipo en este periodo y tus horas conectadas: si hay más llamadas o trabajas más horas, la meta sube; si hay menos, baja.' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : x.mt.tipo === 'dinamica' ? '<i class="fas fa-wand-magic-sparkles"></i> Meta dinámica' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}</span></div>
                         <div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div>
                         <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'promedio' ? '¡Mejor que el promedio del equipo!' : '¡Meta cumplida!'}` : x.dir === 'bajo' ? `Te falta bajar ${esc(dif(m, x.v - x.mt.x))} para alcanzarla` : m.fmt === fmtInt ? (() => { const n = Math.max(1, Math.round(x.mt.x) - Math.round(x.v)); return `Te ${n === 1 ? 'falta 1 llamada' : `faltan ${n} llamadas`}${Mejora.esSuma(m) ? ' por día' : ''} para alcanzarla`; })() : `Te falta ${esc(dif(m, x.mt.x - x.v))} para alcanzarla`}${x.mt.tipo === 'dinamica' ? `<div class="mine-meta-n">Ajustada al volumen de llamadas del equipo y a tus horas netas de este periodo.</div>` : ''}</div></div>` : '';
                     const tipCard = [m.hint || '', x.trend ? `${prevLbl}: ${Mejora.fmtValor(m, x.p)} → ahora: ${Mejora.fmtValor(m, x.v)}` : ''].filter(Boolean).join('\n');
                     return `<div class="mine-card ${x.mt ? (x.mt.ok ? 'is-good' : '') : x.trend?.good ? 'is-good' : ''}" style="animation-delay:${i * 50}ms" ${tipCard ? `title="${esc(tipCard)}"` : ''}>
-                        <div class="mine-lbl">${esc(m.lbl)}</div><div class="mine-val">${esc(m.fmt(total))}</div>${perDay}${tr}${bar}</div>`;
+                        <div class="mine-lbl">${esc(m.lbl)}</div><div class="mine-val">${esc(m.fmt(total))}</div>${perDay}${tr}${bar}${refBox}</div>`;
                 };
                 const lista = (arr, cls, icon, txt) => arr.length ? `<div class="mine-list ${cls}"><h4><i class="fas ${icon}"></i> ${txt}</h4><ul>${arr.map(x => `<li><strong>${esc(x.m.lbl)}</strong>${cls === 'opp' && MEJORA_TXT[x.m.id]?.[1] ? ` <span>${esc(MEJORA_TXT[x.m.id][1])}</span>` : ''}</li>`).join('')}</ul></div>` : '';
                 box.innerHTML = `
                     <div class="mine-hero"><div><div class="mine-hero-t">${titular}</div><div class="mine-hero-s">${sub}</div></div><div class="mine-hero-p">${esc(titulo)}</div></div>
                     <div class="mine-grid">${items.map(card).join('')}</div>
-                    ${(bien.length || opp.length) ? `<div class="mine-lists">${lista(bien, 'good', 'fa-star', 'Lo que estás haciendo muy bien')}${lista(opp, 'opp', 'fa-seedling', 'Tus oportunidades para crecer')}</div>` : ''}`;
+                    ${(bien.length || opp.length || conciencia.length) ? `<div class="mine-lists">${lista(bien, 'good', 'fa-star', 'Lo que estás haciendo muy bien')}${lista(opp, 'opp', 'fa-seedling', 'Tus oportunidades para crecer')}${conciencia.length ? `<div class="mine-list ref"><h4><i class="fas fa-heart"></i> Para tener en cuenta</h4><ul>${conciencia.map(x => `<li><strong>${esc(x.m.lbl)}</strong> <span>${esc(MEJORA_REF_TXT[1])}</span></li>`).join('')}</ul></div>` : ''}</div>` : ''}`;
                 requestAnimationFrame(() => box.querySelectorAll('.mine-bar span').forEach(el => { el.style.width = el.dataset.w + '%'; }));
                 Prod.lastExport = { titulo, cols: vis, rows: [{ nombre: State.user?.nombre || '', b }], team: b, an: { porFila: new Map() } };
             },
@@ -6331,7 +6356,7 @@
                 // Mejor resultado del periodo en cada indicador (se resalta en verde para reconocerlo)
                 const best = new Set();
                 if (rows.length >= 3) vis.forEach(m => {
-                    const { dir } = Mejora.regla(m); if (!dir) return;
+                    const { dir } = Mejora.regla(m); if (!dir || dir === 'ref') return;
                     const vals = rows.map(r => [r.nombre, Mejora.valor(m, r.b)]).filter(([, v]) => v !== null && v > 0);
                     if (vals.length < 3) return;
                     const top = dir === 'alto' ? Math.max(...vals.map(x => x[1])) : Math.min(...vals.map(x => x[1]));
@@ -6345,8 +6370,8 @@
                             <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table">
-                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => { const mt = Mejora.meta(m, team); return `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}${mt ? `<span class="th-meta ${mt.tipo}" title="${mt.tipo === 'fija' ? 'Meta fija definida en Ajustes' : mt.tipo === 'dinamica' ? 'Llamadas que atendió el equipo por cada hora neta en este periodo. La meta de cada asesor = esta tasa × sus horas netas.' : 'Promedio del equipo en este periodo'}">${esc(Mejora.metaTxt(m, mt))}</span>` : ''}</th>`; }).join('')}</tr></thead>
-                                <tbody>${rows.map(r => `<tr><td class="prod-agent"><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})" title="${esc(r.nombre)}">${esc(r.nombre)}</button><div class="mejora-line">${Mejora.chips(an.porFila.get(r.nombre))}</div></td>${vis.map(m => `<td class="num-col ${best.has(r.nombre + '|' + m.id) ? 'prod-best' : an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}" ${best.has(r.nombre + '|' + m.id) ? 'title="Mejor resultado del equipo"' : ''}>${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
+                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => { const mt = Mejora.meta(m, team); return `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}${mt ? `<span class="th-meta ${mt.tipo}" title="${mt.tipo === 'ref' ? 'Sin meta (indicación de RRHH). Solo referencia del equipo para un llamado a la conciencia.' : mt.tipo === 'fija' ? 'Meta fija definida en Ajustes' : mt.tipo === 'dinamica' ? 'Llamadas que atendió el equipo por cada hora neta en este periodo. La meta de cada asesor = esta tasa × sus horas netas.' : 'Promedio del equipo en este periodo'}">${esc(Mejora.metaTxt(m, mt))}</span>` : ''}</th>`; }).join('')}</tr></thead>
+                                <tbody>${rows.map(r => `<tr><td class="prod-agent"><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})" title="${esc(r.nombre)}">${esc(r.nombre)}</button><div class="mejora-line">${Mejora.chips(an.porFila.get(r.nombre))}</div></td>${vis.map(m => `<td class="num-col ${best.has(r.nombre + '|' + m.id) ? 'prod-best' : an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : an.refs?.has(r.nombre + '|' + m.id) ? 'prod-ref' : ''}" ${best.has(r.nombre + '|' + m.id) ? 'title="Mejor resultado del equipo"' : ''}>${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
                                 ${rows.length ? `<tfoot><tr><td>Total del equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
                             </table>
                         </div>
@@ -6407,7 +6432,7 @@
                 const val = (m, b) => b?.d ? Mejora.valor(m, b) : null;
                 const lectura = (m, va, vb, team) => {
                     const { dir } = Mejora.regla(m);
-                    if (!dir || va === null) return '';
+                    if (!dir || dir === 'ref' || va === null) return '';
                     const mejorQueEquipo = team !== null && (dir === 'bajo' ? va <= team : va >= team);
                     if (mejorQueEquipo) return 'ok';
                     const cambio = vb ? (va - vb) / Math.abs(vb) : 0;
