@@ -277,6 +277,12 @@
         .mine-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: #F79009; transition: width .9s cubic-bezier(.2,.8,.2,1); }
         .mine-bar span.ok { background: #12B76A; }
         .mine-meta-t { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; } .mine-meta-t i { color: #12B76A; }
+        .mine-meta-h { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 5px; font-size: 11.5px; }
+        .mine-meta-k { font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+        .mine-meta-k.fija { background: #EFF8FF; color: #175CD3; } .mine-meta-k.promedio { background: #F4F3FF; color: #5925DC; }
+        .mine-meta-v { font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .prod-table th .th-meta { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: 0; }
+        .prod-table th .th-meta.fija { color: #175CD3; } .prod-table th .th-meta.promedio { color: #5925DC; }
         .mine-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
         .mine-list { border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); animation: fadeIn .45s ease both; }
         .mine-list h4 { margin: 0 0 8px; font-size: 14px; } .mine-list.good h4 i { color: #12B76A; } .mine-list.opp h4 i { color: #F79009; }
@@ -4226,6 +4232,15 @@
             regla: (m) => { const r = Mejora.cfg().reglas[m.id] || {}; return { dir: r.dir ?? Mejora.dirDefault(m.id), meta: r.meta ?? null }; },
             esSuma: (m) => m.id !== 'd' && (m.fmt === fmtInt || m.fmt === fmtHMS),
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
+            /** Meta de un indicador: fija (definida por el líder) o promedio del equipo (bucket del equipo). */
+            meta: (m, teamB) => {
+                const { dir, meta } = Mejora.regla(m);
+                if (!dir) return null;
+                if (meta !== null && meta !== undefined && meta !== '') return { x: Number(meta), tipo: 'fija', dir };
+                if (Mejora.cfg().auto && teamB?.d) { const x = Mejora.valor(m, teamB); if (x !== null && x > 0) return { x, tipo: 'promedio', dir }; }
+                return null;
+            },
+            metaTxt: (m, mt) => mt ? `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}` : '',
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
@@ -4340,6 +4355,7 @@
             SHEET: 'Base Productividad',
             HORARIO_DEF: { modo: 'horas', horas: ['10:00', '15:00'], cadaMin: 60 },
             LAST_FIELD: MODO_PRUEBA ? 'ultimaSyncPrueba' : 'ultimaSync',
+            EQ_FIELD: MODO_PRUEBA ? 'equipoPrueba' : 'equipo',   // promedios del equipo por área (los asesores solo ven sus datos)
             src: null, timer: null, busy: false, lastCheck: null, lastResult: null, progress: '', needsPermission: false,
 
             allowed: () => UI.hasPerm('chk_sync_productividad'),
@@ -4748,6 +4764,24 @@
                     if (per.size && enFirebase === 0) throw new Error('Se enviaron los datos pero Firebase no devuelve ninguno. Revisa las reglas v5 en Firebase Console.');
                     ProdSync.src.enFirebase = { asesores: enFirebase, fecha: new Date().toISOString() };
                     await Idb.set(ProdSync.HASHES, cache).catch(() => {});   // solo después de confirmar
+                    // Totales del equipo por área: sirven de "meta promedio" en la vista del asesor sin exponer datos de otros
+                    try {
+                        const eq = {};
+                        for (const [, p] of per) {
+                            const area = ProdSync.src.areaDestino || p.user.areas?.[0] || 'General';
+                            const e = eq[area] || (eq[area] = { semanas: {}, meses: {}, total: prodEmpty() });
+                            prodAdd(e.total, p.total);
+                            Object.entries(p.semanas).forEach(([k, v]) => prodAdd(e.semanas[k] || (e.semanas[k] = prodEmpty()), v));
+                            Object.entries(p.meses).forEach(([k, v]) => prodAdd(e.meses[k] || (e.meses[k] = prodEmpty()), v));
+                        }
+                        const rnd = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, prodRound(v)]));
+                        const equipo = { ...(State.prodCfg?.[ProdSync.EQ_FIELD] || {}) };
+                        Object.entries(eq).forEach(([area, e]) => { equipo[area] = { anio, total: prodRound(e.total), semanas: rnd(e.semanas), meses: rnd(e.meses) }; });
+                        if (Object.keys(eq).length) {
+                            await setDoc(doc(db, "configuracion", "productividad"), { [ProdSync.EQ_FIELD]: equipo }, { merge: true });
+                            State.prodCfg = { ...(State.prodCfg || {}), [ProdSync.EQ_FIELD]: equipo };
+                        }
+                    } catch (e) { console.warn('No se guardaron los promedios del equipo', e); }
 
                     // Pendientes de vincular: códigos de la cola elegida que no están en la app
                     const colaSug = ProdSync.src.colaSugerir || '';
@@ -5056,13 +5090,15 @@
                     // Vista del asesor: tarjetas motivadoras comparadas con su periodo anterior
                     const i = opts.findIndex(o => o.v === ui.valor), prevO = ui.periodo !== 'anio' ? opts[i + 1] : null;
                     const prevPick = (d) => !prevO ? null : ui.periodo === 'semana' ? d.semanas?.[prevO.v] : d.meses?.[prevO.v];
-                    return Prod.drawMine(rows[0]?.b || null, docs[0] ? prevPick(docs[0]) || null : null, vis, titulo, prevO ? prevO.l.toLowerCase() : '', ui.periodo === 'semana' ? 'semana' : ui.periodo === 'mes' ? 'mes' : 'año');
+                    const eqA = State.prodCfg?.[ProdSync.EQ_FIELD]?.[docs[0]?.area];
+                    const teamB = eqA && Number(eqA.anio) === anio ? (ui.periodo === 'semana' ? eqA.semanas?.[ui.valor] : ui.periodo === 'mes' ? eqA.meses?.[ui.valor] : eqA.total) : null;
+                    return Prod.drawMine(rows[0]?.b || null, docs[0] ? prevPick(docs[0]) || null : null, vis, titulo, prevO ? prevO.l.toLowerCase() : '', ui.periodo === 'semana' ? 'semana' : ui.periodo === 'mes' ? 'mes' : 'año', teamB);
                 }
                 Prod.drawTable(rows, vis, '', titulo);
             },
 
             /** Vista personal del asesor: tarjetas con su resultado, cómo va frente al periodo anterior y su meta. */
-            drawMine: (b, prev, vis, titulo, prevLbl, unidad) => {
+            drawMine: (b, prev, vis, titulo, prevLbl, unidad, teamB = null) => {
                 const box = $('prodContent');
                 const nombre = String(State.user?.nombre || '').trim().split(/\s+/)[0] || '';
                 if (!b) { box.innerHTML = `<div class="mine-empty"><i class="fas fa-mug-hot"></i><div><strong>Aún no hay datos de ${esc(titulo)}.</strong><br>Cuando se carguen tus tiempos los verás aquí.</div></div>`; Prod.lastExport = null; return; }
@@ -5075,9 +5111,10 @@
                         trend = { ch, good: dir === 'alto' ? ch > 0.01 : ch < -0.01, bad: dir === 'alto' ? ch < -0.01 : ch > 0.01 };
                     }
                     let mt = null;
-                    if (meta !== null && meta !== undefined && meta !== '' && v !== null && dir) {
-                        const x = Number(meta), ok = dir === 'bajo' ? v <= x : v >= x;
-                        mt = { x, ok, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
+                    const mm = v !== null ? Mejora.meta(m, teamB) : null;
+                    if (mm) {
+                        const x = mm.x, ok = dir === 'bajo' ? v <= x : v >= x;
+                        mt = { x, ok, tipo: mm.tipo, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
                     }
                     return { m, v, trend, mt, dir };
                 });
@@ -5094,7 +5131,9 @@
                     const { m } = x, total = m.calc(b);
                     const perDay = Mejora.esSuma(m) && b.d > 1 ? `<div class="mine-sub">${esc(m.fmt(x.v))} por día</div>` : '';
                     const tr = x.trend ? `<div class="mine-trend ${x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}"><i class="fas fa-arrow-${x.trend.ch > 0 ? 'up' : x.trend.ch < 0 ? 'down' : 'right'}"></i> ${pctTxt(x.trend.ch)} <span>vs ${esc(prevLbl)}</span></div>` : '';
-                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div><div class="mine-meta-t">${x.mt.ok ? '<i class="fas fa-circle-check"></i> ¡Meta cumplida!' : `Meta: ${esc(Mejora.fmtValor(m, x.mt.x))}`}</div></div>` : '';
+                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}</span></div>
+                        <div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div>
+                        <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'fija' ? '¡Meta cumplida!' : '¡Mejor que el promedio del equipo!'}` : `Te falta ${Math.round((1 - x.mt.pct) * 100)}% para alcanzarla`}</div></div>` : '';
                     return `<div class="mine-card ${x.trend?.good || x.mt?.ok ? 'is-good' : ''}" style="animation-delay:${i * 50}ms" ${m.hint ? `title="${esc(m.hint)}"` : ''}>
                         <div class="mine-lbl">${esc(m.lbl)}</div><div class="mine-val">${esc(m.fmt(total))}</div>${perDay}${tr}${bar}</div>`;
                 };
@@ -5128,7 +5167,7 @@
                             <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table">
-                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}</th>`).join('')}</tr></thead>
+                                <thead><tr><th>Asesor <span class="th-sub">y oportunidades</span></th>${vis.map(m => { const mt = Mejora.meta(m, team); return `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(m.lbl)}${mt ? `<span class="th-meta ${mt.tipo}" title="${mt.tipo === 'fija' ? 'Meta fija definida en Ajustes' : 'Promedio del equipo en este periodo'}">${esc(Mejora.metaTxt(m, mt))}</span>` : ''}</th>`; }).join('')}</tr></thead>
                                 <tbody>${rows.map(r => `<tr><td class="prod-agent"><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})" title="${esc(r.nombre)}">${esc(r.nombre)}</button><div class="mejora-line">${Mejora.chips(an.porFila.get(r.nombre))}</div></td>${vis.map(m => `<td class="num-col ${best.has(r.nombre + '|' + m.id) ? 'prod-best' : an.malas.has(r.nombre + '|' + m.id) ? 'prod-bad' : ''}" ${best.has(r.nombre + '|' + m.id) ? 'title="Mejor resultado del equipo"' : ''}>${m.fmt(m.calc(r.b))}</td>`).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, esc(vacio))}</tbody>
                                 ${rows.length ? `<tfoot><tr><td>Total del equipo</td>${vis.map(m => `<td class="num-col">${m.fmt(m.calc(team))}</td>`).join('')}</tr></tfoot>` : ''}
                             </table>
