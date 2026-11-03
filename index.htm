@@ -4298,6 +4298,7 @@
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
             /** Meta de un indicador: fija (definida por el líder) o promedio del equipo (bucket del equipo). */
             meta: (m, teamB, b = null) => {
+                if (teamB && (teamB.dyn || teamB.prom)) teamB = PROD_DYN.has(m.id) ? teamB.dyn : teamB.prom;   // vista del día: volumen del día / promedio de la semana
                 const { dir, meta } = Mejora.regla(m);
                 if (!dir) return null;
                 if (meta !== null && meta !== undefined && meta !== '') return { x: Number(meta), tipo: 'fija', dir };
@@ -6230,10 +6231,20 @@
                     const tituloDia = titulo.charAt(0).toUpperCase() + titulo.slice(1);
                     if (!Scope.hasTeamView()) {
                         const mio = meses.find(m => docs.some(d => d.codigo === m.codigo));
-                        const prevF = Object.keys(mio?.dias || {}).filter(f => f < ui.fecha).sort().pop();
+                        // Se compara con el mismo día de la semana anterior (un lunes con otro lunes, no con el domingo)
+                        const d7 = new Date(ui.fecha + 'T12:00:00'); d7.setDate(d7.getDate() - 7);
+                        const prevF = d7.toLocaleDateString('en-CA');
+                        let prevB = null;
+                        if (Number(prevF.slice(0, 4)) === anio) {
+                            const mesPrev = prevF.slice(5, 7) === ui.fecha.slice(5, 7) ? meses : await Prod.loadMonth(anio, prevF.slice(5, 7));
+                            prevB = mesPrev.find(m => m.codigo === mio?.codigo)?.dias?.[prevF] || null;
+                        }
                         const eqD = State.prodCfg?.[ProdSync.EQ_FIELD]?.[docs[0]?.area];
-                        const teamDia = eqD && Number(eqD.anio) === anio ? eqD.dias?.[ui.fecha] || null : null;
-                        return Prod.drawMine(rows[0]?.b || null, prevF ? mio.dias[prevF] : null, vis, tituloDia, prevF ? new Date(prevF + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric' }) : '', 'día', teamDia);
+                        const deAnio = eqD && Number(eqD.anio) === anio;
+                        // Meta dinámica (llamadas): con el volumen de ese día. Meta promedio (tiempos y %): promedio del equipo en esa semana
+                        const teamDia = deAnio ? eqD.dias?.[ui.fecha] || null : null;
+                        const teamSem = deAnio ? eqD.semanas?.[mio?.semanaDe?.[ui.fecha]] || null : null;
+                        return Prod.drawMine(rows[0]?.b || null, prevB, vis, tituloDia, prevB ? `el ${new Date(prevF + 'T12:00:00').toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric' })}` : '', 'día', teamDia || teamSem ? { dyn: teamDia || teamSem, prom: teamSem || teamDia } : null);
                     }
                     return Prod.drawTable(rows, vis, '', tituloDia, 'Sin datos ese día (fin de semana, feriado o aún no cargado).');
                 }
