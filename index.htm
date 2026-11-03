@@ -4151,18 +4151,19 @@
         ];
         // Hora de ingreso y salida: se estiman con las filas por hora del archivo (primera y última hora con login).
         const PROD_TIMES = [
-            { f: 'ini', lbl: 'Hora de ingreso', hint: 'Estimada con la primera hora con login del día. En semanas y meses: promedio de los días.' },
-            { f: 'fin', lbl: 'Hora de salida', hint: 'Estimada con la última hora con login del día. En semanas y meses: promedio de los días.' }
+            { f: 'ini', lbl: 'Hora de ingreso', hint: 'Exacta (primer Login) con el archivo de conexiones; sin él, estimada con la primera hora con login. En semanas y meses: promedio de los días.' },
+            { f: 'fin', lbl: 'Hora de salida', hint: 'Exacta (último Logout) con el archivo de conexiones; sin él, estimada con la última hora con login. En semanas y meses: promedio de los días.' }
         ];
         /** Horas netas: login menos almuerzo y coaching (tiempo realmente disponible para atender). */
         const prodNetas = (b) => Math.max(0, v0(b, 'login') - v0(b, 'almuerzo') - v0(b, 'coaching'));
         // Meta dinámica de llamadas: llamadas que atendió el equipo por cada hora neta × las horas netas del asesor.
         // Se ajusta sola a días y semanas con más o menos llamadas, y a las horas que trabajó cada quien.
-        const PROD_DYN = new Set(['llam', 'llamE', 'llamS']);
+        const PROD_DYN = new Set(['llam', 'llamE', 'llamS', 'llamG']);
         const prodRate = (teamB, f) => { const n = prodNetas(teamB); return n > 0 ? v0(teamB, f) / n : null; };
         const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
         const PROD_METRICS = [
             ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
+            { id: 'llamG', grupo: 'Llamadas', lbl: 'Llamadas gestionadas', calc: b => v0(b, 'llamG'), fmt: fmtInt, hint: 'Llamadas que el asesor atendió según el archivo de conexiones y llamadas' },
             { id: 'tmo', grupo: 'Llamadas', lbl: 'TMO', calc: b => b?.d ? v0(b, 'tmo') / b.d : null, fmt: fmtMS, hint: 'Promedio diario del tiempo medio de operación' },
             { id: 'd', grupo: 'Llamadas', lbl: 'Días conectado', calc: b => v0(b, 'd'), fmt: fmtInt },
             { id: 'hNetas', grupo: 'Llamadas', lbl: 'Horas netas', calc: b => b?.d ? prodNetas(b) : null, fmt: fmtHMS, hint: 'Login menos almuerzo y coaching' },
@@ -4176,7 +4177,7 @@
         const PROD_GROUPS = ['Llamadas', 'Asistencia', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
         const PROD_DEFAULT_VISIBLES = ['llam', 'tmo', 'login', 'pOcio', 'pAdmin', 'pAlm', 'pBano', 'pCoach'];
         const PROD_PCT = new Set(PROD_PCT_STATES.map(pctKey));
-        const PROD_FIELDS = ['d', 'tmo', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
+        const PROD_FIELDS = ['d', 'tmo', 'llamG', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
         const prodEmpty = () => Object.fromEntries(PROD_FIELDS.map(f => [f, 0]));
         const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
         /** Redondea y omite los ceros (documentos más livianos en Firebase). */
@@ -4190,7 +4191,7 @@
             bajo: ['tmo', 'ocio', 'pOcio', 'admin', 'pAdmin', 'almuerzo', 'pAlm', 'bano', 'pBano', 'descanso', 'p_descanso', 'holdE', 'p_holdE', 'holdS', 'p_holdS', 'perdE', 'perdS', 'noConS',
                 'coaching', 'pCoach', 'testear', 'p_testear', 'rrss', 'p_rrss', 'rrss2', 'p_rrss2', 'marcado', 'p_marcado', 'atenE', 'p_atenE', 'atenS', 'p_atenS',
                 'preview', 'p_preview', 'postview', 'p_postview', 'otrosCrm', 'p_otrosCrm', 'holdLlam'],
-            alto: ['llam', 'llamE', 'llamS', 'login', 'convE', 'p_convE', 'convS', 'p_convS', 'd', 'lph', 'hNetas']
+            alto: ['llam', 'llamE', 'llamS', 'llamG', 'login', 'convE', 'p_convE', 'convS', 'p_convS', 'd', 'lph', 'hNetas']
         };
         PROD_AVGS.forEach(a => MEJORA_DIR.bajo.push(a.f));
         const MEJORA_TXT = {
@@ -4208,6 +4209,7 @@
             login: ['Poco tiempo conectado', 'Cumplir con el horario de conexión.'],
             d: ['Pocos días conectado', 'Revisar asistencia y ausencias del periodo.'],
             llamS: ['Pocas salientes conectadas', 'Revisar la gestión de llamadas salientes.'],
+            llamG: ['Pocas llamadas gestionadas', 'Aumentar el tiempo en estado disponible y agilizar el registro después de la llamada.'],
             pCoach: ['Coaching alto', 'Validar que el tiempo de coaching esté programado.'], coaching: ['Coaching alto', 'Validar que el tiempo de coaching esté programado.'],
             p_testear: ['Testear alto', 'Usar el estado de prueba solo cuando corresponda.'], testear: ['Testear alto', 'Usar el estado de prueba solo cuando corresponda.'],
             p_rrss: ['Redes sociales alto', 'Revisar el tiempo en chats de redes sociales.'], rrss: ['Redes sociales alto', 'Revisar el tiempo en chats de redes sociales.'],
@@ -4368,6 +4370,230 @@
         const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
         // =========================================================
+        // PRODUCTIVIDAD — archivo de conexiones y llamadas (opcional)
+        // "Base Conexiones": hora exacta de ingreso (primer Login) y de salida (último Logout) por asesor y día.
+        // "Base- llamadas ": llamadas que el asesor realmente atendió (SUB_ESTADO = AGENT).
+        // Se lee junto con la productividad, en el mismo horario. Lo leído se guarda en este navegador
+        // para no volver a leer el archivo (que es pesado) mientras no cambie.
+        // =========================================================
+        const ConxSync = {
+            KEY: MODO_PRUEBA ? 'fuente_conexiones_prueba' : 'fuente_conexiones',
+            CACHE: MODO_PRUEBA ? 'conx_datos_prueba' : 'conx_datos',
+            SHEET_C: 'Base Conexiones', SHEET_L: 'Base- llamadas',
+            src: null, needsPermission: false, lastResult: '',
+
+            init: async () => {
+                ConxSync.src = null; ConxSync.needsPermission = false;
+                try { ConxSync.src = await Idb.get(ConxSync.KEY) || null; } catch (e) { console.warn(e); }
+                if (ConxSync.src?.kind === 'file') {
+                    if (!ConxSync.src.handle) ConxSync.src = null;
+                    else ConxSync.needsPermission = (await ConxSync.src.handle.queryPermission({ mode: 'read' })) !== 'granted';
+                }
+            },
+            save: () => Idb.set(ConxSync.KEY, ConxSync.src),
+            /** Después de vincular o desvincular: se vuelve a calcular la productividad con (o sin) los datos exactos. */
+            reload: () => { ProdSync.renderSettings(); if (ProdSync.src && !ProdSync.busy) ProdSync.check(true); },
+
+            link: async (given = null) => {
+                if (!given && !ProdSync.localOk()) return alert("Para buscar en la PC abre la app en Google Chrome o Microsoft Edge.");
+                try {
+                    let handle = given;
+                    if (!handle) [handle] = await window.showOpenFilePicker({ startIn: ConxSync.src?.handle || ProdSync.src?.handle || 'documents', types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }] });
+                    if (handle.kind !== 'file' || !/\.xlsx$/i.test(handle.name)) return alert(`"${handle.name}" no es un archivo de Excel (.xlsx).`);
+                    if ((await handle.queryPermission({ mode: 'read' })) !== 'granted' && (await handle.requestPermission({ mode: 'read' })) !== 'granted') return;
+                    ConxSync.src = { kind: 'file', handle, name: handle.name };
+                    ConxSync.needsPermission = false; ConxSync.lastResult = '';
+                    await ConxSync.save();
+                    ConxSync.reload();
+                } catch (e) { if (e.name !== 'AbortError') { console.error(e); alert("No se pudo vincular: " + e.message); } }
+            },
+            linkUrl: async (raw) => {
+                const url = String(raw || '').trim();
+                if (!/^https?:\/\//i.test(url)) return alert("Pega un enlace que empiece con https://");
+                const provider = Remote.detect(url);
+                if (provider === 'gdrive') return alert("Los archivos de Google Drive no se pueden leer por enlace. Vincula el archivo sincronizado en la PC.");
+                const cand = { kind: 'url', url, provider, name: decodeURIComponent(url.split('?')[0].split('/').pop() || 'Excel en línea') };
+                try {
+                    if (provider === 'm365') { await Remote.token(true); cand.loc = await Remote.m365Locate(url); cand.name = cand.loc.name; }
+                    ConxSync.src = cand; ConxSync.needsPermission = false; ConxSync.lastResult = '';
+                    await ConxSync.save();
+                    ConxSync.reload();
+                } catch (e) { console.error(e); alert("No se pudo vincular el enlace.\n\n" + e.message); }
+            },
+            onDrop: async (ev) => {
+                ev.preventDefault(); $('conxDrop')?.classList.remove('over');
+                const item = [...(ev.dataTransfer?.items || [])].find(i => i.kind === 'file');
+                if (!item || typeof item.getAsFileSystemHandle !== 'function') return alert("Arrastra el archivo desde el Explorador de Windows (Chrome o Edge).");
+                const h = await item.getAsFileSystemHandle();
+                if (h) await ConxSync.link(h);
+            },
+            unlink: async () => {
+                if (!confirm("¿Desvincular el archivo de conexiones? La hora de ingreso y salida vuelve a estimarse con el archivo de productividad y las llamadas gestionadas quedan en 0.")) return;
+                ConxSync.src = null; ConxSync.needsPermission = false; ConxSync.lastResult = '';
+                await Idb.del(ConxSync.KEY).catch(() => {}); await Idb.del(ConxSync.CACHE).catch(() => {});
+                ConxSync.reload();
+            },
+            resume: async () => {
+                const s = ConxSync.src; if (!s) return;
+                try {
+                    if (s.kind === 'url') await Remote.token(true);
+                    else if ((await s.handle.requestPermission({ mode: 'read' })) !== 'granted') return;
+                    ConxSync.needsPermission = false;
+                    ConxSync.reload();
+                } catch (e) { UI.showToast(e.message, 'warning'); }
+            },
+
+            /** Fecha (aaaa-mm-dd) y segundos del día desde un valor de Excel: número de serie, aaaammdd o texto. */
+            when: (v) => {
+                if (v === null || v === undefined || v === '') return null;
+                if (typeof v === 'number' && isFinite(v)) {
+                    if (v >= 19000101 && v <= 21001231) { const s = String(Math.floor(v)); return { f: `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`, s: null }; }
+                    if (v < 1) return null;
+                    const dias = Math.floor(v), s = Math.round((v - dias) * 86400);
+                    return { f: new Date((dias - 25569) * 86400000).toISOString().slice(0, 10), s: s >= 86400 ? 86399 : s };
+                }
+                const t = String(v).trim();
+                let m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(t);
+                if (m) return { f: `${m[1]}-${m[2]}-${m[3]}`, s: m[4] ? Number(m[4]) * 3600 + Number(m[5]) * 60 + Number(m[6] || 0) : null };
+                m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(t);
+                if (m) return { f: `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`, s: m[4] ? Number(m[4]) * 3600 + Number(m[5]) * 60 + Number(m[6] || 0) : null };
+                const n = Number(t); return isNaN(n) ? null : ConxSync.when(n);
+            },
+
+            /**
+             * Datos del archivo: { datos: { 'codigo|aaaa-mm-dd': { i: ingreso, o: salida (segundos del día), g: llamadas gestionadas } }, changed }.
+             * null si no hay archivo vinculado. Si no se puede leer, se usan los datos de la última lectura.
+             */
+            load: async (force = false) => {
+                const s = ConxSync.src; if (!s) return null;
+                let cache = null;
+                try { cache = await Idb.get(ConxSync.CACHE) || null; } catch {}
+                const deCache = (msg) => { ConxSync.lastResult = msg; return cache ? { datos: cache.datos, changed: false } : null; };
+                if (s.kind === 'file' && ConxSync.needsPermission) return deCache('Esperando permiso de lectura; se usan los datos de la última lectura.');
+                try {
+                    let file, version;
+                    if (s.kind === 'url') {
+                        const meta = await Remote.fetchMeta(s);
+                        version = meta.version;
+                        if (!force && cache?.version === version) return { datos: cache.datos, changed: false };
+                        ProdSync.progress = 'Descargando conexiones…'; ProdSync.renderStatus();
+                        file = new Blob([await meta.getBuffer()]);
+                    } else {
+                        file = await s.handle.getFile();
+                        version = `${s.name}|${file.lastModified}|${file.size}`;
+                        if (!force && cache?.version === version) return { datos: cache.datos, changed: false };
+                    }
+                    const t0 = Date.now();
+                    const { datos, dias, llamadas } = await ConxSync.parse(file);
+                    await Idb.set(ConxSync.CACHE, { version, datos, fecha: new Date().toISOString() }).catch(() => {});
+                    s.lastRead = new Date().toISOString(); await ConxSync.save().catch(() => {});
+                    ConxSync.lastResult = `${dias} día(s)-asesor con ingreso y salida; ${llamadas} llamada(s) gestionadas; leído en ${Math.round((Date.now() - t0) / 1000)} s.`;
+                    return { datos, changed: cache?.version !== version };
+                } catch (e) {
+                    console.warn(e);
+                    if (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'AuthRequired') ConxSync.needsPermission = true;
+                    return deCache('Error: ' + (e.name === 'NotFoundError' ? 'no se encontró el archivo de conexiones (¿se movió?). Vincúlalo de nuevo.' : e.message));
+                }
+            },
+
+            parse: async (file) => {
+                const book = await XlsxStream.open(file);
+                const hoja = (nombre) => book.sheetNames.find(n => norm(n) === norm(nombre));
+                const shC = hoja(ConxSync.SHEET_C);
+                const shL = hoja(ConxSync.SHEET_L) || book.sheetNames.find(n => /^base/i.test(n.trim()) && /llamadas/i.test(n));
+                if (!shC && !shL) throw new Error(`El archivo no tiene las hojas "${ConxSync.SHEET_C}" ni "${ConxSync.SHEET_L}".`);
+                const datos = {};
+                const reg = (k) => datos[k] || (datos[k] = {});
+                const idx = (H, ...nombres) => { for (const n of nombres) { const i = H.findIndex(h => norm(h) === norm(n)); if (i >= 0) return i; } return -1; };
+                const prog = (txt) => async (pct) => { ProdSync.progress = `${txt} ${pct}%…`; ProdSync.renderStatus(); await new Promise(r => setTimeout(r, 0)); };
+                let dias = 0, llamadas = 0;
+
+                if (shC) {
+                    let C = null;
+                    await book.rows(shC, (r, n) => {
+                        if (n === 1) {
+                            const H = r.map(x => String(x ?? '').trim());
+                            C = { id: idx(H, 'Id Agente'), usr: idx(H, 'Usuario'), ini: idx(H, 'Log In'), fin: idx(H, 'Logout', 'Log Out'), est: idx(H, 'Promedio diario', 'Estado') };
+                            if ((C.id < 0 && C.usr < 0) || C.ini < 0 || C.fin < 0) throw new Error(`Faltan columnas en "${shC}" (Id Agente, Log In, Logout).`);
+                            return;
+                        }
+                        const codigo = String(r[C.id] ?? '').trim() || (String(r[C.usr] ?? '').match(/^\s*(\d+)/) || [])[1] || '';
+                        if (!/^\d+$/.test(codigo)) return;
+                        if (C.est >= 0 && !/login/i.test(String(r[C.est] ?? ''))) return;   // solo las sesiones de Login (los demás estados van dentro)
+                        const a = ConxSync.when(r[C.ini]), b = ConxSync.when(r[C.fin]);
+                        if (!a || a.s === null) return;
+                        const e = reg(codigo + '|' + a.f);
+                        if (e.i === undefined) dias++;
+                        e.i = Math.min(e.i ?? Infinity, a.s);
+                        const sal = b && b.s !== null ? (b.f === a.f ? b.s : 86399) : a.s;   // sesión que pasa de medianoche: hasta el cierre del día
+                        e.o = Math.max(e.o ?? -Infinity, sal);
+                    }, { onProgress: prog('Leyendo conexiones') });
+                }
+
+                if (shL) {
+                    // Hoja grande: lectura ligera, solo usuario, estado, inicio y fecha de cada llamada
+                    const L = { cols: [], fn: (v) => {
+                        if (norm(v[1]) !== 'AGENT') return;
+                        const codigo = (String(v[0] ?? '').match(/^\s*(\d+)/) || [])[1];
+                        const w = ConxSync.when(v[2]) || ConxSync.when(v[3]);
+                        if (!codigo || !w) return;
+                        const e = reg(codigo + '|' + w.f);
+                        e.g = (e.g || 0) + 1; llamadas++;
+                    } };
+                    await book.rows(shL, (r, n) => {
+                        if (n !== 1) return;
+                        const H = r.map(x => String(x ?? '').trim());
+                        const c = [idx(H, 'USUARIO'), idx(H, 'SUB_ESTADO'), idx(H, 'INICIO'), idx(H, 'FECHA')];
+                        if (c[0] < 0 || c[1] < 0 || (c[2] < 0 && c[3] < 0)) throw new Error(`Faltan columnas en "${shL}" (USUARIO, SUB_ESTADO, INICIO).`);
+                        L.cols = c.map(i => i < 0 ? c[2] < 0 ? c[3] : c[2] : i);
+                    }, { quick: { col: 0, values: new Set(['\u0000']), light: L }, onProgress: prog('Leyendo llamadas') });
+                }
+                return { datos, dias, llamadas };
+            },
+
+            box: () => {
+                if (!ProdSync.allowed()) return '';
+                const s = ConxSync.src;
+                const intro = `<p class="hint" style="margin-bottom:12px;">Con el Excel de llamadas y conexiones (hojas "${ConxSync.SHEET_C}" y "${ConxSync.SHEET_L}") la <strong>hora de ingreso y salida es exacta</strong> (primer Login y último Logout de Neotel) y se agrega el indicador <strong>Llamadas gestionadas</strong> (las que el asesor atendió). Se lee junto con la productividad, en el mismo horario, y solo cuando el archivo cambia.</p>`;
+                if (!s) return `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Archivo de conexiones y llamadas <span class="hint" style="font-weight:400;">(opcional)</span></h3>
+                        ${intro}
+                        ${ProdSync.localOk() ? `
+                        <div id="conxDrop" class="sync-drop"><i class="fas fa-file-arrow-down"></i><strong>Arrastra aquí el Excel de conexiones</strong><span>por ejemplo "3. ST LLamadas y Conexiones.xlsx"</span></div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+                            <span class="hint" style="margin:0;">o bien</span>
+                            <button class="btn-action" onclick="ConxSync.link()"><i class="fas fa-file-excel"></i> Buscar archivo</button>
+                        </div>` : `<div class="callout warn" style="margin-bottom:14px;">Para buscar archivos en la PC abre la app en Google Chrome o Microsoft Edge.</div>`}
+                        <div style="display:flex; gap:8px;">
+                            <input type="url" id="conxUrl" placeholder="o un enlace de SharePoint / OneDrive" style="flex:1; padding:9px 12px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:13px;">
+                            <button class="btn-action" id="conxUrlBtn"><i class="fas fa-link"></i> Vincular enlace</button>
+                        </div>
+                    </div>`;
+                return `
+                    <div class="panel-soft" style="max-width:760px; margin-top:16px;">
+                        <h3 class="panel-title">Conexiones y llamadas: ${esc(s.name)}</h3>
+                        ${intro}
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Estado:</strong> ${ConxSync.needsPermission ? 'esperando permiso de lectura' : ProdSync.busy ? esc(ProdSync.progress) : 'activo (se lee con la productividad)'}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Última lectura:</strong> ${s.lastRead ? esc(new Date(s.lastRead).toLocaleString('es-GT')) : '—'}</p>
+                        <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(ConxSync.lastResult || '—')}</p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                            ${ConxSync.needsPermission ? `<button class="btn-action btn-primary" onclick="ConxSync.resume()"><i class="fas fa-rotate"></i> Dar permiso de lectura</button>` : ''}
+                            ${ProdSync.localOk() ? `<button class="btn-action" onclick="ConxSync.link()">Cambiar archivo</button>` : ''}
+                            <button class="btn-action btn-danger-soft" onclick="ConxSync.unlink()">Desvincular</button>
+                        </div>
+                        <p class="hint" style="margin-top:10px;">Se vuelve a leer en cuanto el archivo cambia (al guardarse en OneDrive), en el horario de actualización o con "Sincronizar ahora".</p>
+                    </div>`;
+            },
+            bind: () => {
+                const dz = $('conxDrop');
+                if (dz) { dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over'); dz.ondrop = ConxSync.onDrop; }
+                const ub = $('conxUrlBtn'); if (ub) ub.onclick = () => ConxSync.linkUrl($('conxUrl').value);
+            }
+        };
+        window.ConxSync = ConxSync;
+
+        // =========================================================
         // PRODUCTIVIDAD — sincronización con el Excel
         // Solo se guardan los asesores vinculados por su código Neotel.
         // Por asesor y año: 1 documento con semanas, meses y total + 12 documentos con los días de cada mes.
@@ -4389,6 +4615,7 @@
             init: async () => {
                 ProdSync.stop(); ProdSync.src = null; ProdSync.needsPermission = false;
                 if (!ProdSync.allowed() || !ProdSync.supported()) return ProdSync.renderStatus();
+                await ConxSync.init().catch(e => console.warn(e));
                 try { ProdSync.src = await Idb.get(ProdSync.KEY) || null; } catch (e) { console.warn(e); }
                 if (!ProdSync.src) return ProdSync.renderStatus();
                 if (ProdSync.src.kind === 'url') {
@@ -4509,7 +4736,10 @@
                 if (ProdSync.src.kind === 'url') {
                     try { await Remote.token(true); ProdSync.needsPermission = false; ProdSync.start(true); }
                     catch (e) { UI.showToast(e.message, 'warning'); }
-                } else if ((await ProdSync.src.handle.requestPermission({ mode: 'read' })) === 'granted') { ProdSync.needsPermission = false; ProdSync.start(true); }
+                } else if ((await ProdSync.src.handle.requestPermission({ mode: 'read' })) === 'granted') {
+                    if (ConxSync.src?.kind === 'file' && ConxSync.needsPermission) ConxSync.needsPermission = (await ConxSync.src.handle.requestPermission({ mode: 'read' }).catch(() => 'denied')) !== 'granted';
+                    ProdSync.needsPermission = false; ProdSync.start(true);
+                }
                 ProdSync.renderStatus(); ProdSync.renderSettings();
             },
 
@@ -4642,7 +4872,10 @@
                 ProdSync.busy = true; ProdSync.progress = 'Revisando…'; ProdSync.renderStatus(); ProdSync.renderSettings();
                 let ok = false;
                 try {
-                    const got = await ProdSync.resolve(force);
+                    // Archivo de conexiones (opcional): hora exacta de ingreso/salida y llamadas gestionadas
+                    const cx = await ConxSync.load(false);
+                    let got = await ProdSync.resolve(force);
+                    if (!got && cx?.changed) got = await ProdSync.resolve(true);   // cambió solo el de conexiones: se recalcula igual
                     if (!got) { ok = true; ProdSync.lastCheck = new Date(); ProdSync.lastResult = 'Sin cambios en el archivo.'; return; }
                     const file = got.file;
                     const t0 = Date.now();
@@ -4738,6 +4971,14 @@
                         onProgress: async (pct) => { ProdSync.progress = `Leyendo ${pct}%…`; ProdSync.renderStatus(); await new Promise(r => setTimeout(r, 0)); }
                     });
                     if (C.rango !== 2) console.warn('La columna "Rango Horario" no está en C; el filtro rápido usa la columna C.');
+                    // Con el archivo de conexiones: ingreso y salida exactos (reemplazan la estimación) y llamadas gestionadas
+                    let nExactos = 0, nGest = 0;
+                    for (const [k, x] of Object.entries(cx?.datos || {})) {
+                        const [codigo, fecha] = k.split('|'), p = per.get(codigo), info = diaInfo.get(fecha);
+                        if (!p || !info || !p.dias[info.mm]?.[fecha]) continue;
+                        if (x.i !== undefined && x.i !== null) { horas.set(k, { ini: x.i, fin: x.o ?? x.i }); nExactos++; }
+                        if (x.g) { [p.dias[info.mm][fecha], p.semanas[info.wk], p.meses[info.mm], p.total].forEach(b => { if (b) b.llamG += x.g; }); nGest += x.g; }
+                    }
                     // Hora de ingreso y salida: se suman al día, la semana, el mes y el año (en promedio por día)
                     for (const [k, e] of horas) {
                         const [codigo, fecha] = k.split('|'), p = per.get(codigo), info = diaInfo.get(fecha);
@@ -4799,7 +5040,7 @@
                             // Por día solo lo necesario para la meta dinámica de llamadas
                             e.dias = e.dias || {};
                             Object.values(p.dias).forEach(dm => Object.entries(dm).forEach(([f, b]) => {
-                                const t = e.dias[f] || (e.dias[f] = { d: 0, llam: 0, llamE: 0, llamS: 0, login: 0, almuerzo: 0, coaching: 0 });
+                                const t = e.dias[f] || (e.dias[f] = { d: 0, llam: 0, llamE: 0, llamS: 0, llamG: 0, login: 0, almuerzo: 0, coaching: 0 });
                                 Object.keys(t).forEach(k => t[k] += Number(b[k] || 0));
                             }));
                         }
@@ -4826,7 +5067,8 @@
                     ProdSync.lastCheck = new Date();
                     const seg = Math.round((Date.now() - t0) / 1000);
                     ProdSync.lastResult = `${per.size} asesor(es) vinculados con datos en ${anio}; ${ops.length} registro(s) actualizados en ${seg} s. Guardados en Firebase: ${enFirebase} asesor(es).` +
-                        (ProdSync.src.pendientes.length ? ` ${ProdSync.src.pendientes.length} asesor(es) de "${colaSug}" sin vincular.` : '');
+                        (ProdSync.src.pendientes.length ? ` ${ProdSync.src.pendientes.length} asesor(es) de "${colaSug}" sin vincular.` : '') +
+                        (cx ? ` Conexiones: ${nExactos} día(s) con ingreso y salida exactos y ${nGest} llamada(s) gestionadas.` : '');
                     if (ops.length) { UI.showToast(`Productividad sincronizada. ${ProdSync.lastResult}`, 'success', 9000); Prod.invalidate(); }
                     else if (ProdSync.src.pendientes.length && !per.size) UI.showToast(`Vincula los asesores con su código Neotel en Ajustes › Productividad para empezar a cargar.`, 'warning', 9000);
                     ok = true;
@@ -4963,7 +5205,7 @@
                         <button class="btn-action btn-primary" style="margin-top:12px;" onclick="ProdSync.saveLinks()"><i class="fas fa-link"></i> Guardar vínculos y cargar</button>`
                         : `<p class="hint">${vinculados.length ? 'Todos los asesores de la cola están vinculados.' : 'Se mostrarán aquí después de la primera lectura del archivo.'}</p>`}
                         ${vinculados.length ? `<details style="margin-top:12px;"><summary class="hint" style="cursor:pointer;">Ver vinculados</summary><div class="hint" style="line-height:1.8;">${vinculados.map(u => `${esc(u.codigo_neotel)} · ${esc(u.nombre)}`).join('<br>')}</div><p class="hint">Para cambiar un código, edita el usuario en la pestaña Usuarios.</p></details>` : ''}
-                    </div>${ProdSync.horarioBox()}${metricsBox}${Mejora.box()}`;
+                    </div>${ConxSync.box()}${ProdSync.horarioBox()}${metricsBox}${Mejora.box()}`;
                 ProdSync.bindSettings();
             },
             bindSettings: () => {
@@ -4971,6 +5213,7 @@
                 if (dz) { dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over'); dz.ondrop = ProdSync.onDrop; }
                 if (!ProdSync.busy) ProdSync.showSaved();
                 const ub = $('prodUrlBtn'); if (ub) ub.onclick = () => ProdSync.linkUrl($('prodUrl').value);
+                ConxSync.bind();
                 const ap = $('prodApply');
                 if (ap) ap.onclick = async () => {
                     const anio = Number($('prodAnio').value);
