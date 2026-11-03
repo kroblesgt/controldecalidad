@@ -4736,7 +4736,10 @@
                 const t = String(v).replace(/\s+/g, ' ').trim();
                 if (!t || /^[—–-]$/.test(t)) return null;
                 const m = /(\d{1,2})[:.](\d{2})\s*(?:–|—|-|a)\s*(\d{1,2})[:.](\d{2})/.exec(t);
-                return { r: m ? [Number(m[1]) * 3600 + Number(m[2]) * 60, Number(m[3]) * 3600 + Number(m[4]) * 60] : null, t };
+                // "(1 h flexible)": ese tiempo se puede tomar al inicio o al final del turno
+                const fx = /(\d+(?:[.,]\d+)?)\s*(h|hora|horas|min|minutos)\b\.?\s*flexibles?/i.exec(t);
+                const f = fx ? Math.round(Number(fx[1].replace(',', '.')) * (/^h/i.test(fx[2]) ? 3600 : 60)) : 0;
+                return { r: m ? [Number(m[1]) * 3600 + Number(m[2]) * 60, Number(m[3]) * 3600 + Number(m[4]) * 60] : null, t, ...(f ? { f } : {}) };
             },
             /** Hora suelta: fracción de día de Excel o texto "8:00". */
             hora: (v) => {
@@ -4796,7 +4799,7 @@
                         Object.assign(a, { empresa: txt(r[C.empresa]) || a.empresa || '', estado: txt(r[C.estado]) || a.estado || '', neotelExcel: txt(r[C.neotel]) || a.neotelExcel || '', extension: txt(r[C.ext]) || a.extension || '' });
                         Object.entries(dias).forEach(([d, c]) => {
                             const con = HorSync.rango(r[c.con]), brk = c.brk !== undefined ? HorSync.rango(r[c.brk]) : null, alm = c.alm !== undefined ? HorSync.rango(r[c.alm]) : null;
-                            a.semana[d] = { c: con?.r || null, ct: con?.t || '', b: brk?.r || null, bt: brk?.t || '', l: alm?.r || null, lt: alm?.t || '' };
+                            a.semana[d] = { c: con?.r || null, ct: con?.t || '', ...(con?.r && con?.f ? { f: con.f } : {}), b: brk?.r || null, bt: brk?.t || '', l: alm?.r || null, lt: alm?.t || '' };
                         });
                     }
                 } else {
@@ -5040,8 +5043,11 @@
                 r.sinProg = !p; r.descanso = p && !p.c;
                 if (!p || !p.c) { if (r.conDatos && p) r.flags.push({ k: 'extra', t: 'Trabajó en su día de descanso' }); return r; }
                 if (!r.conDatos || r.ini === null) { r.sinReg = true; return r; }
-                r.dIni = Math.floor((r.ini - p.c[0]) / 60);
-                r.dFin = r.fin !== null ? Math.ceil((r.fin - p.c[1]) / 60) : null;
+                // Tiempo flexible: lo que use al inicio ya no lo tiene al final (y al revés)
+                const F = p.f || 0, usado = Math.min(F, Math.max(0, r.ini - p.c[0]));
+                r.flex = F; r.usadoIni = usado;
+                r.dIni = Math.floor((r.ini - p.c[0] - usado) / 60);
+                r.dFin = r.fin !== null ? Math.ceil((r.fin - (p.c[1] - (F - usado))) / 60) : null;
                 if (r.dIni > tol.entrada) r.flags.push({ k: 'tarde', t: `Entró ${Hor.min(r.dIni)} tarde`, m: r.dIni });
                 if (r.dFin !== null && r.dFin < -tol.salida) r.flags.push({ k: 'antes', t: `Salió ${Hor.min(-r.dFin)} antes`, m: -r.dFin });
                 if (p.l && r.alm > 0) { const ex = Math.floor((r.alm - (p.l[1] - p.l[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'alm', t: `Almuerzo excedido ${Hor.min(ex)}`, m: ex }); }
@@ -5096,7 +5102,7 @@
                 if (e.sinReg) return `<span class="hor-chip miss" title="Tenía turno ${esc(Hor.rng(p.c))} y no hay conexión registrada (ausencia, permiso o vacaciones)">Sin registro</span>`;
                 const tarde = e.flags.find(x => x.k === 'tarde');
                 const cls = tarde ? 'late' : e.dIni < 0 ? 'early' : 'ok';
-                const tip = [`Turno ${Hor.rng(p.c)}`, `Entró ${fmtHMS(e.ini)}`, e.fin !== null ? `Salió ${fmtHMS(e.fin)}` : '', ...e.flags.filter(x => x.k !== 'tarde').map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
+                const tip = [`Turno ${Hor.rng(p.c)}`, p.f ? `Con ${Hor.min(Math.round(p.f / 60))} flexible al inicio o al final${e.usadoIni ? ` (usó ${Hor.min(Math.round(e.usadoIni / 60))} al inicio)` : ''}` : '', `Entró ${fmtHMS(e.ini)}`, e.fin !== null ? `Salió ${fmtHMS(e.fin)}` : '', ...e.flags.filter(x => x.k !== 'tarde').map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
                 const dTxt = e.dIni > 0 ? `+${e.dIni}` : e.dIni < 0 ? `${e.dIni}` : '✓';
                 const otros = e.flags.filter(x => x.k !== 'tarde').length;
                 return `<span class="hor-chip ${cls}" title="${esc(tip)}">${fmtHora(e.ini)} <b>${dTxt}</b>${otros ? `<i class="hor-dot" title="${esc(e.flags.filter(x => x.k !== 'tarde').map(x => x.t).join('\n'))}"></i>` : ''}</span>`;
