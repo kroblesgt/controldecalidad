@@ -337,6 +337,11 @@
         .comp-table .comp-prev { color: var(--text-muted, #6b7280); font-size: 11px; }
         .comp-table .comp-arrow { font-size: 9px; color: var(--text-muted, #6b7280); margin: 0 2px; }
         .prod-table.comp-table tbody td.comp-ok { background: #F0FDF4; color: #067647; }
+        .comp-table .comp-delta { font-size: 11px; font-weight: 600; margin-top: 2px; white-space: nowrap; }
+        .prod-table.comp-table tbody td.comp-n .comp-delta { color: var(--text-muted, #6b7280); font-weight: 500; }
+        .comp-table .comp-meta { margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 10.5px; }
+        .comp-table .comp-meta.ok { background: #ECFDF3; color: #067647; } .comp-table .comp-meta.no { background: #FEF3F2; color: #B42318; }
+        .comp-legend .comp-n { background: var(--surface-2, #f2f4f7); color: var(--text-muted, #6b7280); }
         .prod-table.comp-table tbody td.comp-mid { background: #FFFBEB; color: #B54708; }
         .prod-table.comp-table tbody td.comp-bad { background: #FEF6F5; color: #B42318; }
         .comp-legend { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 11px; padding: 0 14px 10px; }
@@ -6447,18 +6452,39 @@
                 const tA = rows.reduce((acc, r) => prodAdd(acc, r.a), prodEmpty()), tB = rows.reduce((acc, r) => prodAdd(acc, r.b), prodEmpty());
                 // Valor comparable (por día en los indicadores que se suman) y lectura contra el equipo y la semana anterior
                 const val = (m, b) => b?.d ? Mejora.valor(m, b) : null;
-                const lectura = (m, va, vb, team) => {
-                    const { dir } = Mejora.regla(m);
-                    if (!dir || dir === 'ref' || va === null) return '';
-                    const mejorQueEquipo = team !== null && (dir === 'bajo' ? va <= team : va >= team);
-                    if (mejorQueEquipo) return 'ok';
-                    const cambio = vb ? (va - vb) / Math.abs(vb) : 0;
-                    return (dir === 'bajo' ? cambio < -0.05 : cambio > 0.05) ? 'mid' : 'bad';
+                // Lectura asertiva: cada celda dice si mejoró, quedó igual o hay que mejorar frente a la semana anterior,
+                // con la diferencia en su unidad y, si el indicador tiene meta, si la cumple.
+                const team = Scope.hasTeamView();
+                const eqW = !team ? State.prodCfg?.[ProdSync.EQ_FIELD]?.[docs[0]?.area]?.semanas?.[ui.valor] || null : null;
+                const dif = (m, d) => {
+                    const x = Math.abs(d);
+                    if (PROD_PCT.has(m.id)) return `${(x * 100).toFixed(1)} pts`;
+                    if (m.fmt === fmtHora) return `${Math.round(x / 60)} min`;
+                    return m.fmt === fmtInt ? String(Math.round(x)) : m.fmt(x);
                 };
-                const cell = (m, ra, rb, team) => {
-                    const va = val(m, ra), vb = val(m, rb), cls = lectura(m, va, vb, team);
-                    const arrow = va === null || vb === null ? '' : va > vb ? '▲' : va < vb ? '▼' : '=';
-                    return `<td class="num-col comp-${cls || 'n'}" title="${esc(`${ui.comp}: ${m.fmt(vb)} · ${ui.valor}: ${m.fmt(va)}`)}"><span class="comp-prev">${m.fmt(vb)}</span> <span class="comp-arrow">${arrow}</span> <strong>${m.fmt(va)}</strong></td>`;
+                const igual = (m, d) => PROD_PCT.has(m.id) ? Math.abs(d) < 0.0005 : m.fmt === fmtInt ? Math.abs(d) < 0.5 : m.fmt === fmtDec ? Math.abs(d) < 0.05 : m.fmt === fmtMS ? Math.abs(d) < 5 : Math.abs(d) < 30;
+                const cell = (m, ra, rb, teamRef) => {
+                    const va = val(m, ra), vb = val(m, rb), { dir } = Mejora.regla(m);
+                    if (va === null) return `<td class="num-col comp-n"><span class="hint" style="margin:0;">—</span></td>`;
+                    let cls = 'n', txt = '';
+                    if (vb !== null) {
+                        const d = va - vb;
+                        if (igual(m, d)) { txt = '= Igual'; }
+                        else {
+                            const sube = d > 0, mejor = dir === 'ref' || !dir ? null : (dir === 'bajo' ? !sube : sube);
+                            cls = mejor === null ? 'n' : mejor ? 'ok' : 'bad';
+                            txt = `${sube ? '▲ +' : '▼ −'}${dif(m, d)}${mejor === null ? '' : mejor ? ' · Mejoró' : ' · A mejorar'}`;
+                        }
+                    } else txt = 'Sin semana anterior';
+                    // Meta (fija o dinámica): ¿la cumple esta semana?
+                    const mt = dir && dir !== 'ref' ? Mejora.meta(m, teamRef, ra) : null;
+                    let metaTag = '';
+                    if (mt && (mt.tipo === 'fija' || mt.tipo === 'dinamica') && mt.x !== null) {
+                        const rd = (n) => m.fmt === fmtInt ? Math.round(n) : m.fmt === fmtHMS ? Math.round(n / 60) * 60 : n;
+                        const ok = mt.dir === 'bajo' ? rd(va) <= rd(mt.x) : rd(va) >= rd(mt.x);
+                        metaTag = `<span class="comp-meta ${ok ? 'ok' : 'no'}" title="${esc(`${mt.tipo === 'fija' ? 'Meta fija' : 'Meta dinámica'}: ${Mejora.fmtValor(m, mt.x)}`)}">${ok ? '✓ meta' : '✗ meta'}</span>`;
+                    }
+                    return `<td class="num-col comp-${cls}" title="${esc(`${ui.comp}: ${m.fmt(vb)} → ${ui.valor}: ${m.fmt(va)}`)}"><div><span class="comp-prev">${m.fmt(vb)}</span> → <strong>${m.fmt(va)}</strong></div><div class="comp-delta">${esc(txt)}${metaTag}</div></td>`;
                 };
                 const lbl = (m) => Mejora.esSuma(m) ? `${m.lbl} por día` : m.lbl;
                 box.innerHTML = `
@@ -6467,12 +6493,12 @@
                             <h3>Semana ${weekNum(ui.comp)} → Semana ${weekNum(ui.valor)}</h3>
                             <span class="hint" style="margin:0;">${esc(corteTxt)}</span>
                             <span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
-                        <div class="comp-legend"><span class="comp-ok">Mejor que el equipo</span><span class="comp-mid">Mejorando, aún sin alcanzar al equipo</span><span class="comp-bad">Por mejorar</span><span class="hint">Cada celda: semana anterior ▲▼ semana actual. Llamadas y tiempos, por día.</span></div>
+                        <div class="comp-legend"><span class="comp-ok">Mejoró</span><span class="comp-n">Igual</span><span class="comp-bad">A mejorar</span><span class="hint">Frente a la semana ${weekNum(ui.comp)}. Cada celda: semana anterior → semana actual y la diferencia. "✓ meta" indica que esta semana cumple la meta. Llamadas y tiempos, por día.</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table comp-table">
                                 <thead><tr><th>Asesor</th>${vis.map(m => `<th class="num-col" ${m.hint ? `title="${esc(m.hint)}"` : ''}>${esc(lbl(m))}</th>`).join('')}</tr></thead>
-                                <tbody>${rows.map(r => `<tr><td><button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button></td>${vis.map(m => cell(m, r.a, r.b, val(m, tA))).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, 'Sin datos en estas semanas.')}</tbody>
-                                ${rows.length ? `<tfoot><tr><td>Equipo</td>${vis.map(m => `<td class="num-col"><span class="comp-prev">${m.fmt(val(m, tB))}</span> → <strong>${m.fmt(val(m, tA))}</strong></td>`).join('')}</tr></tfoot>` : ''}
+                                <tbody>${rows.map(r => `<tr><td>${team ? `<button class="agent-link" onclick="App.viewAgentDashboard(${js(r.nombre)})">${esc(r.nombre)}</button>` : esc(r.nombre)}</td>${vis.map(m => cell(m, r.a, r.b, team ? tA : eqW)).join('')}</tr>`).join('') || UI.emptyRow(vis.length + 1, 'Sin datos en estas semanas.')}</tbody>
+                                ${rows.length && team ? `<tfoot><tr><td>Equipo</td>${vis.map(m => `<td class="num-col"><span class="comp-prev">${m.fmt(val(m, tB))}</span> → <strong>${m.fmt(val(m, tA))}</strong></td>`).join('')}</tr></tfoot>` : ''}
                             </table>
                         </div>
                     </div>`;
