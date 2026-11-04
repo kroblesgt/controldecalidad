@@ -301,6 +301,7 @@
         .mejora-tag.ref b { background: #EEF4FF; color: #3538CD; }
         .prod-table td.prod-ref { color: #3538CD; }
         .prod-table th .th-meta.ref { color: #3538CD; }
+        .mine-meta-tol { font-size: 10.5px; font-weight: 500; color: var(--text-muted); margin-left: 5px; }
         .mine-meta-n { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.35; }
         .mine-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 20px 22px; border-radius: 14px; margin-bottom: 16px; color: #fff; background: linear-gradient(120deg, #0B3B8C 0%, #1570EF 55%, #12B76A 130%); box-shadow: 0 8px 24px -12px rgba(21,112,239,.55); animation: fadeIn .35s ease both; }
         .mine-hero-t { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
@@ -4326,7 +4327,7 @@
                 let dir = r.dir ?? Mejora.dirDefault(m.id);
                 if (MEJORA_REF.has(m.id) && dir === 'bajo' && !r.conMeta) dir = 'ref';   // Baño: por indicación de RRHH no lleva meta salvo que se elija expresamente
                 const meta = r.meta ?? (r.sinMeta ? null : MEJORA_META_DEF[m.id] ?? null);
-                return { dir, meta: dir === 'ref' ? null : meta };
+                return { dir, meta: dir === 'ref' ? null : meta, tol: Number(r.tol) || 0 };
             },
             esSuma: (m) => m.id !== 'd' && !m.prom && (m.fmt === fmtInt || m.fmt === fmtHMS),
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
@@ -4336,7 +4337,8 @@
                 const { dir, meta } = Mejora.regla(m);
                 if (!dir) return null;
                 if (dir === 'ref') { if (!teamB?.d) return null; const x = Mejora.valor(m, teamB); return x !== null && x > 0 ? { x, tipo: 'ref', dir: 'bajo' } : null; }
-                if (meta !== null && meta !== undefined && meta !== '') return { x: Number(meta), tipo: 'fija', dir };
+                if (meta !== null && meta !== undefined && meta !== '') return { x: Number(meta), tipo: 'fija', dir, tol: Mejora.regla(m).tol };
+
                 if (!Mejora.cfg().auto || !teamB?.d) return null;
                 if (PROD_DYN.has(m.id)) {
                     const rate = prodRate(teamB, m.id);
@@ -4347,7 +4349,13 @@
                 const x = Mejora.valor(m, teamB);
                 return x !== null && x > 0 ? { x, tipo: 'promedio', dir } : null;
             },
-            metaTxt: (m, mt) => !mt ? '' : mt.tipo === 'ref' ? `Referencia del equipo ${Mejora.fmtValor(m, mt.x)}` : mt.tipo === 'dinamica' ? `Meta dinámica ${(mt.rate * 3600).toFixed(1)} por hora` : `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}`,
+            /** ¿Cumple la meta? Con la tolerancia de la meta fija (minutos, llamadas o puntos de margen definidos en Ajustes). */
+            cumple: (m, v, mt) => {
+                const rd = (n) => m.fmt === fmtInt ? Math.round(n) : m.fmt === fmtHMS ? Math.round(n / 60) * 60 : n;
+                const t = mt.tipo === 'fija' ? (mt.tol || 0) : 0;
+                return mt.dir === 'bajo' ? rd(v) <= rd(mt.x + t) : rd(v) >= rd(mt.x - t);
+            },
+            metaTxt: (m, mt) => !mt ? '' : mt.tipo === 'ref' ? `Referencia del equipo ${Mejora.fmtValor(m, mt.x)}` : mt.tipo === 'dinamica' ? `Meta dinámica ${(mt.rate * 3600).toFixed(1)} por hora` : `${mt.tipo === 'fija' ? 'Meta fija' : 'Meta promedio'} ${Mejora.fmtValor(m, mt.x)}${mt.tipo === 'fija' && mt.tol ? ` ± ${Mejora.show(m, mt.tol)}` : ''}`,
             /** Valor comparable: por día para indicadores que se suman. */
             valor: (m, b) => { const v = m.calc(b); if (v === null || v === undefined || isNaN(v)) return null; return Mejora.esSuma(m) ? (b?.d ? v / b.d : null) : v; },
             fmtValor: (m, v) => Mejora.esSuma(m) ? `${m.fmt(v)} por día` : m.fmt(v),
@@ -4363,7 +4371,7 @@
                     if (!vals.length) return;
                     const prom = vals.reduce((a, b) => a + b, 0) / vals.length;
                     let ref = null, tipo = '';
-                    if (meta !== null && meta !== '') { ref = Number(meta); tipo = 'meta'; }
+                    if (meta !== null && meta !== '') { const t = Mejora.regla(m).tol || 0; ref = Number(meta) + (dir === 'bajo' ? t : -t); tipo = 'meta'; }   // con su tolerancia
                     else if (c.auto && conEquipo && prom > 0) { ref = dir === 'bajo' ? prom * (1 + c.margen / 100) : prom * (1 - c.margen / 100); tipo = 'equipo'; }
                     if (ref === null) return;
                     const minAbs = PROD_PCT.has(m.id) ? 0.01 : m.fmt === fmtInt ? 1 : m.fmt === fmtDec ? 0.1 : 30;   // diferencias mínimas que vale la pena señalar
@@ -4433,11 +4441,12 @@
                         </div>
                         <div class="users-list" style="max-height:340px;">
                             <table class="prod-table" style="font-size:12px;">
-                                <thead><tr><th>Indicador</th><th>Se evalúa</th><th>Meta</th></tr></thead>
+                                <thead><tr><th>Indicador</th><th>Se evalúa</th><th>Meta</th><th title="Margen permitido sobre la meta fija antes de marcar que no se cumple">Tolerancia</th></tr></thead>
                                 <tbody>${evaluables.map(m => { const r = Mejora.regla(m); return `<tr>
                                     <td>${esc(m.lbl)}</td>
                                     <td><select class="mejora-dir" data-id="${m.id}" ${can ? '' : 'disabled'} style="padding:4px 6px; font-size:12px;"><option value="" ${!r.dir ? 'selected' : ''}>No evaluar</option><option value="bajo" ${r.dir === 'bajo' ? 'selected' : ''}>Menos es mejor</option><option value="alto" ${r.dir === 'alto' ? 'selected' : ''}>Más es mejor</option><option value="ref" ${r.dir === 'ref' ? 'selected' : ''}>Solo referencia (sin meta)</option></select></td>
-                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="${r.dir === 'ref' ? 'referencia' : PROD_DYN.has(m.id) ? 'dinámica' : 'promedio'}" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td></tr>`; }).join('')}</tbody>
+                                    <td><input class="mejora-meta" data-id="${m.id}" value="${esc(Mejora.show(m, r.meta))}" placeholder="${r.dir === 'ref' ? 'referencia' : PROD_DYN.has(m.id) ? 'dinámica' : 'promedio'}" ${can ? '' : 'disabled'} style="width:90px; padding:4px 6px; font-size:12px;"> <span class="hint">${esc(Mejora.unidad(m))}</span></td>
+                                    <td><input class="mejora-tol" data-id="${m.id}" value="${r.tol ? esc(Mejora.show(m, r.tol)) : ''}" placeholder="0" ${can ? '' : 'disabled'} style="width:80px; padding:4px 6px; font-size:12px;" title="Solo aplica con meta fija. Mismo formato que la meta (p. ej. 0:05:00 o 5 = 5 min)"></td></tr>`; }).join('')}</tbody>
                             </table>
                         </div>
                         ${can ? `<button class="btn-action" id="mejoraSave" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar metas</button>` : ''}
@@ -4451,8 +4460,11 @@
                     const meta = Mejora.parse(m, raw);
                     if (Number.isNaN(meta)) return alert(`La meta de "${m.lbl}" no es válida (${Mejora.unidad(m)}).`);
                     if (sel.value === 'ref') { if (!MEJORA_REF.has(m.id)) reglas[m.id] = { dir: 'ref', meta: null }; continue; }
+                    const tolRaw = document.querySelector(`.mejora-tol[data-id="${m.id}"]`)?.value || '';
+                    const tol = Mejora.parse(m, tolRaw);
+                    if (Number.isNaN(tol) || (tol !== null && tol < 0)) return alert(`La tolerancia de "${m.lbl}" no es válida (${Mejora.unidad(m)}).`);
                     const sinMeta = meta === null && MEJORA_META_DEF[m.id] !== undefined;   // borró la meta por defecto: queda en promedio
-                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null || sinMeta) reglas[m.id] = { dir: sel.value, meta, ...(sinMeta ? { sinMeta: true } : {}), ...(MEJORA_REF.has(m.id) && sel.value === 'bajo' ? { conMeta: true } : {}) };
+                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null || sinMeta || tol) reglas[m.id] = { dir: sel.value, meta, ...(tol ? { tol } : {}), ...(sinMeta ? { sinMeta: true } : {}), ...(MEJORA_REF.has(m.id) && sel.value === 'bajo' ? { conMeta: true } : {}) };
                 }
                 const margen = Math.max(0, Math.min(100, Number($('mejoraMargen').value) || 0));
                 const mejora = { auto: $('mejoraAuto').checked, margen, reglas };
@@ -6334,8 +6346,8 @@
                         // Conteos se comparan redondeados; tiempos h:mm:ss al minuto (1:00:20 de almuerzo cuenta como 1:00)
                         const rd = (n) => m.fmt === fmtInt ? Math.round(n) : m.fmt === fmtHMS ? Math.round(n / 60) * 60 : n;
                         const x = rd(mm.x), vv = rd(v);
-                        const ok = dir === 'bajo' ? vv <= x : vv >= x;
-                        mt = { x, ok, tipo: mm.tipo, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
+                        const ok = Mejora.cumple(m, v, { ...mm, x: mm.x });
+                        mt = { x, ok, tipo: mm.tipo, tol: mm.tol || 0, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
                     }
                     if (dir === 'ref') trend = null;   // sin meta ni flechas de bien/mal: solo referencia
                     return { m, v, p, trend, mt, ref, dir };
@@ -6366,7 +6378,7 @@
                     const tr = x.trend && !x.mt ? `<div class="mine-trend ${eq ? 'flat' : x.trend.good ? 'good' : x.trend.bad ? 'bad' : 'flat'}" title="${esc(`${prevLbl}: ${Mejora.fmtValor(m, x.p)} → ahora: ${Mejora.fmtValor(m, x.v)}`)}"><i class="fas fa-arrow-${eq ? 'right' : d > 0 ? 'up' : 'down'}"></i> ${eq ? 'Igual' : `${d > 0 ? '+' : '−'}${esc(dif(m, d))}`} <span>vs ${esc(prevLbl)} (${esc(Mejora.fmtValor(m, x.p).replace(' por día', ''))})</span></div>` : '';
                     const refBox = x.ref ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ref" title="Sin meta: el baño es libre. Es solo una referencia del equipo."><i class="fas fa-heart"></i> Referencia del equipo</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.ref.x))}</span></div>
                         <div class="mine-ref-t ${x.ref.alto ? 'alto' : ''}">${x.ref.alto ? 'Tus pausas están por encima del promedio del equipo. Úsalas con conciencia: cada minuto disponible ayuda a tus compañeros y a nuestros clientes. 💙' : 'Dentro del promedio del equipo. ¡Gracias por cuidar tu tiempo disponible! 💙'}</div></div>` : '';
-                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : x.mt.tipo === 'dinamica' ? 'Se calcula con las llamadas que recibió el equipo en este periodo y tus horas conectadas: si hay más llamadas o trabajas más horas, la meta sube; si hay menos, baja.' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : x.mt.tipo === 'dinamica' ? '<i class="fas fa-wand-magic-sparkles"></i> Meta dinámica' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}</span></div>
+                    const bar = x.mt ? `<div class="mine-meta"><div class="mine-meta-h"><span class="mine-meta-k ${x.mt.tipo}" title="${x.mt.tipo === 'fija' ? 'Meta definida por tu líder' : x.mt.tipo === 'dinamica' ? 'Se calcula con las llamadas que recibió el equipo en este periodo y tus horas conectadas: si hay más llamadas o trabajas más horas, la meta sube; si hay menos, baja.' : 'Promedio de tu equipo en este periodo'}">${x.mt.tipo === 'fija' ? '<i class="fas fa-flag"></i> Meta fija' : x.mt.tipo === 'dinamica' ? '<i class="fas fa-wand-magic-sparkles"></i> Meta dinámica' : '<i class="fas fa-users"></i> Meta promedio'}</span><span class="mine-meta-v">${esc(Mejora.fmtValor(m, x.mt.x))}${x.mt.tipo === 'fija' && x.mt.tol ? `<span class="mine-meta-tol" title="Tolerancia definida por tu líder">± ${esc(Mejora.show(m, x.mt.tol))}</span>` : ''}</span></div>
                         <div class="mine-bar"><span data-w="${Math.round(x.mt.pct * 100)}" class="${x.mt.ok ? 'ok' : ''}"></span></div>
                         <div class="mine-meta-t">${x.mt.ok ? `<i class="fas fa-circle-check"></i> ${x.mt.tipo === 'promedio' ? '¡Mejor que el promedio del equipo!' : '¡Meta cumplida!'}` : x.dir === 'bajo' ? `Te falta bajar ${esc(dif(m, x.v - x.mt.x))} para alcanzarla` : m.fmt === fmtInt ? (() => { const n = Math.max(1, Math.round(x.mt.x) - Math.round(x.v)); return `Te ${n === 1 ? 'falta 1 llamada' : `faltan ${n} llamadas`}${Mejora.esSuma(m) ? ' por día' : ''} para alcanzarla`; })() : `Te falta ${esc(dif(m, x.mt.x - x.v))} para alcanzarla`}${x.mt.tipo === 'dinamica' ? `<div class="mine-meta-n">Ajustada al volumen de llamadas del equipo y a tus horas netas de este periodo.</div>` : ''}</div></div>` : '';
                     const tipCard = [m.hint || '', x.trend ? `${prevLbl}: ${Mejora.fmtValor(m, x.p)} → ahora: ${Mejora.fmtValor(m, x.v)}` : ''].filter(Boolean).join('\n');
@@ -6492,7 +6504,7 @@
                     let metaTag = '';
                     if (mt && (mt.tipo === 'fija' || mt.tipo === 'dinamica') && mt.x !== null) {
                         const rd = (n) => m.fmt === fmtInt ? Math.round(n) : m.fmt === fmtHMS ? Math.round(n / 60) * 60 : n;
-                        const ok = mt.dir === 'bajo' ? rd(va) <= rd(mt.x) : rd(va) >= rd(mt.x);
+                        const ok = Mejora.cumple(m, va, mt);
                         metaTag = `<span class="comp-meta ${ok ? 'ok' : 'no'}" title="${esc(`${mt.tipo === 'fija' ? 'Meta fija' : 'Meta dinámica'}: ${Mejora.fmtValor(m, mt.x)}`)}">${ok ? '✓ meta' : '✗ meta'}</span>`;
                     }
                     return `<td class="num-col comp-${cls}" title="${esc(`${ui.comp}: ${m.fmt(vb)} → ${ui.valor}: ${m.fmt(va)}`)}"><div><span class="comp-prev">${m.fmt(vb)}</span> → <strong>${m.fmt(va)}</strong></div><div class="comp-delta">${esc(txt)}${metaTag}</div></td>`;
