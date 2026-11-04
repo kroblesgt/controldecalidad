@@ -4228,6 +4228,7 @@
         const prodRate = (teamB, f) => { const n = prodNetas(teamB); return n > 0 ? v0(teamB, f) / n : null; };
         const PROD_PCT_STATES = PROD_STATES.filter(st => st.f !== 'login');
         const PROD_PROM_DIA = new Set(['almuerzo', 'bano', 'descanso']);
+        const PROD_PROM_DIV = { almuerzo: 'dAlm', descanso: 'dDesc' };   // días con almuerzo / con break
         const PROD_METRICS = [
             ...PROD_CALLS.map(c => ({ id: c.f, grupo: 'Llamadas', lbl: c.lbl, calc: b => v0(b, c.f), fmt: fmtInt })),
             { id: 'llamG', grupo: 'Llamadas', lbl: 'Llamadas gestionadas', calc: b => v0(b, 'llamG'), fmt: fmtInt, hint: 'Llamadas que el asesor atendió según el archivo de conexiones y llamadas' },
@@ -4240,14 +4241,17 @@
             ...PROD_PCT_STATES.map(st => ({ id: pctKey(st), grupo: 'Porcentaje del login', lbl: '% ' + st.lbl, calc: b => b?.d ? v0(b, pctKey(st)) / b.d : null, fmt: fmtPct, hint: 'Promedio de los días' })),
             // Pausas con norma diaria (almuerzo 1 h, break, baño): se muestran como promedio por día, no como total del periodo
             ...PROD_STATES.map(st => PROD_PROM_DIA.has(st.f)
-                ? ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: `${st.lbl} (prom. por día)`, calc: b => b?.d ? v0(b, st.f) / b.d : null, fmt: fmtHMS, prom: true, hint: 'Promedio por día del periodo' })
+                ? ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: `${st.lbl} (prom. por día)`, fmt: fmtHMS, prom: true,
+                    // Almuerzo y break: se dividen solo entre los días en que se tomaron (sábados o medios días sin almuerzo no bajan el promedio)
+                    calc: b => { if (!b?.d) return null; const t = v0(b, st.f); if (!t) return 0; const n = PROD_PROM_DIV[st.f] ? v0(b, PROD_PROM_DIV[st.f]) : 0; return t / (n || b.d); },
+                    hint: PROD_PROM_DIV[st.f] ? `Promedio de los días en que tomó ${st.lbl.toLowerCase()} (no cuenta días sin ${st.lbl.toLowerCase()}, como sábados o medios días)` : 'Promedio por día trabajado del periodo' })
                 : ({ id: st.f, grupo: 'Tiempo en cada estado', lbl: st.lbl, calc: b => v0(b, st.f), fmt: fmtHMS })),
             ...PROD_AVGS.map(a => ({ id: a.f, grupo: 'Promedios por llamada', lbl: a.lbl, calc: b => v0(b, 'n_' + a.f) ? v0(b, 'a_' + a.f) / v0(b, 'n_' + a.f) : null, fmt: fmtMS, hint: 'Promedio de los días con valor' }))
         ];
         const PROD_GROUPS = ['Llamadas', 'Asistencia', 'Porcentaje del login', 'Tiempo en cada estado', 'Promedios por llamada'];
         const PROD_DEFAULT_VISIBLES = ['llam', 'tmo', 'login', 'pOcio', 'pAdmin', 'pAlm', 'pBano', 'pCoach'];
         const PROD_PCT = new Set(PROD_PCT_STATES.map(pctKey));
-        const PROD_FIELDS = ['d', 'tmo', 'llamG', 'nx', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
+        const PROD_FIELDS = ['d', 'tmo', 'llamG', 'nx', 'dAlm', 'dDesc', ...PROD_CALLS.map(c => c.f), ...PROD_STATES.map(st => st.f), ...PROD_PCT, ...PROD_AVGS.flatMap(a => ['a_' + a.f, 'n_' + a.f]), ...PROD_TIMES.flatMap(t => ['a_' + t.f, 'n_' + t.f])];
         const prodEmpty = () => Object.fromEntries(PROD_FIELDS.map(f => [f, 0]));
         const prodAdd = (a, b) => { PROD_FIELDS.forEach(f => a[f] += Number(b?.[f] || 0)); return a; };
         /** Redondea y omite los ceros (documentos más livianos en Firebase). */
@@ -5858,6 +5862,8 @@
                             b[st.f] = t;
                             if (st.f !== 'login') b[pctKey(st)] = st.pcol ? ProdSync.num(r[PI[st.f]]) : (loginDia ? t / loginDia : 0);
                         });
+                        // Días en que tomó almuerzo (más de 5 min) y break (más de 1 min): base del promedio por día de esas pausas
+                        b.dAlm = b.almuerzo > 300 ? 1 : 0; b.dDesc = b.descanso > 60 ? 1 : 0;
                         const p = per.get(codigo) || { user: u, total: prodEmpty(), semanas: {}, meses: {}, dias: {}, wk: {} };
                         const wk = 'S' + Number(r[C.semana]), mm = String(Number(r[C.mes])).padStart(2, '0');
                         diaInfo.set(fecha, { wk, mm }); p.wk[fecha] = wk;
