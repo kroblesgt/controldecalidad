@@ -4308,6 +4308,8 @@
         };
         // Indicadores que no llevan meta (indicación de RRHH: el baño es libre), solo referencia del equipo
         const MEJORA_REF = new Set(['bano', 'pBano']);
+        // Metas fijas por defecto: el almuerzo es de 1 hora por día (se puede cambiar en Ajustes)
+        const MEJORA_META_DEF = { almuerzo: 3600 };
         const MEJORA_REF_TXT = ['Pausas de baño altas', 'Llamado a la conciencia: el baño es libre, pero cada minuto disponible ayuda al equipo y a nuestros clientes.'];
         const Mejora = {
             cfg: () => ({ auto: true, margen: 20, reglas: {}, ...(State.prodCfg?.mejora || {}) }),
@@ -4317,7 +4319,8 @@
                 const r = Mejora.cfg().reglas[m.id] || {};
                 let dir = r.dir ?? Mejora.dirDefault(m.id);
                 if (MEJORA_REF.has(m.id) && dir === 'bajo' && !r.conMeta) dir = 'ref';   // Baño: por indicación de RRHH no lleva meta salvo que se elija expresamente
-                return { dir, meta: dir === 'ref' ? null : (r.meta ?? null) };
+                const meta = r.meta ?? (r.sinMeta ? null : MEJORA_META_DEF[m.id] ?? null);
+                return { dir, meta: dir === 'ref' ? null : meta };
             },
             esSuma: (m) => m.id !== 'd' && !m.prom && (m.fmt === fmtInt || m.fmt === fmtHMS),
             esNum: (m) => m.fmt === fmtInt || m.fmt === fmtDec,
@@ -4373,7 +4376,8 @@
                             porFila.set(r.nombre, arr);
                             return;
                         }
-                        const mal = dir === 'bajo' ? v > ref && (tipo === 'meta' || v - prom >= minAbs) : v < ref && (tipo === 'meta' || prom - v >= minAbs);
+                        const aMin = (n) => tipo === 'meta' && m.fmt === fmtHMS ? Math.round(n / 60) * 60 : n;   // metas de tiempo h:mm:ss se comparan al minuto
+                        const mal = dir === 'bajo' ? aMin(v) > aMin(ref) && (tipo === 'meta' || v - prom >= minAbs) : aMin(v) < aMin(ref) && (tipo === 'meta' || prom - v >= minAbs);
                         if (!mal) return;
                         (esRef ? refs : malas).add(r.nombre + '|' + m.id);
                         const [lbl, accion] = esRef ? MEJORA_REF_TXT : MEJORA_TXT[m.id] || [`${m.lbl} ${dir === 'bajo' ? 'alto' : 'bajo'}`, ''];
@@ -4441,7 +4445,8 @@
                     const meta = Mejora.parse(m, raw);
                     if (Number.isNaN(meta)) return alert(`La meta de "${m.lbl}" no es válida (${Mejora.unidad(m)}).`);
                     if (sel.value === 'ref') { if (!MEJORA_REF.has(m.id)) reglas[m.id] = { dir: 'ref', meta: null }; continue; }
-                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null) reglas[m.id] = { dir: sel.value, meta, ...(MEJORA_REF.has(m.id) && sel.value === 'bajo' ? { conMeta: true } : {}) };
+                    const sinMeta = meta === null && MEJORA_META_DEF[m.id] !== undefined;   // borró la meta por defecto: queda en promedio
+                    if (sel.value !== Mejora.dirDefault(m.id) || meta !== null || sinMeta) reglas[m.id] = { dir: sel.value, meta, ...(sinMeta ? { sinMeta: true } : {}), ...(MEJORA_REF.has(m.id) && sel.value === 'bajo' ? { conMeta: true } : {}) };
                 }
                 const margen = Math.max(0, Math.min(100, Number($('mejoraMargen').value) || 0));
                 const mejora = { auto: $('mejoraAuto').checked, margen, reglas };
@@ -6310,7 +6315,9 @@
                     if (mm?.tipo === 'ref') ref = { x: mm.x, alto: v > mm.x * (1 + Mejora.cfg().margen / 100) && v - mm.x >= (PROD_PCT.has(m.id) ? 0.01 : 30) };
                     else if (mm && mm.x !== null) {
                         // Conteos (llamadas) se comparan redondeados: 35 contra una meta de 35.4 ya es meta cumplida
-                        const x = m.fmt === fmtInt ? Math.round(mm.x) : mm.x, vv = m.fmt === fmtInt ? Math.round(v) : v;
+                        // Conteos se comparan redondeados; tiempos h:mm:ss al minuto (1:00:20 de almuerzo cuenta como 1:00)
+                        const rd = (n) => m.fmt === fmtInt ? Math.round(n) : m.fmt === fmtHMS ? Math.round(n / 60) * 60 : n;
+                        const x = rd(mm.x), vv = rd(v);
                         const ok = dir === 'bajo' ? vv <= x : vv >= x;
                         mt = { x, ok, tipo: mm.tipo, pct: Math.max(0.04, Math.min(1, dir === 'bajo' ? (v ? x / v : 1) : (x ? v / x : 0))) };
                     }
