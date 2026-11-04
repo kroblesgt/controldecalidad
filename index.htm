@@ -4223,7 +4223,8 @@
             { f: 'ini', lbl: 'Hora de ingreso', hint: 'Exacta (primer Login) con el archivo de conexiones; sin él, estimada con la primera hora con login. En semanas y meses: promedio de los días.' },
             { f: 'fin', lbl: 'Hora de salida', hint: 'Exacta (último Logout) con el archivo de conexiones; sin él, estimada con la última hora con login. En semanas y meses: promedio de los días.' },
             { f: 'almIni', lbl: 'Inicio de almuerzo', hint: 'Hora en que inició el almuerzo, según el archivo de conexiones. En semanas y meses: promedio de los días.' },
-            { f: 'brkIni', lbl: 'Inicio de break', hint: 'Hora en que inició el break (Descanso), según el archivo de conexiones. En semanas y meses: promedio de los días.' }
+            { f: 'brkIni', lbl: 'Inicio de break', hint: 'Hora en que inició el break (Descanso), según el archivo de conexiones. En semanas y meses: promedio de los días.' },
+            { f: 'ultLlam', lbl: 'Fin de última llamada', hint: 'Hora en que terminó su última llamada del día, según el archivo de llamadas. En semanas y meses: promedio de los días.' }
         ];
         /** Horas netas: login menos almuerzo y coaching (tiempo realmente disponible para atender). */
         const prodNetas = (b) => Math.max(0, v0(b, 'login') - v0(b, 'almuerzo') - v0(b, 'coaching'));
@@ -4475,7 +4476,7 @@
         // =========================================================
         const ConxSync = {
             KEY: MODO_PRUEBA ? 'fuente_conexiones_prueba' : 'fuente_conexiones',
-            CACHE: MODO_PRUEBA ? 'conx_datos_prueba' : 'conx_datos',
+            CACHE: MODO_PRUEBA ? 'conx_datos_prueba_v2' : 'conx_datos_v2',   // v2: incluye la hora de la última llamada
             SHEET_C: 'Base Conexiones', SHEET_L: 'Base- llamadas',
             src: null, needsPermission: false, lastResult: '',
 
@@ -4640,13 +4641,16 @@
                         if (!codigo || !w) return;
                         const e = reg(codigo + '|' + w.f);
                         e.g = (e.g || 0) + 1; llamadas++;
+                        // Hora en que terminó su última llamada (para saber si cerró sesión al salir)
+                        const fin = ConxSync.when(v[4]), u = fin && fin.f === w.f && fin.s !== null ? fin.s : w.s;
+                        if (u !== null && u !== undefined) e.u = Math.max(e.u ?? 0, u);
                     } };
                     await book.rows(shL, (r, n) => {
                         if (n !== 1) return;
                         const H = r.map(x => String(x ?? '').trim());
-                        const c = [idx(H, 'USUARIO'), idx(H, 'SUB_ESTADO'), idx(H, 'INICIO'), idx(H, 'FECHA')];
+                        const c = [idx(H, 'USUARIO'), idx(H, 'SUB_ESTADO'), idx(H, 'INICIO'), idx(H, 'FECHA'), idx(H, 'FIN')];
                         if (c[0] < 0 || c[1] < 0 || (c[2] < 0 && c[3] < 0)) throw new Error(`Faltan columnas en "${shL}" (USUARIO, SUB_ESTADO, INICIO).`);
-                        L.cols = c.map(i => i < 0 ? c[2] < 0 ? c[3] : c[2] : i);
+                        L.cols = c.map(i => i < 0 ? c[2] < 0 ? c[3] : c[2] : i);   // sin FIN se usa INICIO
                     }, { quick: { col: 0, values: new Set(['\u0000']), light: L }, onProgress: prog('Leyendo llamadas') });
                 }
                 return { datos, dias, llamadas };
@@ -5251,13 +5255,13 @@
             evalDia: (b, p, tol, nov = []) => {
                 const r = Hor.evalBase(b, p, tol);
                 r.nov = nov;
-                if (nov.length && (r.flags.length || r.sinReg)) r.just = nov.map(Hor.novTxt).join(' · ');
+                if (nov.length && (r.flags.some(x => x.k !== 'cierre') || r.sinReg)) r.just = nov.map(Hor.novTxt).join(' · ');   // el aviso de cierre de sesión se muestra siempre
                 return r;
             },
             evalBase: (b, p, tol) => {
                 const r = { flags: [] };
                 const val = (f) => b?.['n_' + f] ? b['a_' + f] / b['n_' + f] : null;
-                r.ini = val('ini'); r.fin = val('fin'); r.almIni = val('almIni'); r.brkIni = val('brkIni');
+                r.ini = val('ini'); r.fin = val('fin'); r.almIni = val('almIni'); r.brkIni = val('brkIni'); r.ult = val('ultLlam');
                 r.alm = v0(b, 'almuerzo'); r.brk = v0(b, 'descanso'); r.exacto = v0(b, 'nx') > 0; r.conDatos = !!b?.d;
                 r.sinProg = !p; r.descanso = p && !p.c;
                 if (!p || !p.c) { if (r.conDatos && p) r.flags.push({ k: 'extra', t: 'Trabajó en su día de descanso' }); return r; }
@@ -5271,6 +5275,9 @@
                 if (r.dFin !== null && r.dFin < -tol.salida) r.flags.push({ k: 'antes', t: `Salió ${Hor.min(-r.dFin)} antes`, m: -r.dFin });
                 if (p.l && r.alm > 0) { const ex = Math.floor((r.alm - (p.l[1] - p.l[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'alm', t: `Almuerzo excedido ${Hor.min(ex)}`, m: ex }); }
                 if (p.b && r.brk > 0) { const ex = Math.floor((r.brk - (p.b[1] - p.b[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'brk', t: `Break excedido ${Hor.min(ex)}`, m: ex }); }
+                // Cierre de sesión: el logout quedó más de 30 min después de su hora de salida y de su última llamada
+                if (r.fin !== null && r.fin - p.c[1] > 1800 && (r.ult === null || r.fin - r.ult > 1800))
+                    r.flags.push({ k: 'cierre', t: `No cerró sesión al salir: logout ${fmtHora(r.fin)}${r.ult !== null ? `, última llamada ${fmtHora(r.ult)}` : ''}` });
                 return r;
             },
             /** Filas por asesor: { nombre, codigo, dias: { fecha: {b, p, e} } } para las fechas dadas. */
@@ -5304,9 +5311,10 @@
                 return { rows, ultimo };
             },
             resumen: (r, fechas) => {
-                const s = { dias: 0, tarde: 0, minTarde: 0, antes: 0, alm: 0, brk: 0, sinReg: 0, puntual: 0, just: 0 };
+                const s = { dias: 0, tarde: 0, minTarde: 0, antes: 0, alm: 0, brk: 0, sinReg: 0, puntual: 0, just: 0, cierre: 0 };
                 fechas.forEach(f => {
                     const e = r.dias[f]?.e; if (!e) return;
+                    if (e.flags?.some(x => x.k === 'cierre')) s.cierre++;
                     if (e.just) { s.just++; if (!e.sinReg && e.dIni !== undefined) { s.dias++; s.puntual++; } return; }   // justificado por una novedad aprobada
                     if (e.sinReg) { s.sinReg++; return; }
                     if (e.dIni === undefined) return;
@@ -5325,19 +5333,21 @@
                 const reales = [hay(e.ini) ? `Entró ${fmtHMS(e.ini)}` : '', hay(e.fin) ? `Salió ${fmtHMS(e.fin)}` : ''];
                 if (e.sinProg) return hay(e.ini) ? par('off', fmtHora(e.ini), 'off', hay(e.fin) ? fmtHora(e.fin) : '', ['Sin horario cargado para ese día', ...reales].filter(Boolean).join('\n')) : '';
                 if (e.descanso) return e.conDatos ? par('extra', fmtHora(e.ini), 'extra', hay(e.fin) ? fmtHora(e.fin) : '', [`Trabajó en su día de descanso (${p?.ct || 'Descanso'})`, ...reales].filter(Boolean).join('\n')) : `<span class="hor-chip off">${esc(p?.ct || 'Descanso')}</span>`;
+                const cierre = e.flags?.find(x => x.k === 'cierre');
                 if (e.just) {
-                    const tip = ['Justificado (Mesa de trabajo): ' + e.just, p?.c ? `Turno ${Hor.rng(p.c)}` : '', ...reales, e.sinReg ? 'Sin conexión' : ''].filter(Boolean).join('\n');
-                    return e.sinReg || !hay(e.ini) ? `<span class="hor-chip just" title="${esc(tip)}">${esc(e.nov[0]?.t || 'Justificado')}</span>` : par('just', fmtHora(e.ini) + ' <b>✓</b>', 'just', hay(e.fin) ? fmtHora(e.fin) + ' <b>✓</b>' : '', tip);
+                    const tip = ['Justificado (Mesa de trabajo): ' + e.just, p?.c ? `Turno ${Hor.rng(p.c)}` : '', ...reales, cierre ? cierre.t : '', e.sinReg ? 'Sin conexión' : ''].filter(Boolean).join('\n');
+                    return e.sinReg || !hay(e.ini) ? `<span class="hor-chip just" title="${esc(tip)}">${esc(e.nov[0]?.t || 'Justificado')}</span>` : par('just', fmtHora(e.ini) + ' <b>✓</b>', cierre ? 'miss' : 'just', hay(e.fin) ? fmtHora(e.fin) + (cierre ? ' <b>⚠</b>' : ' <b>✓</b>') : '', tip);
                 }
                 if (e.sinReg) return `<span class="hor-chip miss" title="Tenía turno ${esc(Hor.rng(p.c))} y no hay conexión registrada (ausencia, permiso o vacaciones)">Sin registro</span>`;
                 const tarde = e.flags.find(x => x.k === 'tarde'), antes = e.flags.find(x => x.k === 'antes');
                 const cls = tarde ? 'late' : e.dIni < 0 ? 'early' : 'ok';
                 const pausas = e.flags.filter(x => x.k === 'alm' || x.k === 'brk');
-                const tip = [cls === 'early' ? 'Entró temprano' : cls === 'ok' ? 'Entró a tiempo' : `Entró ${Hor.min(e.dIni)} tarde`, antes ? `Salió ${Hor.min(antes.m)} antes` : '', `Turno ${Hor.rng(p.c)}`, p.f ? `Con ${Hor.min(Math.round(p.f / 60))} flexible al inicio o al final${e.usadoIni ? ` (usó ${Hor.min(Math.round(e.usadoIni / 60))} al inicio)` : ''}` : '', ...reales, ...pausas.map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
+                const tip = [cls === 'early' ? 'Entró temprano' : cls === 'ok' ? 'Entró a tiempo' : `Entró ${Hor.min(e.dIni)} tarde`, antes ? `Salió ${Hor.min(antes.m)} antes` : '', cierre ? `⚠ ${cierre.t}` : '', `Turno ${Hor.rng(p.c)}`, p.f ? `Con ${Hor.min(Math.round(p.f / 60))} flexible al inicio o al final${e.usadoIni ? ` (usó ${Hor.min(Math.round(e.usadoIni / 60))} al inicio)` : ''}` : '', ...reales, ...pausas.map(x => x.t), e.exacto ? '' : 'Hora estimada (sin archivo de conexiones ese día)'].filter(Boolean).join('\n');
                 // Solo se cuentan minutos de tardanza o de salida anticipada; entrar antes o salir después no suma minutos
                 const tIn = `${fmtHora(e.ini)} <b>${tarde ? '+' + e.dIni : '✓'}</b>${pausas.length ? '<i class="hor-dot"></i>' : ''}`;
-                const tOut = hay(e.fin) ? `${fmtHora(e.fin)} <b>${antes ? '−' + antes.m : '✓'}</b>` : '';
-                return par(cls, tIn, antes ? 'late' : 'ok', tOut, tip);
+                // Salida: ⚠ si no cerró sesión (el logout quedó muy después de su hora y de su última llamada)
+                const tOut = hay(e.fin) ? `${fmtHora(e.fin)} <b>${antes ? '−' + antes.m : cierre ? '⚠' : '✓'}</b>` : '';
+                return par(cls, tIn, antes ? 'late' : cierre ? 'miss' : 'ok', tOut, tip);
             },
 
             draw: async () => {
@@ -5371,7 +5381,7 @@
                 } catch (e) { console.error(e); box.innerHTML = `<div class="callout warn">No se pudo cargar la puntualidad (${esc(e.message)}).</div>`; }
             },
 
-            leyenda: () => `<div class="hor-legend"><span class="hor-chip early">Temprano</span><span class="hor-chip ok">A tiempo</span><span class="hor-chip late">Tarde</span><span class="hor-chip miss">Sin registro</span><span class="hor-chip just">Justificado</span><span class="hor-chip extra">Día de descanso trabajado</span><span><i class="hor-dot"></i> almuerzo o break excedido</span><span class="hint" style="margin:0;">Arriba la entrada (login) y abajo la salida (logout). El número son minutos en contra: tardanza o salida anticipada. Entrar antes o salir después no suma minutos. Pasa el cursor para ver el detalle.</span></div>`,
+            leyenda: () => `<div class="hor-legend"><span class="hor-chip early">Temprano</span><span class="hor-chip ok">A tiempo</span><span class="hor-chip late">Tarde</span><span class="hor-chip miss">Sin registro</span><span class="hor-chip just">Justificado</span><span class="hor-chip extra">Día de descanso trabajado</span><span><i class="hor-dot"></i> almuerzo o break excedido</span><span class="hor-chip miss">17:00 ⚠</span><span>no cerró sesión al salir</span><span class="hint" style="margin:0;">Arriba la entrada (login) y abajo la salida (logout). El número son minutos en contra: tardanza o salida anticipada. Entrar antes o salir después no suma minutos. Pasa el cursor para ver el detalle.</span></div>`,
             heroMio: (s, titulo) => {
                 const nombre = String(State.user.nombre || '').split(' ')[0];
                 const head = !s.dias ? `Aún no hay días para evaluar` : s.tarde === 0 ? `¡Excelente, ${esc(nombre)}! Puntual todos los días ⏰` : s.tarde === 1 ? `¡Muy bien, ${esc(nombre)}! Solo un día tarde` : `Puedes mejorar tu puntualidad, ${esc(nombre)}`;
@@ -5389,19 +5399,19 @@
                         <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>${esc(titulo)}</h3><span class="hint" style="margin:0 0 0 auto;">${rows.length} asesor(es)</span></div>
                         <div class="table-scroll prod-scroll">
                             <table class="prod-table hor-table">
-                                <thead><tr><th>Asesor</th>${cabDias}<th class="num-col" title="Días con turno y conexión">Días</th><th class="num-col">A tiempo</th><th class="num-col">Tardanzas</th><th class="num-col">Min. tarde</th><th class="num-col">Salidas antes</th><th class="num-col">Almuerzo excedido</th><th class="num-col">Break excedido</th><th class="num-col" title="Días con turno sin conexión registrada">Sin registro</th><th class="num-col" title="Días con algo que marcar, cubiertos por una novedad aprobada de la Mesa de trabajo">Justificados</th></tr></thead>
+                                <thead><tr><th>Asesor</th>${cabDias}<th class="num-col" title="Días con turno y conexión">Días</th><th class="num-col">A tiempo</th><th class="num-col">Tardanzas</th><th class="num-col">Min. tarde</th><th class="num-col">Salidas antes</th><th class="num-col">Almuerzo excedido</th><th class="num-col">Break excedido</th><th class="num-col" title="Días con turno sin conexión registrada">Sin registro</th><th class="num-col" title="Días en que no cerró sesión al salir (el logout quedó más de 30 min después de su hora de salida y de su última llamada)">Sin cerrar sesión</th><th class="num-col" title="Días con algo que marcar, cubiertos por una novedad aprobada de la Mesa de trabajo">Justificados</th></tr></thead>
                                 <tbody>${rows.map(r => { const s = res.get(r.codigo); return `<tr>
                                     <td class="prod-agent">${team ? `<button class="agent-link" onclick="Hor.verDia(${js(r.codigo)})" title="Ver su detalle">${esc(r.nombre)}</button>` : esc(r.nombre)}</td>
                                     ${conDias ? fechas.map(f => `<td style="text-align:center;">${Hor.chip(r.dias[f]?.e, r.dias[f]?.p)}</td>`).join('') : ''}
                                     <td class="num-col">${s.dias}</td><td class="num-col">${s.puntual}</td>
                                     <td class="num-col ${s.tarde ? 'prod-bad' : ''}">${s.tarde}</td><td class="num-col">${s.minTarde ? Hor.min(s.minTarde) : '—'}</td>
                                     <td class="num-col ${s.antes ? 'prod-bad' : ''}">${s.antes}</td><td class="num-col ${s.alm ? 'prod-bad' : ''}">${s.alm}</td><td class="num-col ${s.brk ? 'prod-bad' : ''}">${s.brk}</td>
-                                    <td class="num-col ${s.sinReg ? 'prod-bad' : ''}">${s.sinReg || '—'}</td><td class="num-col">${s.just || '—'}</td></tr>`; }).join('') || UI.emptyRow(10 + (conDias ? 7 : 0), 'Sin datos en este periodo.')}</tbody>
+                                    <td class="num-col ${s.sinReg ? 'prod-bad' : ''}">${s.sinReg || '—'}</td><td class="num-col ${s.cierre ? 'prod-bad' : ''}">${s.cierre || '—'}</td><td class="num-col">${s.just || '—'}</td></tr>`; }).join('') || UI.emptyRow(11 + (conDias ? 7 : 0), 'Sin datos en este periodo.')}</tbody>
                             </table>
                         </div>
                     </div>`;
                 box.innerHTML = `
-                    ${team ? `<div class="hor-kpis">${kpi('Días evaluados', tot.dias || 0)}${kpi('A tiempo', tot.dias ? Math.round(tot.puntual / tot.dias * 100) + '%' : '—', 'ok')}${kpi('Tardanzas', tot.tarde || 0, tot.tarde ? 'bad' : '')}${kpi('Minutos tarde', tot.minTarde ? Hor.min(tot.minTarde) : '0', tot.minTarde ? 'bad' : '')}${kpi('Salidas antes', tot.antes || 0)}${kpi('Pausas excedidas', (tot.alm || 0) + (tot.brk || 0))}${kpi('Justificados', tot.just || 0)}</div>` : Hor.heroMio(res.get(rows[0]?.codigo) || { dias: 0, tarde: 0, puntual: 0, minTarde: 0 }, titulo)}
+                    ${team ? `<div class="hor-kpis">${kpi('Días evaluados', tot.dias || 0)}${kpi('A tiempo', tot.dias ? Math.round(tot.puntual / tot.dias * 100) + '%' : '—', 'ok')}${kpi('Tardanzas', tot.tarde || 0, tot.tarde ? 'bad' : '')}${kpi('Minutos tarde', tot.minTarde ? Hor.min(tot.minTarde) : '0', tot.minTarde ? 'bad' : '')}${kpi('Salidas antes', tot.antes || 0)}${kpi('Pausas excedidas', (tot.alm || 0) + (tot.brk || 0))}${kpi('Sin cerrar sesión', tot.cierre || 0, tot.cierre ? 'bad' : '')}${kpi('Justificados', tot.just || 0)}</div>` : Hor.heroMio(res.get(rows[0]?.codigo) || { dias: 0, tarde: 0, puntual: 0, minTarde: 0 }, titulo)}
                     ${conDias ? Hor.leyenda() : ''}
                     ${tabla}
                     <p class="hint" style="margin-top:10px;">Se compara con el horario vigente de cada día (Excel de horarios). Tolerancias: entrada ${HorSync.tol().entrada} min, salida ${HorSync.tol().salida} min, pausas ${HorSync.tol().pausa} min. Los días con una novedad aprobada en la hoja "Novedades (Mesa)" del Excel salen como justificados.</p>`;
@@ -5419,11 +5429,12 @@
                     const { b, p, e } = r.dias[fecha] || {};
                     const ent = e && !e.sinProg && !e.descanso && !e.sinReg ? e : null;
                     const flags = e?.flags || [];
-                    const est = !e ? 'Aún sin datos' : e.just ? `Justificado: ${e.just}` : e.sinProg ? 'Sin horario cargado' : e.descanso ? (e.conDatos ? 'Trabajó en su día de descanso' : 'Descanso') : e.sinReg ? 'Sin conexión registrada' : flags.length ? flags.map(x => x.t).join(' · ') : 'Todo en orden';
+                    const cierreD = flags.find(x => x.k === 'cierre');
+                    const est = !e ? 'Aún sin datos' : e.just ? `Justificado: ${e.just}${cierreD ? ` · ⚠ ${cierreD.t}` : ''}` : e.sinProg ? 'Sin horario cargado' : e.descanso ? (e.conDatos ? 'Trabajó en su día de descanso' : 'Descanso') : e.sinReg ? 'Sin conexión registrada' : flags.length ? flags.map(x => x.t).join(' · ') : 'Todo en orden';
                     return `<tr ${solo && r.codigo === solo ? 'class="hor-focus"' : ''}>
                         <td class="prod-agent">${esc(r.nombre)}</td>
                         <td>${det(p?.ct || (p ? 'Descanso' : ''), e?.ini !== null && e?.ini !== undefined ? 'Entró ' + fmtHMS(e.ini) : '', ent ? badge(e.dIni, !e.just && flags.some(x => x.k === 'tarde'), e.dIni < 0) : '')}</td>
-                        <td>${det(p?.c ? fmtHora(p.c[1]) : '', e?.fin !== null && e?.fin !== undefined ? 'Salió ' + fmtHMS(e.fin) : '', ent && e.dFin !== null ? badge(e.dFin, !e.just && flags.some(x => x.k === 'antes'), false) : '')}</td>
+                        <td>${det(p?.c ? fmtHora(p.c[1]) : '', e?.fin !== null && e?.fin !== undefined ? 'Salió ' + fmtHMS(e.fin) : '', ent && e.dFin !== null ? (cierreD ? ' <b class="hor-d late">⚠ no cerró sesión</b>' : badge(e.dFin, !e.just && flags.some(x => x.k === 'antes'), false)) : '')}</td>
                         <td>${det(p?.lt || '', e?.almIni !== null && e?.almIni !== undefined ? 'Salió ' + fmtHora(e.almIni) : '', '', e?.alm ? ` · ${Math.round(e.alm / 60)} min` : '')}</td>
                         <td>${det(p?.bt || '', e?.brkIni !== null && e?.brkIni !== undefined ? 'Salió ' + fmtHora(e.brkIni) : '', '', e?.brk ? ` · ${Math.round(e.brk / 60)} min` : '')}</td>
                         <td style="white-space:normal; min-width:180px;">${e?.just ? `<span style="color:#5925DC; font-weight:600;">${esc(est)}</span>` : flags.length || e?.sinReg ? `<span style="color:#B54708; font-weight:600;">${esc(est)}</span>` : `<span class="hint" style="margin:0;">${esc(est)}</span>`}${e && !e.exacto && e.ini !== null ? '<div class="hint" style="margin:0;">Hora estimada</div>' : ''}</td></tr>`;
@@ -5499,7 +5510,7 @@
                 const rows = ex.rows.map(r => {
                     const s = ex.res.get(r.codigo), o = { Asesor: r.nombre };
                     if (ex.fechas.length <= 7) ex.fechas.forEach(f => { const e = r.dias[f]?.e; o[Hor.fmtF(f, { weekday: 'short', day: 'numeric' })] = !e ? '' : e.sinProg ? '' : e.descanso ? (e.conDatos ? 'Descanso (trabajó)' : 'Descanso') : e.just ? `Justificado: ${e.just}` : e.sinReg ? 'Sin registro' : `${fmtHora(e.ini)}–${e.fin !== null && e.fin !== undefined ? fmtHora(e.fin) : '?'} · ${e.flags.find(x => x.k === 'tarde') ? `tarde ${e.dIni} min` : e.dIni < 0 ? 'temprano' : 'a tiempo'}${e.flags.filter(x => x.k !== 'tarde').map(x => ' · ' + x.t).join('')}`; });
-                    return { ...o, 'Días': s.dias, 'A tiempo': s.puntual, 'Tardanzas': s.tarde, 'Minutos tarde': s.minTarde, 'Salidas antes': s.antes, 'Almuerzo excedido': s.alm, 'Break excedido': s.brk, 'Sin registro': s.sinReg, 'Justificados': s.just };
+                    return { ...o, 'Días': s.dias, 'A tiempo': s.puntual, 'Tardanzas': s.tarde, 'Minutos tarde': s.minTarde, 'Salidas antes': s.antes, 'Almuerzo excedido': s.alm, 'Break excedido': s.brk, 'Sin registro': s.sinReg, 'Sin cerrar sesión': s.cierre, 'Justificados': s.just };
                 });
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Puntualidad");
@@ -5895,7 +5906,7 @@
                         if (!p || !info || !p.dias[info.mm]?.[fecha]) continue;
                         if (x.i !== undefined && x.i !== null) { horas.set(k, { ini: x.i, fin: x.o ?? x.i }); nExactos++; }
                         // Inicio de almuerzo y de break; nx marca los días con ingreso y salida exactos
-                        const extra = { ...(isFinite(x.a) ? { a_almIni: x.a, n_almIni: 1 } : {}), ...(isFinite(x.b) ? { a_brkIni: x.b, n_brkIni: 1 } : {}), ...(x.i !== undefined && x.i !== null ? { nx: 1 } : {}) };
+                        const extra = { ...(isFinite(x.a) ? { a_almIni: x.a, n_almIni: 1 } : {}), ...(isFinite(x.b) ? { a_brkIni: x.b, n_brkIni: 1 } : {}), ...(isFinite(x.u) ? { a_ultLlam: x.u, n_ultLlam: 1 } : {}), ...(x.i !== undefined && x.i !== null ? { nx: 1 } : {}) };
                         if (Object.keys(extra).length) [p.dias[info.mm][fecha], p.semanas[info.wk], p.meses[info.mm], p.total].forEach(b => { if (b) Object.entries(extra).forEach(([f, v]) => b[f] += v); });
                         if (x.g) { [p.dias[info.mm][fecha], p.semanas[info.wk], p.meses[info.mm], p.total].forEach(b => { if (b) b.llamG += x.g; }); nGest += x.g; }
                     }
