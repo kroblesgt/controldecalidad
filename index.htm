@@ -123,6 +123,11 @@
         .nav-item i { font-size: 14px; width: 18px; text-align: center; }
         .nav-count { margin-left: auto; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,0.1); color: #DDE8E5; }
         .nav-count.alert { background: var(--amber); color: #2B1D00; }
+        .nav-count.new { background: #DC2626; color: #fff; animation: newPulse 2s infinite; }
+        @keyframes newPulse { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); } 70% { box-shadow: 0 0 0 7px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
+        .agent-note-item.is-new { position: relative; border-color: #DC2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.15); }
+        .new-tag { position: absolute; top: -8px; right: -6px; background: #DC2626; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: .5px; padding: 2px 6px; border-radius: 999px; animation: newPulse 2s infinite; }
+        .aviso-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
 
         .upload-area { padding: 8px 12px; }
         .btn-upload { background: transparent; color: var(--sidebar-text); border: none; border-top: 1px solid var(--sidebar-line); border-radius: 0 !important; padding: 12px 10px 4px; width: 100%; border-radius: var(--radius-sm); font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
@@ -497,7 +502,7 @@
             <div class="nav-item" id="navHor" data-view="viewHor" style="display:none;" tabindex="0"><i class="fas fa-user-clock"></i> Horarios</div>
             <div class="nav-item" id="navBajas" data-view="viewBajas" style="display:none;" tabindex="0"><i class="fas fa-user-slash"></i> Asesores de baja <span class="nav-count" id="navBajasCount" style="display:none;"></span></div>
             <div class="nav-group" id="navGroupPersonal" style="display:none;">Personal</div>
-            <div class="nav-item" id="navAgente" data-view="viewAgente" style="display:none;" tabindex="0"><i class="fas fa-user"></i> Mi desempeño</div>
+            <div class="nav-item" id="navAgente" data-view="viewAgente" style="display:none;" tabindex="0"><i class="fas fa-user"></i> Mi desempeño <span class="nav-count new" id="navAgenteCount" style="display:none;"></span></div>
         </div>
 
         <div class="sync-sidebar" id="syncSidebar" style="display:none;"></div>
@@ -800,6 +805,18 @@
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Selecciona las áreas que deseas visualizar en esta sesión. Tus áreas asignadas no se modifican.</p>
                 <div class="form-group"><div id="modalAreaChecks" class="perm-grid" style="grid-template-columns: 1fr; gap: 10px; padding: 15px;"></div></div>
                 <button class="btn-action" id="btnSaveMyArea" style="width:100%; justify-content:center; background:var(--primary); color:white; border:none; padding:14px;"><i class="fas fa-eye"></i> Aplicar Vista</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVEDADES DEL ASESOR -->
+    <div class="modal-overlay" id="avisosModal">
+        <div class="modal-box fade-in" style="max-width: 460px; margin: auto;">
+            <div class="modal-header"><h2><i class="fas fa-bell" style="color:#DC2626;"></i> Tienes novedades</h2><button class="close-btn" data-close="avisosModal"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
+                <div id="avisosBody" style="display:flex; flex-direction:column; gap:8px;"></div>
+                <button class="btn-action" id="btnAvisosPermiso" style="display:none; justify-content:center;"><i class="fas fa-bell"></i> Avisarme en este navegador cuando llegue una nota</button>
+                <button class="btn-action" data-close="avisosModal" style="justify-content:center; background:var(--primary); color:white; border:none; padding:12px;">Entendido</button>
             </div>
         </div>
     </div>
@@ -1635,6 +1652,7 @@
                 ['firmasPendingBody', 'npsDetailsBody', 'agentNotesGrid', 'agentMainFeedback', 'rankAreas', 'rankAsesores'].forEach(id => $(id).innerHTML = "");
                 $('kpiPanel').style.display = '';
                 $('searchInput').value = "";
+                Avisos.reset();
             }
         };
 
@@ -1839,6 +1857,7 @@
                 State.weekKeys = [...weeks].sort((a, b) => weekNum(a) - weekNum(b) || String(a).localeCompare(String(b)));
                 App.applyEstados();
                 App.rebuildWeekSelectors();
+                Avisos.onRecords(selYear);
                 refreshActiveView();
             },
 
@@ -2004,6 +2023,112 @@
         // RENDERS
         // =========================================================
         const destroyChart = (key) => { if (State.charts[key]) { State.charts[key].destroy(); State.charts[key] = null; } };
+
+        // =========================================================
+        // AVISOS DEL ASESOR: notas nuevas y firmas pendientes
+        // =========================================================
+        /**
+         * Una nota es "nueva" hasta que el asesor la abre. Lo visto se guarda en este navegador.
+         * La primera vez en un navegador solo cuenta como nueva la última semana con nota.
+         */
+        const BASE_TITLE = document.title;
+        const Avisos = {
+            seen: null, known: null, knownYear: null, modalShown: false,
+            enabled: () => !!State.user?.nombre && UI.hasPerm('chk_ver_propio'),
+            key: () => `calidadcx_vistos_${State.user.email}`,
+            save: () => { try { localStorage.setItem(Avisos.key(), JSON.stringify([...Avisos.seen])); } catch {} },
+            mine: () => State.records.filter(r => r.id_asesor === State.user.nombre),
+            init: () => {
+                let saved = null;
+                try { const v = localStorage.getItem(Avisos.key()); if (v) saved = new Set(JSON.parse(v)); } catch {}
+                if (saved) { Avisos.seen = saved; return; }
+                const mine = Avisos.mine();
+                const last = mine.reduce((m, r) => Math.max(m, weekNum(r.semana)), 0);
+                Avisos.seen = new Set(mine.filter(r => weekNum(r.semana) < last).map(r => r.idDoc));
+                Avisos.save();
+            },
+            isNew: (r) => !!Avisos.seen && r.id_asesor === State.user.nombre && !Avisos.seen.has(r.idDoc),
+            nuevos: () => Avisos.mine().filter(Avisos.isNew).sort((a, b) => weekNum(b.semana) - weekNum(a.semana)),
+            pendientes: () => Avisos.mine().filter(r => Rules.needsSignature(r)),
+            markSeen: (idDoc) => {
+                if (!Avisos.seen || Avisos.seen.has(idDoc)) return;
+                Avisos.seen.add(idDoc); Avisos.save(); Avisos.refresh();
+                if (document.querySelector('.view-section.active')?.id === 'viewAgente') Renders.drawAgent();
+            },
+            /** Contador rojo en el menú, número en el título de la pestaña y punto en el ícono. */
+            refresh: () => {
+                if (!Avisos.enabled() || !Avisos.seen) return;
+                const n = new Set([...Avisos.nuevos(), ...Avisos.pendientes()].map(r => r.idDoc)).size;
+                const el = $('navAgenteCount'); el.style.display = n ? '' : 'none'; el.innerText = n;
+                document.title = (n ? `(${n}) ` : '') + BASE_TITLE;
+                Avisos.favicon(n);
+            },
+            favicon: (n) => {
+                let link = document.getElementById('avisoFavicon');
+                if (!n) { if (link) link.remove(); return; }
+                const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+                g.fillStyle = '#1B3F86'; g.beginPath(); g.arc(32, 32, 30, 0, Math.PI * 2); g.fill();
+                g.fillStyle = '#fff'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CX', 32, 34);
+                g.fillStyle = '#DC2626'; g.beginPath(); g.arc(48, 16, 15, 0, Math.PI * 2); g.fill();
+                g.fillStyle = '#fff'; g.font = 'bold 20px sans-serif'; g.fillText(n > 9 ? '9+' : String(n), 48, 17);
+                if (!link) { link = document.createElement('link'); link.id = 'avisoFavicon'; link.rel = 'icon'; document.head.appendChild(link); }
+                link.href = c.toDataURL('image/png');
+            },
+            /** Se llama cada vez que llegan las notas desde la base. */
+            onRecords: (anio) => {
+                if (!Avisos.enabled()) return;
+                if (!Avisos.seen) Avisos.init();
+                const ids = new Set(Avisos.mine().map(r => r.idDoc));
+                if (Avisos.known && Avisos.knownYear === anio) {
+                    const llegadas = [...ids].filter(i => !Avisos.known.has(i));
+                    if (llegadas.length) Avisos.notificar(llegadas);
+                }
+                Avisos.known = ids; Avisos.knownYear = anio;
+                Avisos.refresh();
+                if (!Avisos.modalShown) { Avisos.modalShown = true; Avisos.mostrar(); }
+            },
+            /** Aviso cuando cae una nota nueva con la app abierta. */
+            notificar: (ids) => {
+                const recs = State.records.filter(r => ids.includes(r.idDoc));
+                if (!recs.length) return;
+                const msg = recs.length === 1 ? `Ya está tu nota de la semana ${recs[0].semana}: ${recs[0].nota}${isNumericNote(recs[0].nota) ? '%' : ''}.` : `Tienes ${recs.length} notas nuevas.`;
+                UI.showToast(msg, 'info', 8000);
+                try { navigator.vibrate?.(200); } catch {}
+                if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+                    try {
+                        const nt = new Notification('Calidad CX: tienes una nota nueva', { body: msg, tag: 'calidadcx-nota' });
+                        nt.onclick = () => { window.focus(); App.switchView('viewAgente', true); nt.close(); };
+                    } catch {}
+                }
+            },
+            /** Ventana al entrar: notas nuevas y firmas pendientes. */
+            mostrar: () => {
+                const nuevos = Avisos.nuevos(), pend = Avisos.pendientes();
+                if (!nuevos.length && !pend.length) return;
+                const pct = (v) => esc(v) + (isNumericNote(v) ? '%' : '');
+                let html = nuevos.map(r => `<div class="aviso-item"><div><b>Semana ${esc(r.semana)}</b> · ${esc(r.area)}<br><span class="hint" style="margin:0;">Nota ${pct(r.nota)}${r.feedback_lider ? ' · con retroalimentación' : ''}</span></div>
+                    <button class="btn-action" style="background:var(--primary); color:white; border:none;" onclick="UI.closeModal('avisosModal'); Interactions.openFeedback(${js(r.idDoc)})">Ver</button></div>`).join('');
+                if (pend.length) html += `<div class="aviso-item" style="background:var(--amber-soft); border-color:#EED7A6;"><div><b>${pend.length} compromiso(s) por firmar</b><br><span class="hint" style="margin:0;">Es un requisito operativo.</span></div>
+                    <button class="btn-action" style="background:var(--amber); border-color:var(--amber); color:#2B1D00;" onclick="UI.closeModal('avisosModal'); App.switchView('viewAgente', true)">Firmar</button></div>`;
+                $('avisosBody').innerHTML = html;
+                const canAsk = 'Notification' in window && Notification.permission === 'default' && window.isSecureContext;
+                $('btnAvisosPermiso').style.display = canAsk ? 'flex' : 'none';
+                UI.openModal('avisosModal');
+            },
+            pedirPermiso: async () => {
+                try {
+                    const r = await Notification.requestPermission();
+                    UI.showToast(r === 'granted' ? 'Listo: te avisaremos cuando llegue una nota mientras tengas la app abierta.' : 'No se activaron los avisos del navegador.', r === 'granted' ? 'success' : 'warning');
+                } catch { UI.showToast('Este navegador no permite avisos.', 'warning'); }
+                $('btnAvisosPermiso').style.display = 'none';
+            },
+            reset: () => {
+                Object.assign(Avisos, { seen: null, known: null, knownYear: null, modalShown: false });
+                document.title = BASE_TITLE; Avisos.favicon(0);
+                const el = $('navAgenteCount'); if (el) el.style.display = 'none';
+            }
+        };
+        window.Avisos = Avisos;
 
         const Renders = {
             drawMatrix: () => {
@@ -2413,7 +2538,8 @@
                     notes.forEach(n => {
                         const needs = Rules.needsSignature(n);
                         if (needs) pending++;
-                        notesHTML += `<div class="agent-note-item" style="${needs ? 'border-color:#fca5a5; background:#fef2f2;' : ''}">
+                        const nueva = isMe && Avisos.isNew(n);
+                        notesHTML += `<div class="agent-note-item${nueva ? ' is-new' : ''}" style="${needs ? 'border-color:#fca5a5; background:#fef2f2;' : ''}">${nueva ? '<span class="new-tag">NUEVA</span>' : ''}
                             <span class="week">${esc(wk)}</span><span class="area-lbl" title="${esc(n.area)}">${esc(n.area)}</span>
                             <div class="${needs ? 'needs-sig-pulse' : ''}">${UI.getBadgeHTML(n.nota, true, `Interactions.openFeedback(${js(n.idDoc)})`)}</div></div>`;
                         if (isNumericNote(n.nota)) { sWk += Number(n.nota); cWk++; sum += Number(n.nota); count++; }
@@ -2425,7 +2551,7 @@
                 if (pending > 0) {
                     banner.style.display = 'flex';
                     $('agentPendingText').innerText = `${isMe ? 'Tienes' : 'Tiene'} ${pending} evaluación(es) pendiente(s) de firma. Es un requisito operativo.`;
-                    if (!State.notifiedPending && isMe) { UI.showToast(`Tienes ${pending} firma(s) pendiente(s). Por favor revisa tu panel.`, "warning", 6000); State.notifiedPending = true; }
+                    if (!State.notifiedPending && isMe && !Avisos.modalShown) { UI.showToast(`Tienes ${pending} firma(s) pendiente(s). Por favor revisa tu panel.`, "warning", 6000); State.notifiedPending = true; }
                 } else banner.style.display = 'none';
 
                 $('agentNotesGrid').innerHTML = notesHTML || '<p style="font-size:12px; color:var(--text-muted);">Sin evaluaciones registradas este año.</p>';
@@ -2499,6 +2625,7 @@
             openFeedback: (idDoc) => {
                 const data = State.records.find(d => d.idDoc === idDoc);
                 if (!data) return;
+                if (data.id_asesor === State.user.nombre) Avisos.markSeen(idDoc);
                 State.currentDocId = idDoc;
 
                 $('fbAgentName').innerText = data.id_asesor;
@@ -6764,6 +6891,7 @@
 
         document.querySelectorAll('.nav-item').forEach(el => el.addEventListener('click', () => App.switchView(el.dataset.view, el.dataset.view === 'viewAgente')));
         document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => UI.closeModal(el.dataset.close)));
+        $('btnAvisosPermiso').addEventListener('click', () => Avisos.pedirPermiso());
         document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('mousedown', (e) => { if (e.target === m) UI.closeModal(m.id); }));
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(m => { if (m.style.display === 'flex') UI.closeModal(m.id); }); });
         document.querySelectorAll('#settingsModal .tab-btn').forEach(b => b.addEventListener('click', () => App.switchSettingsTab(b.dataset.tab)));
