@@ -667,7 +667,7 @@
 
             <!-- VISTA: FIRMAS -->
             <div id="viewFirmas" class="view-section">
-                <p class="view-lead">Evaluaciones con feedback del líder que el asesor debe firmar. Haz clic en una fila para ver el feedback y la respuesta.</p>
+                <p class="view-lead">Evaluaciones con feedback del líder que el asesor debe firmar. "Vista, sin firmar": el asesor ya abrió su nota pero no ha firmado. Haz clic en una fila para ver el feedback y la respuesta.</p>
                 <div class="grid-cards">
                     <div class="card-dash">
                         <h3>Requieren firma</h3>
@@ -679,7 +679,7 @@
                     </div>
                     <div class="card-dash" style="background: var(--amber-soft);">
                         <h3 style="color:#7A5205;">Pendientes</h3>
-                        <div><div class="val" id="firmasPend" style="color:#7A5205;">0</div></div>
+                        <div><div class="val" id="firmasPend" style="color:#7A5205;">0</div><div class="hint" id="firmasPendDet" style="margin:0; color:#7A5205;"></div></div>
                     </div>
                     <div class="card-dash">
                         <h3>Cumplimiento</h3>
@@ -690,7 +690,7 @@
                     <div class="table-scroll">
                         <table>
                             <thead>
-                                <tr><th>Asesor</th><th>Área</th><th>Semana</th><th style="text-align: center;">Nota</th><th style="text-align: center;">Firma</th><th style="text-align: center;"></th></tr>
+                                <tr><th>Asesor</th><th>Área</th><th>Semana</th><th style="text-align: center;">Nota</th><th style="text-align: center;">Estado</th><th style="text-align: center;"></th></tr>
                             </thead>
                             <tbody id="firmasPendingBody"></tbody>
                         </table>
@@ -1895,7 +1895,7 @@
                     rows = base.filter(r => r.nps_agente).map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Calificación Operativa": r.nota, "NPS (1-10)": r.nps_agente, "Comentario del Asesor": r.observacion_agente || "-", "Plan de Acción Firmado": r.compromiso_agente || "-", "Feedback Líder": r.feedback_lider || "-" }));
                 } else if (active === 'viewFirmas') {
                     sheetName = "Auditoria_Firmas";
-                    rows = base.filter(r => r.feedback_lider && !Rules.isInformative(r)).map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Nota": r.nota, "Estatus Firma": r.compromiso_agente ? "Firmado" : "Pendiente", "Fecha Firma": r.fecha_firma ? new Date(r.fecha_firma).toLocaleString() : "-", "Feedback del Líder": r.feedback_lider, "Compromiso del Asesor": r.compromiso_agente || "Pendiente de firma", "Observación Extra": r.observacion_agente || "-" }));
+                    rows = base.filter(r => r.feedback_lider && !Rules.isInformative(r)).map(r => ({ "Área": r.area, "Asesor": r.id_asesor, "Semana": r.semana, "Nota": r.nota, "Estatus Firma": r.compromiso_agente ? "Firmado" : (r.visto_agente ? "Vista, sin firmar" : "Sin abrir"), "Fecha Vista": r.visto_agente ? new Date(r.visto_agente).toLocaleString() : "-", "Fecha Firma": r.fecha_firma ? new Date(r.fecha_firma).toLocaleString() : "-", "Feedback del Líder": r.feedback_lider, "Compromiso del Asesor": r.compromiso_agente || "Pendiente de firma", "Observación Extra": r.observacion_agente || "-" }));
                 } else {
                     sheetName = "Matriz_Calidad";
                     const agMap = {};
@@ -2047,7 +2047,15 @@
                 Avisos.seen = new Set(mine.filter(r => weekNum(r.semana) < last).map(r => r.idDoc));
                 Avisos.save();
             },
-            isNew: (r) => !!Avisos.seen && r.id_asesor === State.user.nombre && !Avisos.seen.has(r.idDoc),
+            isNew: (r) => !!Avisos.seen && r.id_asesor === State.user.nombre && !Avisos.seen.has(r.idDoc) && !r.visto_agente && !r.compromiso_agente,
+            enviados: new Set(),
+            /** Deja constancia en la base de que el asesor abrió su nota (una sola vez por nota). */
+            marcarVisto: (r) => {
+                if (!r || r.visto_agente || r.id_asesor !== State.user.nombre || Avisos.enviados.has(r.idDoc)) return;
+                Avisos.enviados.add(r.idDoc);
+                setDoc(doc(db, COL_NOTAS, r.idDoc), { visto_agente: new Date().toISOString() }, { merge: true })
+                    .catch(e => console.warn('No se pudo registrar la nota como vista', e?.code || e));
+            },
             nuevos: () => Avisos.mine().filter(Avisos.isNew).sort((a, b) => weekNum(b.semana) - weekNum(a.semana)),
             pendientes: () => Avisos.mine().filter(r => Rules.needsSignature(r)),
             markSeen: (idDoc) => {
@@ -2353,8 +2361,10 @@
                 const f = Filters.get();
                 const req = State.records
                     .filter(r => Filters.match(r, f) && r.feedback_lider && !Rules.isInformative(r))
-                    .sort((a, b) => (!!a.compromiso_agente - !!b.compromiso_agente) || weekNum(b.semana) - weekNum(a.semana));
+                    .sort((a, b) => (!!a.compromiso_agente - !!b.compromiso_agente) || (!!a.visto_agente - !!b.visto_agente) || weekNum(b.semana) - weekNum(a.semana));
                 const signed = req.filter(r => r.compromiso_agente).length;
+                const vistasSinFirma = req.filter(r => !r.compromiso_agente && r.visto_agente).length;
+                $('firmasPendDet').innerText = req.length - signed ? `${vistasSinFirma} ya la vieron · ${req.length - signed - vistasSinFirma} sin abrir` : '';
 
                 $('firmasTotal').innerText = req.length;
                 $('firmasDone').innerText = signed;
@@ -2366,8 +2376,11 @@
                     const detId = 'det_' + slug(r.idDoc);
                     const status = isSigned
                         ? `<span style="color:var(--ok); font-weight:600; background:var(--ok-soft); padding:4px 8px; border-radius:6px;"><i class="fas fa-check-double"></i> Firmado</span>`
-                        : `<span style="color:#ef4444; font-weight:600; background:#fee2e2; padding:4px 8px; border-radius:6px;"><i class="fas fa-clock"></i> Pendiente</span>`;
-                    const fecha = r.fecha_firma ? `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">${esc(new Date(r.fecha_firma).toLocaleString())}</div>` : '';
+                        : r.visto_agente
+                            ? `<span style="color:#7A5205; font-weight:600; background:var(--amber-soft); padding:4px 8px; border-radius:6px;"><i class="fas fa-eye"></i> Vista, sin firmar</span>`
+                            : `<span style="color:#ef4444; font-weight:600; background:#fee2e2; padding:4px 8px; border-radius:6px;"><i class="fas fa-eye-slash"></i> Sin abrir</span>`;
+                    const cuando = r.fecha_firma ? r.fecha_firma : r.visto_agente;
+                    const fecha = cuando ? `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">${isSigned ? '' : 'Vista: '}${esc(new Date(cuando).toLocaleString())}</div>` : '';
                     return `
                     <tr style="cursor:pointer;" onclick="Interactions.toggleDetail(${js(detId)})">
                         <td><strong>${esc(r.id_asesor)}</strong></td>
@@ -2625,7 +2638,7 @@
             openFeedback: (idDoc) => {
                 const data = State.records.find(d => d.idDoc === idDoc);
                 if (!data) return;
-                if (data.id_asesor === State.user.nombre) Avisos.markSeen(idDoc);
+                if (data.id_asesor === State.user.nombre) { Avisos.markSeen(idDoc); Avisos.marcarVisto(data); }
                 State.currentDocId = idDoc;
 
                 $('fbAgentName').innerText = data.id_asesor;
