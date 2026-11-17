@@ -2581,7 +2581,7 @@
                 $('agentNotesGrid').classList.toggle('single-area', myAreas.length <= 1);
                 $('agentBestPracticesGrid').classList.toggle('single-area', myAreas.length <= 1);
                 let aSum = 0, aC = 0;
-                State.records.forEach(d => { if (myAreas.includes(d.area) && Rules.countsInKpi(d.estado) && isNumericNote(d.nota)) { aSum += Number(d.nota); aC++; } });
+                State.records.forEach(d => { if (myAreas.includes(d.area) && !isInactiveEstado(d.estado) && Rules.countsInKpi(d.estado) && isNumericNote(d.nota)) { aSum += Number(d.nota); aC++; } });
                 const areaAvg = avg(aSum, aC);
                 const showTeam = Scope.hasTeamView();
                 const ref = showTeam ? areaAvg : meta;
