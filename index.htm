@@ -5391,6 +5391,8 @@
             rng: (r) => r ? `${fmtHora(r[0])} – ${fmtHora(r[1])}` : '',
             min: (n) => { const a = Math.abs(n); return a >= 60 ? `${Math.floor(a / 60)} h ${a % 60} min` : `${a} min`; },
             asesores: () => HorSync.cfg()?.asesores || [],
+            /** Dado de baja o inactivo en la app (aunque el Excel de horarios aún lo tenga activo). */
+            deBaja: (nombre) => isInactiveEstado(normalizeEstado(State.estadosAgentes[nombre])),
             /** Horario que estaba vigente para ese asesor en esa fecha. */
             prog: (codigo, fecha) => {
                 const v = HorSync.cfg()?.versiones || {};
@@ -5446,7 +5448,7 @@
                 });
                 // Asesores con horario pero sin datos (p. ej. ausentes toda la semana): solo en la vista del equipo
                 if (Scope.hasTeamView()) Hor.asesores().forEach(a => {
-                    if (!a.codigo || porCod.has(a.codigo) || !a.enApp || /vacaci|baja|inactiv/i.test(a.estado)) return;
+                    if (!a.codigo || porCod.has(a.codigo) || !a.enApp || /vacaci|baja|inactiv/i.test(a.estado) || Hor.deBaja(a.nombre)) return;
                     const u = State.usersMap[a.nombre];
                     if (!u || (u.areas?.[0] && !Scope.inView(u.areas[0]))) return;
                     porCod.set(a.codigo, { nombre: a.nombre, codigo: a.codigo, dias: {} });
@@ -5624,6 +5626,7 @@
             lista: () => {
                 const fl = Filters.get();
                 return Hor.asesores().filter(a => {
+                    if (Hor.deBaja(a.nombre)) return false;
                     if (!Scope.hasTeamView()) { const cod = State.usersMap[State.user.nombre]?.codigo_neotel; return a.nombre === State.user.nombre || (!!cod && String(cod) === a.codigo); }
                     const u = State.usersMap[a.nombre];
                     if (u?.areas?.[0] && !Scope.inView(u.areas[0])) return false;
