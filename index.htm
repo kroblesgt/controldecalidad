@@ -5185,6 +5185,7 @@
                         <p style="font-size:13px; margin-bottom:6px;"><strong>Último resultado:</strong> ${esc(HorSync.lastResult || '—')}</p>
                         ${cfg ? `<p style="font-size:13px; margin-bottom:6px;"><strong>Horario vigente desde:</strong> ${esc(String(cfg.vigente || '').split('-').reverse().join('/'))} · ${Object.keys(cfg.versiones || {}).length} versión(es) guardadas · ${(cfg.novedades || []).length} novedad(es) aprobadas que justifican</p>` : ''}
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                            <button class="btn-action" onclick="HorSync.check(true).then(() => HorSync.renderSettings())"><i class="fas fa-rotate"></i> Leer ahora</button>
                             ${ProdSync.localOk() ? `<button class="btn-action" onclick="HorSync.link()">Cambiar archivo</button>` : ''}
                             <button class="btn-action btn-danger-soft" onclick="HorSync.unlink()">Desvincular</button>
                         </div>
