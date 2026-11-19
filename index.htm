@@ -5489,7 +5489,9 @@
                 r.dIni = Math.floor((r.ini - p.c[0] - usado) / 60);
                 r.dFin = r.fin !== null ? Math.ceil((r.fin - (p.c[1] - (F - usado))) / 60) : null;
                 if (r.dIni > tol.entrada) r.flags.push({ k: 'tarde', t: `Entró ${Hor.min(r.dIni)} tarde`, m: r.dIni });
-                if (r.dFin !== null && r.dFin < -tol.salida) r.flags.push({ k: 'antes', t: `Salió ${Hor.min(-r.dFin)} antes`, m: -r.dFin });
+                // Entró antes para salir antes: los minutos que entró temprano compensan la salida anticipada
+                if (r.dFin !== null && r.dFin < 0 && r.dIni < 0) { r.compensa = Math.min(-r.dIni, -r.dFin); r.dFin += r.compensa; }
+                if (r.dFin !== null && r.dFin < -tol.salida) r.flags.push({ k: 'antes', t: `Salió ${Hor.min(-r.dFin)} antes${r.compensa ? ` (descontando ${Hor.min(r.compensa)} que entró temprano)` : ''}`, m: -r.dFin });
                 if (p.l && r.alm > 0) { const ex = Math.floor((r.alm - (p.l[1] - p.l[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'alm', t: `Almuerzo excedido ${Hor.min(ex)}`, m: ex }); }
                 if (p.b && r.brk > 0) { const ex = Math.floor((r.brk - (p.b[1] - p.b[0])) / 60); if (ex > tol.pausa) r.flags.push({ k: 'brk', t: `Break excedido ${Hor.min(ex)}`, m: ex }); }
                 // Cierre de sesión: el logout quedó más de 30 min después de su hora de salida y de su última llamada
