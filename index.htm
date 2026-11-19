@@ -5052,12 +5052,13 @@
                     const hi = R.findIndex(r => r && r.some(v => sinTildes(v) === 'DESDE') && r.some(v => sinTildes(v) === 'CODIGO'));
                     if (hi >= 0) {
                         const H = R[hi].map(txt), ci = (n) => H.findIndex(h => sinTildes(h) === sinTildes(n));
-                        const C = { desde: ci('Desde'), hasta: ci('Hasta'), neotel: ci('Neotel'), cod: ci('Código'), tipo: ci('Tipo'), jornada: ci('Jornada'), hi: ci('Hora inicio'), hf: ci('Hora fin'), estado: ci('Estado'), just: ci('Justifica') };
+                        const C = { desde: ci('Desde'), hasta: ci('Hasta'), neotel: ci('Neotel'), cod: ci('Código'), tipo: ci('Tipo'), jornada: ci('Jornada'), hi: ci('Hora inicio'), hf: ci('Hora fin'), estado: ci('Estado'), just: ci('Justifica'), con: ci('Intercambio con') };
                         for (const r of R.slice(hi + 1)) {
                             const d = HorSync.fecha(r[C.desde]), n = txt(r[C.neotel]);
                             if (!d || !/^\d+$/.test(n) || !/^aprobad/i.test(txt(r[C.estado])) || (C.just >= 0 && !/^s/i.test(sinTildes(r[C.just])))) continue;
                             const hm = (v) => { const x = HorSync.hora(v); return x === null ? '' : fmtHora(x); };
-                            novedades.push({ n, d, h: HorSync.fecha(r[C.hasta]) || d, c: txt(r[C.cod]), t: txt(r[C.tipo]) || txt(r[C.cod]), j: txt(r[C.jornada]), hi: hm(r[C.hi]), hf: hm(r[C.hf]) });
+                            const con = C.con >= 0 ? txt(r[C.con]) : '';
+                            novedades.push({ n, d, h: HorSync.fecha(r[C.hasta]) || d, c: txt(r[C.cod]), t: txt(r[C.tipo]) || txt(r[C.cod]), j: txt(r[C.jornada]), hi: hm(r[C.hi]), hf: hm(r[C.hf]), ...(/^\d+$/.test(con) ? { con } : {}) });
                         }
                     }
                 }
@@ -5164,7 +5165,7 @@
                 const fuente = !s ? `
                     <div class="panel-soft" style="max-width:760px;">
                         <h3 class="panel-title">Excel de horarios y datos de los asesores</h3>
-                        <p class="hint" style="margin-bottom:12px;">Se leen las hojas "Cuadro semanal" (conexión, break y almuerzo de cada día), "Datos del personal" (correo, usuario Neotel, extensión y fecha de ingreso) y "Novedades (Mesa)" (permisos, vacaciones y cambios aprobados, que justifican la puntualidad). <strong>Teléfonos y estudios no se leen.</strong> Cuando guardes cambios en el Excel, la app los toma en la siguiente actualización.</p>
+                        <p class="hint" style="margin-bottom:12px;">Se leen las hojas "Cuadro semanal" (conexión, break y almuerzo de cada día), "Datos del personal" (correo, usuario Neotel, extensión y fecha de ingreso) y "Novedades (Mesa)" (permisos, vacaciones y cambios aprobados, que justifican la puntualidad). Los cambios de horario, descansos por cambio e intercambios aprobados (columna "Intercambio con") se aplican al horario de ese día. <strong>Teléfonos y estudios no se leen.</strong> Cuando guardes cambios en el Excel, la app los toma en la siguiente actualización.</p>
                         ${ProdSync.localOk() ? `
                         <div id="horDrop" class="sync-drop"><i class="fas fa-file-arrow-down"></i><strong>Arrastra aquí el Excel de horarios</strong><span>por ejemplo "1. Horarios y Datos Asesores ST.xlsx"</span></div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
@@ -5395,6 +5396,29 @@
             deBaja: (nombre) => isInactiveEstado(normalizeEstado(State.estadosAgentes[nombre])),
             /** Horario que estaba vigente para ese asesor en esa fecha. */
             prog: (codigo, fecha) => {
+                const base = Hor.progBase(codigo, fecha);
+                const nov = Hor.novDe(codigo, fecha);
+                const sec = (t) => HorSync.hora(t);
+                // Intercambio de horario: ese día toma el horario base del compañero
+                const ix = nov.find(x => x.c === 'CH' && x.con);
+                if (ix) {
+                    const o = Hor.progBase(ix.con, fecha);
+                    const quien = (Hor.asesores().find(a => a.codigo === ix.con)?.nombre || '').split(' ')[0];
+                    return o ? { ...o, vigente: base?.vigente || o.vigente, cambio: `Intercambio de horario${quien ? ' con ' + quien : ''}` } : base;
+                }
+                // Descanso por cambio o feriado (día completo)
+                if (nov.some(x => x.c === 'DESC')) return { vigente: base?.vigente, c: null, ct: 'Descanso (cambio)', cambio: 'Descanso por cambio o feriado' };
+                // Cambio de horario del día, o trabaja su descanso / un feriado: horario de la Mesa
+                const ch = nov.find(x => ['CH', 'TDD', 'FT'].includes(x.c) && sec(x.hi) !== null && sec(x.hf) !== null);
+                if (ch) {
+                    const c = [sec(ch.hi), sec(ch.hf)];
+                    const dentro = (r) => r && r[0] >= c[0] && r[1] <= c[1];
+                    return { ...(base || {}), c, ct: Hor.rng(c), f: 0, b: dentro(base?.b) ? base.b : null, bt: dentro(base?.b) ? base.bt : '', l: dentro(base?.l) ? base.l : null, lt: dentro(base?.l) ? base.lt : '', vigente: base?.vigente, cambio: ch.c === 'CH' ? 'Cambio de horario' : ch.t };
+                }
+                return base;
+            },
+            /** Horario del Excel (sin cambios de la Mesa). */
+            progBase: (codigo, fecha) => {
                 const v = HorSync.cfg()?.versiones || {};
                 const k = Object.keys(v).filter(x => x <= fecha).sort().pop() || null;
                 if (!k) return null;
@@ -5458,7 +5482,8 @@
                 rows.forEach(r => fechas.forEach(f => {
                     const d = r.dias[f] || (r.dias[f] = {});
                     d.p = Hor.prog(r.codigo, f);
-                    d.nov = Hor.novDe(r.codigo, f);
+                    // Un cambio de horario ya aplicado al turno no justifica por sí solo: se evalúa contra el nuevo horario
+                    d.nov = Hor.novDe(r.codigo, f).filter(x => !(d.p?.cambio && ['CH', 'DESC', 'TDD', 'FT'].includes(x.c)));
                     d.e = f <= ultimo ? Hor.evalDia(d.b, d.p, tol, d.nov) : null;   // días sin cargar aún: no se evalúan
                 }));
                 rows.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -5609,8 +5634,9 @@
                 const fecha = Hor.ui.fecha, lun = Hor.lunes(fecha), fechas = [...Array(7)].map((_, i) => Hor.sumar(lun, i));
                 const hoy = Hor.hoy();
                 const lista = Hor.lista();
-                const celda = (p) => !p ? '<span class="hint" style="margin:0;">—</span>' : !p.c ? `<span class="hor-chip off">${esc(p.ct || 'Descanso')}</span>`
-                    : `<div style="font-weight:600;">${esc(Hor.rng(p.c))}</div>${p.bt ? `<div class="hint" style="margin:0;">Break ${esc(p.bt)}</div>` : ''}${p.lt ? `<div class="hint" style="margin:0;">Almuerzo ${esc(p.lt)}</div>` : ''}`;
+                const marca = (p) => p?.cambio ? `<div style="margin-top:3px;"><span class="hor-chip just" title="Aprobado en la Mesa de trabajo">${esc(p.cambio)}</span></div>` : '';
+                const celda = (p) => !p ? '<span class="hint" style="margin:0;">—</span>' : !p.c ? `<span class="hor-chip off">${esc(p.ct || 'Descanso')}</span>${marca(p)}`
+                    : `<div style="font-weight:600;">${esc(Hor.rng(p.c))}</div>${p.bt ? `<div class="hint" style="margin:0;">Break ${esc(p.bt)}</div>` : ''}${p.lt ? `<div class="hint" style="margin:0;">Almuerzo ${esc(p.lt)}</div>` : ''}${marca(p)}`;
                 box.innerHTML = `
                     <div class="table-card">
                         <div class="table-card-head" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><h3>Horario de la semana del ${esc(Hor.fmtF(fechas[0], { day: 'numeric', month: 'long' }))}</h3><span class="hint" style="margin:0 0 0 auto;">Vigente desde ${esc(String(Hor.prog(lista[0]?.codigo, fechas[6])?.vigente || HorSync.cfg()?.vigente || '').split('-').reverse().join('/'))}</span></div>
