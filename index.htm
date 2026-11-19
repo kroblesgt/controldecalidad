@@ -5409,14 +5409,16 @@
                 const completo = (x) => /completo/i.test(x.j || '') || (!x.hi && !x.hf && !/AM|PM|horas/i.test(x.j || ''));
                 let p = base ? { ...base } : null; const cambios = [], notas = [];
                 // Intercambio de horario: ese día toma el horario base del compañero
-                const ix = nov.find(x => x.c === 'CH' && x.con);
+                // Un cambio de horario puntual (con hora inicio y fin) pesa más que el intercambio
+                const chP = nov.find(x => ['CH', 'TDD', 'FT'].includes(x.c) && !x.con && sec(x.hi) !== null && sec(x.hf) !== null);
+                const ix = !chP && nov.find(x => x.c === 'CH' && x.con);
                 if (ix) {
                     const o = Hor.progBase(ix.con, fecha);
                     const quien = (Hor.asesores().find(a => a.codigo === ix.con)?.nombre || '').split(' ')[0];
                     if (o) { p = { ...o, vigente: base?.vigente || o.vigente }; cambios.push(`Intercambio de horario${quien ? ' con ' + quien : ''}`); }
                 }
                 // Cambio de horario del día, o trabaja su descanso / un feriado
-                const ch = !ix && nov.find(x => ['CH', 'TDD', 'FT'].includes(x.c) && sec(x.hi) !== null && sec(x.hf) !== null);
+                const ch = chP;
                 if (ch) {
                     const c = [sec(ch.hi), sec(ch.hf)], dentro = (r) => r && r[0] >= c[0] && r[1] <= c[1];
                     p = { ...(p || {}), c, ct: Hor.rng(c), f: 0, b: dentro(p?.b) ? p.b : null, bt: dentro(p?.b) ? p.bt : '', l: dentro(p?.l) ? p.l : null, lt: dentro(p?.l) ? p.lt : '', vigente: base?.vigente };
