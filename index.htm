@@ -5440,7 +5440,17 @@
                 // Ausencias de día completo (vacaciones, permisos…) y permisos parciales
                 const aus = nov.find(x => Hor.NOV_AUS.includes(x.c) && completo(x));
                 if (aus && p?.c) p = { vigente: base?.vigente, c: null, ct: etiqueta(aus), aus: true };
-                nov.filter(x => Hor.NOV_AUS.includes(x.c) && !completo(x)).forEach(x => notas.push(x.c === 'IGSS' ? 'Cita IGSS' : Hor.novTxt({ ...x, t: etiqueta(x) })));
+                // Medio día (mañana o tarde libre): mueve la entrada o la salida; el almuerzo fuera del nuevo turno no aplica
+                if (!aus && p?.c) nov.filter(x => Hor.NOV_AUS.includes(x.c) && /^(AM|PM)$/i.test(x.j || '')).forEach(x => {
+                    const c = [...p.c];
+                    if (/AM/i.test(x.j) && sec(x.hf) !== null) c[0] = Math.max(c[0], sec(x.hf));
+                    if (/PM/i.test(x.j) && sec(x.hi) !== null) c[1] = Math.min(c[1], sec(x.hi));
+                    if (c[0] >= c[1]) return;
+                    const dentro = (r) => r && r[0] >= c[0] && r[1] <= c[1];
+                    p = { ...p, c, ct: Hor.rng(c), f: 0, b: dentro(p.b) ? p.b : null, bt: dentro(p.b) ? p.bt : '', l: dentro(p.l) ? p.l : null, lt: dentro(p.l) ? p.lt : '' };
+                    cambios.push(`${etiqueta(x)} (${/AM/i.test(x.j) ? 'mañana' : 'tarde'} libre)`);
+                });
+                nov.filter(x => Hor.NOV_AUS.includes(x.c) && !completo(x) && !/^(AM|PM)$/i.test(x.j || '')).forEach(x => notas.push(x.c === 'IGSS' ? 'Cita IGSS' : Hor.novTxt({ ...x, t: etiqueta(x) })));
                 if (!p) return null;
                 if (cambios.length) p.cambio = cambios.join(' · ');
                 if (notas.length) p.notas = notas;
